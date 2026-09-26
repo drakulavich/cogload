@@ -110,7 +110,7 @@ open it? [Y/n]
 
 <p align="center"><img src="https://raw.githubusercontent.com/drakulavich/zapara/main/assets/card.webp" alt="zapara card: The Marathoner, longest streak 7h53m, 68% of hours calm" width="800"></p>
 
-This one comes from the same `busy-week` fixture as the pictures above. A headless browser that Bun drives takes the picture: WebKit on macOS, an installed Google Chrome elsewhere. On Linux or Windows, install Chrome or write `--out card.html` and open the page in any browser.
+This one comes from the same `busy-week` fixture as the pictures above. A headless browser that Bun drives takes the picture: WebKit on macOS, an installed Chromium browser (Chrome, Edge, Brave, Chromium) elsewhere. On Linux or Windows, install one or write `--out card.html` and open the page in any browser.
 
 If your card told you something about your week, star [the repository](https://github.com/drakulavich/zapara) so other people can find zapara.
 
@@ -185,7 +185,7 @@ Between runs, zapara caches each transcript's parsed events in `~/.claude/zapara
 - The norms come from two machines of one user working in auto mode, which makes them a starting point for a conversation about the metric rather than a study.
 - The 98-column grid does not adapt to a narrow terminal.
 - For the grid and the day a pipe always gets JSON, and there is no flag to ask for text instead.
-- The card needs a browser engine: WebKit comes with macOS, elsewhere Google Chrome must be installed. `--out card.html` works everywhere.
+- The card needs a browser engine: WebKit comes with macOS, elsewhere a Chromium browser (Chrome, Edge, Brave, Chromium) must be installed. `--out card.html` works everywhere.
 - A window that includes today is a snapshot: today's entry in the JSON carries `asOf`, the tables end with `as of HH:MM`, and two runs minutes apart differ while Claude Code is still writing. Today's numbers cover everything up to `asOf` and nothing timestamped after it, even if it lands in the same run. `zapara status` writes that snapshot to a file for a status line.
 
 ## Under the hood

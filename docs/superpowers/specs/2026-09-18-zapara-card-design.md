@@ -53,7 +53,7 @@ zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [-
   (with the actual `--days`) to stderr, writes nothing, exits 1.
 - When the picture cannot be rendered because no browser engine is available
   (see Rendering), stderr gets one line, `card needs a browser engine:
-  install Google Chrome, or write --out card.html`, exit 1. A render that
+  install a Chromium browser such as Chrome or Edge, or write --out card.html`, exit 1. A render that
   does not finish within 15 seconds is `render timed out`, exit 1.
 - When the file cannot be written (the directory does not exist, is not
   writable, is not a directory, or the file system is read-only), stderr
@@ -395,7 +395,7 @@ command, the two stdout lines, the card rendered from `busy-week`
 (`assets/card.webp`, 2400×1260, a plain file like `characters.webp` so clones do
 not spend the LFS bandwidth quota on it; `.gitattributes` tracks
 `docs/superpowers/specs/assets/*.webp` by LFS), and one line saying the picture
-needs macOS or an installed Google Chrome, while `--out card.html` works
+needs macOS or an installed Chromium browser (Chrome, Edge), while `--out card.html` works
 anywhere. CHANGELOG under Unreleased/Added. The demo screencast stays as it
 is.
 

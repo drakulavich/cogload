@@ -283,6 +283,15 @@ describe("zapara card", () => {
     expect((await run("card", "--days", "91", "--out", "x.html")).code).toBe(2);
   });
 
+  // Off macOS the engine is a Chromium browser that Bun finds; a path to nothing breaks it.
+  test.skipIf(process.platform === "darwin")("without a browser engine, card names what to install and the way around it", async () => {
+    const p = Bun.spawn(["bun", CLI, "--projects", projects, "card", "--to", "2026-09-20", "--out", "c.png"], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home, BUN_CHROME_PATH: join(cwd, "no-such-browser") } });
+    const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
+    expect(code).toBe(1);
+    expect(out).toBe("");
+    expect(err).toBe("zapara: card needs a browser engine: install a Chromium browser such as Chrome or Edge, or write --out card.html\n");
+  });
+
   for (const [name, format] of [["x.png", "png"], ["x.webp", "webp"]] as const) {
     test.skipIf(webviewMissing !== null)(`--out ${name} is a 2400x1260 picture`, async () => {
       const r = await run("card", "--to", "2026-09-20", "--out", name);

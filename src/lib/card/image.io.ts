@@ -23,7 +23,7 @@ export async function loadAssets(): Promise<CardAssets> {
 }
 
 const BACKEND = process.platform === "darwin" ? "webkit" : "chrome";
-const ENGINE_LINE = "card needs a browser engine: install Google Chrome, or write --out card.html";
+const ENGINE_LINE = "card needs a browser engine: install a Chromium browser such as Chrome or Edge, or write --out card.html";
 const WRITE_LINE = "cannot write the card: check the --out directory";
 const TEMP_LINE = "cannot draw the card: the temporary directory is not writable";
 const WIDTH = 2400;
