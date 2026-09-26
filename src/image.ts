@@ -1,7 +1,9 @@
 // The only module that reads the card assets, opens a Bun.WebView or Bun.Image,
 // writes the card, and starts another program: the opener that shows it.
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import type { CardAssets } from "./cardhtml.ts";
 
 const ASSETS = new URL("../assets/", import.meta.url);
@@ -23,35 +25,36 @@ export async function loadAssets(): Promise<CardAssets> {
 const BACKEND = process.platform === "darwin" ? "webkit" : "chrome";
 const ENGINE_LINE = "card needs a browser engine: install Google Chrome, or write --out card.html";
 const WRITE_LINE = "cannot write the card: check the --out directory";
+const TEMP_LINE = "cannot draw the card: the temporary directory is not writable";
 const WIDTH = 2400;
 const HEIGHT = 1260;
 const READY = 'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
 
-// The budget bounds the whole render. Under load from other WebKit views, a
-// view sometimes stops answering: navigate() or evaluate() never settles, while
-// a fresh view renders in under a second. So the budget is two attempts, each
-// on its own view: the first gets half, is closed when it runs out, and the
-// second gets what is left. An engine failure is not retried: it becomes one
-// line that never quotes the engine's text.
+// The budget bounds the whole render, and the view closes the moment it runs
+// out. The page loads from a file because a data: URL this size sometimes
+// never finishes loading while other WebKit views are open. An engine failure
+// becomes one line that never quotes the engine's text.
 export async function renderCard(html: string, out: string, timeoutMs = 15_000): Promise<void> {
   const lower = out.toLowerCase();
   if (lower.endsWith(".html")) {
     await write(out, html);
     return;
   }
-  const end = performance.now() + timeoutMs;
+  const dir = await mkdtemp(join(tmpdir(), "zapara-card-")).catch(() => { throw new Error(TEMP_LINE); });
   let bytes: Uint8Array | null;
   try {
-    bytes = (await shoot(html, lower.endsWith(".webp"), timeoutMs / 2)) ?? (await shoot(html, lower.endsWith(".webp"), end - performance.now()));
-  } catch {
-    throw new Error(ENGINE_LINE);
+    const page = join(dir, "card.html");
+    await writeFile(page, html, { mode: 0o600 }).catch(() => { throw new Error(TEMP_LINE); });
+    bytes = await shoot(pathToFileURL(page).href, lower.endsWith(".webp"), timeoutMs).catch(() => { throw new Error(ENGINE_LINE); });
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
   if (bytes === null) throw new Error("render timed out");
   await write(out, bytes);
 }
 
 // The picture, or null when the view did not finish within `ms`.
-async function shoot(html: string, webp: boolean, ms: number): Promise<Uint8Array | null> {
+async function shoot(url: string, webp: boolean, ms: number): Promise<Uint8Array | null> {
   const view = new Bun.WebView({ width: WIDTH, height: HEIGHT, backend: BACKEND });
   let timer: ReturnType<typeof setTimeout> | undefined;
   const work = (async () => {
@@ -61,7 +64,7 @@ async function shoot(html: string, webp: boolean, ms: number): Promise<Uint8Arra
     // Headless Chrome (or Edge) shoots at 1x and cannot evaluate before a navigate.
     const dpr = BACKEND === "webkit" ? await view.evaluate<number>("devicePixelRatio") : 1;
     if (dpr !== 1) await view.resize(Math.round(WIDTH / dpr), Math.round(HEIGHT / dpr));
-    await view.navigate("data:text/html;charset=utf-8," + encodeURIComponent(html));
+    await view.navigate(url);
     await view.evaluate(`document.documentElement.style.zoom = "${2 / dpr}"`);
     while (!(await view.evaluate<boolean>(READY))) await Bun.sleep(50);
     const shot = await view.screenshot({ encoding: "buffer", format: "png" });

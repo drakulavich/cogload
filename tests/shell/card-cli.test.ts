@@ -23,7 +23,10 @@ afterEach(async () => {
 });
 
 async function run(...args: string[]): Promise<{ code: number; out: string; err: string }> {
-  const p = Bun.spawn(["bun", CLI, "--projects", projects, ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+  return runWith({}, ...args);
+}
+async function runWith(env: Record<string, string>, ...args: string[]): Promise<{ code: number; out: string; err: string }> {
+  const p = Bun.spawn(["bun", CLI, "--projects", projects, ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home, ...env } });
   const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
   return { code, out, err };
 }
@@ -255,6 +258,26 @@ describe("zapara card", () => {
       await chmod(locked, 0o700).catch(() => {});
     }
   }, WEBVIEW_TEST_TIMEOUT);
+
+  test.skipIf(webviewMissing !== null)("a picture leaves no page behind in the temporary directory, drawn or not", async () => {
+    const tmp = await mkdtemp(join(tmpdir(), "zapara-tmp-"));
+    try {
+      const drawn = await runWith({ TMPDIR: tmp }, "card", "--to", "2026-09-20", "--out", "c.png");
+      expect(drawn.code).toBe(0);
+      const unwritable = await runWith({ TMPDIR: tmp }, "card", "--to", "2026-09-20", "--out", join(cwd, "missing", "c.png"));
+      expect(unwritable.code).toBe(1);
+      expect((await readdir(tmp)).filter((name) => name.startsWith("zapara-card-"))).toEqual([]);
+    } finally { await rm(tmp, { recursive: true, force: true }); }
+  }, WEBVIEW_TEST_TIMEOUT);
+
+  test("a picture with no writable temporary directory exits 1 with one line that names no path", async () => {
+    const tmp = join(cwd, "no-such-tmp");
+    const r = await runWith({ TMPDIR: tmp }, "card", "--to", "2026-09-20", "--out", "c.png");
+    expect(r.code).toBe(1);
+    expect(r.out).toBe("");
+    expect(r.err).toBe("zapara: cannot draw the card: the temporary directory is not writable\n");
+    expect(await files()).toEqual([]);
+  });
 
   test("--out on the grid and --explain on card are usage errors", async () => {
     expect((await run("--out", "x.png")).code).toBe(2);
