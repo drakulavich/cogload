@@ -11,6 +11,14 @@ All notable changes to this project are documented here. The format follows
   `zapara status` adds the write of its status file. The `cache` row now
   carries the milliseconds spent looking files up in the cache, so `read`
   counts only the reads of files the cache missed.
+- A PNG or WebP card is drawn on a second browser view when the first one
+  stops answering. With other programs holding WebKit views open, about one
+  view in 48 never finished loading or evaluating, while a fresh view drew
+  the card in about a second. The first view gets half of the 15 s budget
+  and is closed when that runs out; the second gets the rest, so
+  `render timed out` still comes at 15 s. With six processes rendering at
+  once, 4 of 48 cards needed the second view and all 48 were written, in
+  at most 8.3 s.
 
 ## [0.8.0] - 2026-09-26
 

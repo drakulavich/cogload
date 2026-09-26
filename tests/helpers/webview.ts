@@ -5,11 +5,13 @@
 //
 // The per-test budget of every WebView-backed test, in milliseconds: 30 s, or
 // ZAPARA_WEBVIEW_TIMEOUT_MS when set, so a slow machine or a loaded runner
-// raises it once instead of editing four tests. Half of it is the page's
-// readiness deadline below, which keeps the 15 s a render had before; the
-// other half is headroom, so the deadline's message is what a slow render
-// reports rather than the test's own timer. This is the one place the number lives.
+// raises it once instead of editing every test. This is the one place the number lives.
+// An in-process test runs at most two WebView steps back to back (a render, then
+// a page that reads it), each bounded by WEBVIEW_STEP_TIMEOUT, so the last third
+// is headroom and a step's own message is what a failure reports, never the test's
+// timer. A CLI test renders once, under the CLI's own 15 s, inside the whole budget.
 export const WEBVIEW_TEST_TIMEOUT = Number(process.env.ZAPARA_WEBVIEW_TIMEOUT_MS) || 30_000;
+export const WEBVIEW_STEP_TIMEOUT = WEBVIEW_TEST_TIMEOUT / 3;
 const BACKEND = process.platform === "darwin" ? "webkit" : "chrome";
 const READY = 'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
 
@@ -27,25 +29,35 @@ if (webviewMissing !== null && process.env.ZAPARA_REQUIRE_WEBVIEW) {
   throw new Error(`ZAPARA_REQUIRE_WEBVIEW is set but no WebView can be opened: ${webviewMissing}`);
 }
 
-// A view with the page loaded and its fonts ready. The caller closes it. The
-// readiness deadline is half the test budget and covers navigate() too, so a
-// slow render fails here with a message rather than on the test's own timer,
-// which would say only how long it took.
+// A view with the page loaded and its fonts ready. The caller closes it. Like
+// renderCard, it gives a view that stops answering under load (navigate() or
+// evaluate() never settles) half the step and then tries a fresh one.
 export async function openPage(html: string, width: number, height: number): Promise<Bun.WebView> {
+  const half = WEBVIEW_STEP_TIMEOUT / 2;
+  const view = (await attempt(html, width, height, half)) ?? (await attempt(html, width, height, half));
+  if (view === null) throw new Error(`page never became ready on two views in ${half} ms each: navigate, fonts or images did not settle`);
+  return view;
+}
+
+async function attempt(html: string, width: number, height: number, ms: number): Promise<Bun.WebView | null> {
   const view = new Bun.WebView({ width, height, backend: BACKEND });
-  const budget = WEBVIEW_TEST_TIMEOUT / 2;
   const ready = (async () => {
     await view.navigate("data:text/html;charset=utf-8," + encodeURIComponent(html));
     while (!(await view.evaluate<boolean>(READY))) await Bun.sleep(50);
+    return true;
   })();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const late = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`page never became ready in ${budget} ms: navigate, fonts or images did not settle`)), budget);
-  });
   // Once the deadline wins, `ready` keeps running against a closed view and may
   // reject on its own; that rejection is expected and must not go unhandled.
   ready.catch(() => {});
-  try { await Promise.race([ready, late]); return view; }
-  catch (e) { view.close(); throw e; }
-  finally { clearTimeout(timer); }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    if (await Promise.race([ready, new Promise<false>((done) => { timer = setTimeout(() => done(false), ms); })])) return view;
+  } catch (e) {
+    view.close();
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+  view.close();
+  return null;
 }

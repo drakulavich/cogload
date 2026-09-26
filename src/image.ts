@@ -27,17 +27,22 @@ const WIDTH = 2400;
 const HEIGHT = 1260;
 const READY = 'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
 
-// The budget bounds the whole render, and the view closes the moment it runs
-// out. An engine failure becomes one line that never quotes the engine's text.
+// The budget bounds the whole render. Under load from other WebKit views, a
+// view sometimes stops answering: navigate() or evaluate() never settles, while
+// a fresh view renders in under a second. So the budget is two attempts, each
+// on its own view: the first gets half, is closed when it runs out, and the
+// second gets what is left. An engine failure is not retried: it becomes one
+// line that never quotes the engine's text.
 export async function renderCard(html: string, out: string, timeoutMs = 15_000): Promise<void> {
   const lower = out.toLowerCase();
   if (lower.endsWith(".html")) {
     await write(out, html);
     return;
   }
+  const end = performance.now() + timeoutMs;
   let bytes: Uint8Array | null;
   try {
-    bytes = await shoot(html, lower.endsWith(".webp"), timeoutMs);
+    bytes = (await shoot(html, lower.endsWith(".webp"), timeoutMs / 2)) ?? (await shoot(html, lower.endsWith(".webp"), end - performance.now()));
   } catch {
     throw new Error(ENGINE_LINE);
   }

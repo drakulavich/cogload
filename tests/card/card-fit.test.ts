@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { CardData, Character, Segment } from "../../src/card.ts";
 import { cardHtml } from "../../src/cardhtml.ts";
 import { loadAssets, renderCard } from "../../src/image.ts";
-import { openPage, WEBVIEW_TEST_TIMEOUT, webviewMissing } from "../helpers/webview.ts";
+import { openPage, WEBVIEW_STEP_TIMEOUT, WEBVIEW_TEST_TIMEOUT, webviewMissing } from "../helpers/webview.ts";
 
 const assets = await loadAssets();
 const strong = (text: string): Segment => ({ text, strong: true });
@@ -94,8 +94,8 @@ describe("renderCard", () => {
     const dir = await mkdtemp(join(tmpdir(), "zapara-render-"));
     try {
       const html = cardHtml(longest("supervisor"), assets);
-      await renderCard(html, join(dir, "c.png"));
-      await renderCard(html, join(dir, "c.webp"));
+      await renderCard(html, join(dir, "c.png"), WEBVIEW_STEP_TIMEOUT);
+      await renderCard(html, join(dir, "c.webp"), WEBVIEW_STEP_TIMEOUT);
       const png = await readFile(join(dir, "c.png"));
       const webp = await readFile(join(dir, "c.webp"));
       expect(await new Bun.Image(png).metadata()).toMatchObject({ width: 2400, height: 1260, format: "png" });
@@ -112,7 +112,7 @@ describe("renderCard", () => {
     const quad = (left: number, top: number, color: string) => `<div style="position:absolute;left:${left}px;top:${top}px;width:600px;height:315px;background:${color}"></div>`;
     const html = `<!doctype html><html><head><style>html{zoom:2}html,body{margin:0}</style></head><body>${quad(0, 0, "#f00")}${quad(600, 0, "#0f0")}${quad(0, 315, "#00f")}${quad(600, 315, "#ff0")}</body></html>`;
     try {
-      await renderCard(html, join(dir, "q.png"));
+      await renderCard(html, join(dir, "q.png"), WEBVIEW_STEP_TIMEOUT);
       const png = (await readFile(join(dir, "q.png"))).toString("base64");
       const view = await openPage(`<canvas width=2400 height=1260></canvas><img id=i src="data:image/png;base64,${png}">`, 100, 100);
       try {
