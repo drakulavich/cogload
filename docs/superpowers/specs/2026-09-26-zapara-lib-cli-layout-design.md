@@ -129,8 +129,10 @@ is the only devDependency; that is known and left for a separate change.
   every test.
 - No test assertion changes; the diff of `tests/` is file moves and import
   paths.
-- `zapara card --json`, `zapara --json` and `zapara status` print the same
-  bytes as 0.8.0 over the same projects tree and the same `--to`.
+- `zapara card --json`, `zapara --json` and the card page (`--out card.html`)
+  are the same bytes as 0.8.0 over the same projects tree and the same `--to`.
+  `zapara status` reads the clock and takes no `--to`, so its tests in
+  `tests/cli/` are what holds it.
 - Each dependency-cruiser rule and the pure typecheck is shown to fire once:
   the plan makes one throwaway violation per rule, runs the check, and
   records the message.
