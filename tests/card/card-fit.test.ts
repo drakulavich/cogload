@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CardData, Character, Segment } from "../../src/card.ts";
@@ -127,9 +127,13 @@ describe("renderCard", () => {
     } finally { await rm(dir, { recursive: true, force: true }); }
   }, WEBVIEW_TEST_TIMEOUT);
 
-  // No test for the timeout path: on this machine's WebKit backend, both a broken
-  // <img> (reports `complete` once it has errored) and a broken @font-face (settles
-  // document.fonts.ready anyway) resolve instead of hanging, so there is no page
-  // that reliably never becomes ready to pin against. The timeout path is covered
-  // only by reading the code above.
+  // No page reliably hangs (a broken <img> or @font-face settles on WebKit), so a
+  // 1 ms budget, which no render meets, is what reaches the deadline.
+  test.skipIf(webviewMissing !== null)("a render past its budget fails with its own line and writes nothing", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zapara-render-"));
+    try {
+      await expect(renderCard(cardHtml(longest("conductor"), assets), join(dir, "c.png"), 1)).rejects.toThrow(/^render timed out$/);
+      expect(await readdir(dir)).toEqual([]);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  }, WEBVIEW_TEST_TIMEOUT);
 });
