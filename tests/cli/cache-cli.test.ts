@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assistant, prompt, writeTree } from "../helpers/transcript.ts";
 
-const CLI = join(import.meta.dir, "../../src/index.ts");
+const CLI = join(import.meta.dir, "../../src/cli/index.ts");
 const A = "aaaaaaaa-1111-4111-8111-111111111111";
 const B = "bbbbbbbb-1111-4111-8111-111111111111";
 const C = "cccccccc-1111-4111-8111-111111111111";

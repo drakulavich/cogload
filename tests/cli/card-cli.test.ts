@@ -6,7 +6,7 @@ import { cardData, cardHtml, loadAssets } from "../../src/lib/card/index.ts";
 import { report } from "../../src/lib/report/index.ts";
 import { WEBVIEW_TEST_TIMEOUT, webviewMissing } from "../helpers/webview.ts";
 
-const CLI = join(import.meta.dir, "../../src/index.ts");
+const CLI = join(import.meta.dir, "../../src/cli/index.ts");
 const projects = join(import.meta.dir, "../fixtures/busy-week/projects");
 let cwd: string;
 let home: string;

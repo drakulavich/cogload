@@ -11,7 +11,7 @@ const paths = files.map((f) => f.path);
 test("the source, the card's fonts and sheet, and the licences ship in the tarball", () => {
   expect(paths).toEqual(
     expect.arrayContaining([
-      "src/index.ts",
+      "src/cli/index.ts",
       "src/lib/card/card.ts",
       "src/lib/card/cardhtml.ts",
       "src/lib/card/image.io.ts",

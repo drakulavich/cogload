@@ -6,7 +6,7 @@ import { assistant, bigToolResult, prompt, sidechain, writeTree } from "../helpe
 
 // --verbose is for a person diagnosing someone else's machine: where the time
 // goes and how much was read, as numbers only, on stderr.
-const CLI = join(import.meta.dir, "../../src/index.ts");
+const CLI = join(import.meta.dir, "../../src/cli/index.ts");
 const A = "aaaaaaaa-1111-4111-8111-111111111111";
 let root: string;
 let cwd: string;

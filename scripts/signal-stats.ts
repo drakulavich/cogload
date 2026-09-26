@@ -42,7 +42,7 @@ function parseArgs(argv: string[], now: Date): Args {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
     // A missing value or one that looks like another flag is a usage error, never
-    // treated as this flag's value (mirrors src/index.ts's parseArgs).
+    // treated as this flag's value (mirrors src/cli/args.ts's parseArgs).
     const value = (): string => {
       const v = argv[++i];
       if (v === undefined || v.startsWith("-")) throw new UsageError(`${arg} needs a value`);
@@ -64,7 +64,7 @@ function parseArgs(argv: string[], now: Date): Args {
 // forwarded unchanged; the CLI validates them, and a failure here is forwarded
 // verbatim (first stderr line, same exit code) rather than re-validated.
 function runCli(a: Args): Day[] {
-  const cli = join(import.meta.dir, "../src/index.ts");
+  const cli = join(import.meta.dir, "../src/cli/index.ts");
   const proc = Bun.spawnSync(
     ["bun", cli, "--json", "--days", a.days, "--to", a.to, "--projects", a.projects],
     { stdout: "pipe", stderr: "pipe" },

@@ -38,7 +38,7 @@ zapara yesterday --explain  # one day, with the components behind each index
 zapara card                 # the picture
 ```
 
-No build step and no runtime dependency: Bun runs `src/index.ts` from the package as it is.
+No build step and no runtime dependency: Bun runs `src/cli/index.ts` from the package as it is.
 
 ## What it looks like
 
@@ -64,13 +64,13 @@ Sun 20/09    ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  · 
 The fixture's timestamps are UTC and zapara buckets by local time, so pin the zone to get these exact hours:
 
 ```bash
-TZ=UTC bun src/index.ts --projects tests/fixtures/busy-week --to 2026-09-20 --no-color
+TZ=UTC bun src/cli/index.ts --projects tests/fixtures/busy-week --to 2026-09-20 --no-color
 ```
 
 That prints the grid above. One day of it, with the weighted parts behind each index:
 
 ```bash
-TZ=UTC bun src/index.ts 2026-09-14 --projects tests/fixtures/busy-week --explain --no-color
+TZ=UTC bun src/cli/index.ts 2026-09-14 --projects tests/fixtures/busy-week --explain --no-color
 ```
 
 ```
@@ -253,7 +253,7 @@ bun install
 bun link
 ```
 
-`bun link` registers the clone's `bin` entry, so `zapara` runs this checkout; without it, `bun src/index.ts` does the same thing.
+`bun link` registers the clone's `bin` entry, so `zapara` runs this checkout; without it, `bun src/cli/index.ts` does the same thing.
 
 ```bash
 bun run check    # tsc --noEmit, then the test suite under TZ=UTC
