@@ -302,7 +302,7 @@ src/lib/
                                  for the parser fingerprint (2026-09-26-zapara-transcript-cache-design.md)
   metrics/        analyze.ts     analyze(transcripts, window) → Day[]; analyzeEvents(events, window)
                   derive.ts      Event[] + window → Day[] with HourBucket metrics
-                  score.ts       metrics → { index, level, parts }; WEIGHTS, NORMS, LEVELS
+                  score.ts       metrics → { index, level, parts }; WEIGHTS, NORMS
   report/         report.io.ts   report(options) → Day[]: scan, cache lookup, read, analyze
   text/           render.ts      Day[] → week / day / explain / json strings
                   format.ts      compact counts and plurals
@@ -341,7 +341,8 @@ the CLI tests and the report test cover the shell.
 (`biome.json`) fails a pure file that imports `node:` or `bun:` or names
 `Bun`, `process` or `Buffer`, an import that reaches into another feature
 past its `index.ts`, a library file that imports the CLI, and any import
-cycle. Knip (`knip.json`) fails a file under `src/` that nothing uses. The
+cycle. Knip (`knip.json`) fails a file under `src/` that nothing uses, and an
+export or exported type that nothing imports. The
 current time is a parameter, never `Date.now()` inside the core; that one
 stays a review item.
 Named exports only. No runtime dependencies.

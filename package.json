@@ -18,7 +18,7 @@
     "stats": "bun scripts/signal-stats.ts",
     "test": "TZ=UTC bun test",
     "typecheck": "tsc --noEmit",
-    "lint": "biome ci && knip --include files",
+    "lint": "biome ci && knip --include files,exports,types",
     "check": "bun run typecheck && bun run lint && bun run test"
   },
   "devDependencies": {

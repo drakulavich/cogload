@@ -4,7 +4,7 @@ import type { Level, Metrics, Parts, Score } from "../types.ts";
 // stay exact; norms are the p90 of two weeks on two machines (see CHANGELOG).
 export const WEIGHTS = { parallel: 25, pace: 15, supervision: 30, reading: 10, streak: 10, late: 10 } as const;
 export const NORMS = { parallelSpan: 4, pacePerHour: 20, supervisionPerHour: 45, decisionWeight: 3, readingTokens: 80_000, streakMin: 40 } as const;
-export const LEVELS: readonly { max: number; level: Level }[] = [
+const LEVELS: readonly { max: number; level: Level }[] = [
   { max: 29, level: "Calm" },
   { max: 59, level: "Warming" },
   { max: 84, level: "Heating" },

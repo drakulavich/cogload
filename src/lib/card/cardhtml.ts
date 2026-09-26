@@ -11,7 +11,7 @@ export type CardAssets = {
 
 // Fractions [x, y, w, h] of the sheet's side, measured on assets/characters.webp.
 // Scaled so the longer side is BOX px, centred at CENTRE; nothing is cropped.
-export const CHARACTER_RECTS: Record<Character, [number, number, number, number]> = {
+const CHARACTER_RECTS: Record<Character, [number, number, number, number]> = {
   conductor: [0.02, 0.01, 0.53, 0.543],
   supervisor: [0.55, 0.07, 0.38, 0.505],
   marathoner: [0.02, 0.553, 0.50, 0.437],

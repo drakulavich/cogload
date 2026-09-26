@@ -1,9 +1,9 @@
 import { score } from "./score.ts";
 import type { Day, Event, EventKind, HourBucket, LiveBucket, Metrics, Totals, Window } from "../types.ts";
 
-export const LOOKBACK_MS = 3 * 60 * 60 * 1000;
+const LOOKBACK_MS = 3 * 60 * 60 * 1000;
 export const GAP_MS = 10 * 60 * 1000;
-export const SLOT_MS = 5 * 60 * 1000;
+const SLOT_MS = 5 * 60 * 1000;
 const LIVE_MS = 60 * 60 * 1000;
 const LATE_HOURS = new Set([23, 0, 1, 2, 3, 4, 5]);
 
