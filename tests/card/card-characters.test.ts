@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { analyze } from "../../src/analyze.ts";
-import { cardData, sentenceText } from "../../src/card.ts";
+import { analyze } from "../../src/lib/metrics/index.ts";
+import { cardData, sentenceText } from "../../src/lib/card/index.ts";
 import { assistantText, nextRequestId, prompt, teammate, transcript } from "../helpers/transcript.ts";
 
 const sid = (c: string) => `${c.repeat(8)}-1111-4111-8111-111111111111`;

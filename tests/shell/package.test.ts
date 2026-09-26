@@ -12,9 +12,9 @@ test("the source, the card's fonts and sheet, and the licences ship in the tarba
   expect(paths).toEqual(
     expect.arrayContaining([
       "src/index.ts",
-      "src/card.ts",
-      "src/cardhtml.ts",
-      "src/image.ts",
+      "src/lib/card/card.ts",
+      "src/lib/card/cardhtml.ts",
+      "src/lib/card/image.io.ts",
       "assets/characters.webp",
       "assets/fonts/inter-400.woff2",
       "assets/fonts/inter-700.woff2",
@@ -28,6 +28,10 @@ test("the source, the card's fonts and sheet, and the licences ship in the tarba
       "package.json",
     ]),
   );
+});
+
+test("the bin ships", async () => {
+  expect(paths).toContain(JSON.parse(await Bun.file(join(import.meta.dir, "../../package.json")).text()).bin.zapara);
 });
 
 test("tests, docs, scripts, CI and media do not", () => {

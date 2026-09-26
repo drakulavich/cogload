@@ -2,10 +2,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { cardData } from "../../src/card.ts";
-import { cardHtml } from "../../src/cardhtml.ts";
-import { loadAssets } from "../../src/image.ts";
-import { report } from "../../src/report.ts";
+import { cardData, cardHtml, loadAssets } from "../../src/lib/card/index.ts";
+import { report } from "../../src/lib/report/index.ts";
 import { WEBVIEW_TEST_TIMEOUT, webviewMissing } from "../helpers/webview.ts";
 
 const CLI = join(import.meta.dir, "../../src/index.ts");

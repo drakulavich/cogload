@@ -10,10 +10,9 @@
 // path, a project root, or message text.
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { windowBounds } from "../src/derive.ts";
-import { parseTranscript } from "../src/parse.ts";
-import { scan } from "../src/scan.ts";
-import type { EventKind } from "../src/types.ts";
+import { windowBounds } from "../src/lib/metrics/index.ts";
+import { parseTranscript, scan } from "../src/lib/transcripts/index.ts";
+import type { EventKind } from "../src/lib/types.ts";
 
 type Bucket = {
   hour: number;

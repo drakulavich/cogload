@@ -3,16 +3,13 @@
 import { readFileSync, statSync } from "node:fs";
 import { cpus, homedir } from "node:os";
 import { join } from "node:path";
-import { openCache, type TranscriptCache } from "./cache.ts";
-import { cardData, sentenceText } from "./card.ts";
-import { cardHtml } from "./cardhtml.ts";
-import { localDate } from "./derive.ts";
-import { loadAssets, openCard, renderCard } from "./image.ts";
-import { renderDay, renderJson, renderWeek } from "./render.ts";
-import { READERS, report, type Timing } from "./report.ts";
-import { renderStatus, statusOf } from "./status.ts";
-import { writeStatus } from "./statusfile.ts";
-import type { Day } from "./types.ts";
+import { openCache, type TranscriptCache } from "./lib/transcripts/index.ts";
+import { cardData, sentenceText, cardHtml, loadAssets, openCard, renderCard } from "./lib/card/index.ts";
+import { localDate } from "./lib/metrics/index.ts";
+import { renderDay, renderJson, renderWeek } from "./lib/text/index.ts";
+import { READERS, report, type Timing } from "./lib/report/index.ts";
+import { renderStatus, statusOf, writeStatus } from "./lib/status/index.ts";
+import type { Day } from "./lib/types.ts";
 
 // Read only when --version is handled, so a broken package.json fails inside
 // the guarded catch instead of at module load.

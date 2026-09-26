@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { cardData, type CardData } from "../../src/card.ts";
-import { cardHtml } from "../../src/cardhtml.ts";
-import { loadAssets } from "../../src/image.ts";
-import { report } from "../../src/report.ts";
+import { cardData, type CardData, cardHtml, loadAssets } from "../../src/lib/card/index.ts";
+import { report } from "../../src/lib/report/index.ts";
 
 const projects = join(import.meta.dir, "../fixtures/busy-week/projects");
 const days = await report({ projects, to: "2026-09-20", days: 14 });
