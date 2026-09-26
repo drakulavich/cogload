@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-09-27
+
 ### Changed
 - `--verbose` now accounts for the whole run. New rows time Bun's start
   and zapara's module load, opening the cache, and saving to it, and
