@@ -21,7 +21,7 @@ jobs:
           bun-version: ${{ matrix.bun-version }}
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
-      - run: bun run lint:deps
+      - run: bun run lint
       - run: bun run test
         env:
           ZAPARA_REQUIRE_WEBVIEW: "1"

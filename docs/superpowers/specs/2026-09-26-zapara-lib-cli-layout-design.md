@@ -73,40 +73,46 @@ them.
 
 ## Checked by machine
 
-### Imports: dependency-cruiser
+`bun run lint` runs Biome and then Knip over `src`, `tests` and `scripts`,
+and `bun run check` runs it between the typecheck and the tests, as CI does.
+Neither tool uses the TypeScript compiler API, which TypeScript 7.0 does not
+ship. Each rule carries a `message` written for the agent that breaks it:
+what the rule protects and where the code should go instead.
 
-`dependency-cruiser` becomes a devDependency, configured in
-`.dependency-cruiser.cjs`, run as `bun run lint:deps` (`depcruise src tests
-scripts`), and added to `bun run check` and to CI. Each rule's `comment` is
-written for the agent that breaks it: what the rule protects and where the
-code should go instead.
+### Biome
 
-| rule | from | to | comment says |
+`biome.json` turns off every rule except these, with `overrides` choosing
+the files each one applies to:
+
+| rule | in | forbids | message says |
 |---|---|---|---|
-| `pure-no-builtins` | `src/` files not named `*.io.ts`, except `src/cli/index.ts` | `dependencyTypes: core` | pure code takes data as arguments; move the I/O into a `*.io.ts` file |
-| `cli-via-index` | `^src/cli/` | `^src/lib/[^/]+/` not ending `index.ts` | import the feature's `index.ts`, and export from it what the CLI needs |
-| `feature-via-index` | `^src/lib/([^/]+)/` | `^src/lib/(?!$1)[^/]+/` not ending `index.ts` | another feature is reached through its `index.ts` |
-| `outside-via-index` | `^(tests\|scripts)/` | `^src/lib/[^/]+/` not ending `index.ts` | tests and scripts use a feature's `index.ts` like any caller |
-| `lib-not-cli` | `^src/lib/` | `^src/cli/` | the library never depends on the CLI |
-| `no-circular` | any | `circular: true` | break the cycle by moving the shared piece down, usually into `lib/types.ts` |
-| `no-orphans` | `^src/` except `src/cli/index.ts` | `orphan: true` | an unused module is deleted, not kept |
+| `noNodejsModules` | pure files | `node:` imports | pure code takes data as arguments; move the I/O into a `*.io.ts` file |
+| `noRestrictedGlobals` | pure files | `Bun`, `process`, `Buffer` | the same |
+| `noRestrictedImports` | pure files | `bun` and `bun:*` imports | the same |
+| `noRestrictedImports` | `src/lib/` | `../<feature>/<file>.ts` other than `index.ts` | another feature is reached through its `index.ts` |
+| `noRestrictedImports` | `src/lib/` | anything under `cli/` | the library never depends on the CLI |
+| `noRestrictedImports` | `src/cli/` | `../lib/<feature>/<file>.ts` other than `index.ts` | import the feature's `index.ts`, and export from it what the CLI needs |
+| `noRestrictedImports` | `tests/`, `scripts/` | `src/lib/<feature>/<file>.ts` other than `index.ts` | tests and scripts use a feature's `index.ts` like any caller |
+| `noImportCycles` | everywhere, type-only imports included | a cycle | break it by moving the shared piece down, usually into `lib/types.ts` |
 
-### Globals: a second typecheck
+Pure files are `src/lib/**/*.ts` except `**/*.io.ts`, plus
+`src/cli/args.ts` and `src/cli/timing.ts`. Import patterns match the
+specifier as written, so they rely on the layout: a feature's own files
+import each other with `./`, and a sibling feature is always `../<feature>/`.
+`Date.now()` stays legal to the linter; that rule remains a review item.
 
-dependency-cruiser sees imports, and `Bun.WebView`, `process.env` and
-`Buffer` are globals. `tsconfig.pure.json` extends the main config, sets
-`"types": []` so no Bun or Node types load, and includes exactly the pure
-files: `src/lib/**/*.ts` except `**/*.io.ts`, plus `src/cli/args.ts` and
-`src/cli/timing.ts`. `bun run typecheck` runs `tsc --noEmit` and then
-`tsc --noEmit -p tsconfig.pure.json`, so a pure file that names `Bun`,
-`process` or `Buffer` fails the check. `Date.now()` stays legal to the
-compiler; that rule remains a review item.
+### Knip
+
+`knip.json` names the entry points (the `bin` from `package.json`, every
+file under `scripts/` and `tests/`) and the project files (`src/**/*.ts`).
+`knip --include files` fails on a file under `src/` that no entry point
+reaches, since an unused module is deleted, not kept.
 
 ## What else moves
 
 - `package.json`: `bin` points at `src/cli/index.ts`; `files` keeps shipping
-  `src/` without tests; `scripts` gains `lint:deps`, and `check` runs
-  typecheck, `lint:deps` and the tests.
+  `src/` without tests; `scripts` gains `lint`, and `check` runs
+  typecheck, `lint` and the tests.
 - The cache fingerprint in `cache.io.ts` reads `lib/transcripts/parse.ts`
   and `lib/types.ts`. If the move changes either file's bytes (an import
   path is enough), the first run after it reparses every transcript once.
@@ -125,7 +131,7 @@ is the only devDependency; that is known and left for a separate change.
 
 ## Acceptance
 
-- `bun run check` passes: both typechecks, `lint:deps` with zero violations,
+- `bun run check` passes: the typecheck, `lint` with no errors,
   every test.
 - No test assertion changes; the diff of `tests/` is file moves and import
   paths.
@@ -133,7 +139,7 @@ is the only devDependency; that is known and left for a separate change.
   are the same bytes as 0.8.0 over the same projects tree and the same `--to`.
   `zapara status` reads the clock and takes no `--to`, so its tests in
   `tests/cli/` are what holds it.
-- Each dependency-cruiser rule and the pure typecheck is shown to fire once:
+- Each Biome rule and the Knip check is shown to fire once:
   the plan makes one throwaway violation per rule, runs the check, and
   records the message.
 

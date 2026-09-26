@@ -337,15 +337,13 @@ everything up to `asOf` and nothing after. Fixture tests feed it directly with
 in-memory transcripts and get the statistics back without touching the disk;
 the CLI tests and the report test cover the shell.
 
-Two checks in `bun run check` hold the rules. `bun run lint:deps` runs
-dependency-cruiser over `src`, `tests` and `scripts` with the rules in
-`.dependency-cruiser.cjs`: no `node:` or `bun:` import outside `*.io.ts` and
-`src/cli/index.ts`, features and callers reach a feature only through its
-`index.ts`, the library never imports the CLI, no cycles, no unused modules.
-`bun run typecheck` runs `tsc --noEmit`, then `scripts/typecheck-pure.ts`,
-which type-checks the pure files with no Bun or Node types loaded, so a pure
-file that names `Bun`, `process` or `Buffer` fails. The current time is a
-parameter, never `Date.now()` inside the core; that one stays a review item.
+`bun run lint` holds the rules, as part of `bun run check`. Biome
+(`biome.json`) fails a pure file that imports `node:` or `bun:` or names
+`Bun`, `process` or `Buffer`, an import that reaches into another feature
+past its `index.ts`, a library file that imports the CLI, and any import
+cycle. Knip (`knip.json`) fails a file under `src/` that nothing uses. The
+current time is a parameter, never `Date.now()` inside the core; that one
+stays a review item.
 Named exports only. No runtime dependencies.
 
 Performance target: a week view over this machine's `~/.claude/projects` (about

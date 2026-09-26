@@ -17,14 +17,14 @@
     "dev": "bun run src/cli/index.ts",
     "stats": "bun scripts/signal-stats.ts",
     "test": "TZ=UTC bun test",
-    "typecheck": "tsc --noEmit && bun scripts/typecheck-pure.ts",
-    "lint:deps": "depcruise --output-type err-long src tests scripts",
-    "check": "bun run typecheck && bun run lint:deps && bun run test"
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint && knip --include files",
+    "check": "bun run typecheck && bun run lint && bun run test"
   },
   "devDependencies": {
-    "@swc/core": "^1.16.2",
+    "@biomejs/biome": "^2.5.14",
     "@types/bun": "^1.4.0",
-    "dependency-cruiser": "^18.4.0",
+    "knip": "^6.38.0",
     "typescript": "^7.0.2"
   }
 }
