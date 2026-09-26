@@ -8,7 +8,7 @@ import type { Day, Event } from "./types.ts";
 
 export type ReportOptions = { projects: string; to: string; days: number; now?: Date };
 // What --verbose prints about a run: counts and milliseconds, never a path.
-export type Timing = ScanStats & { inWindow: number; read: number; bytes: number; cache: { hits: number; misses: number } | null; scanMs: number; readMs: number; analyzeMs: number; render?: { format: string; ms: number }; totalMs?: number };
+export type Timing = ScanStats & { inWindow: number; read: number; bytes: number; cache: { hits: number; misses: number } | null; startMs?: number; openMs?: number; scanMs: number; lookupMs: number; readMs: number; analyzeMs: number; saveMs: number; render?: { format: string; ms: number }; writeMs?: number; totalMs?: number };
 
 // Reading one file at a time left the disk idle between files: 1.6 GB took 5.4 s
 // sequentially and 0.9 s in parallel. The cap keeps open files well under the limit.
@@ -40,6 +40,8 @@ export async function report(o: ReportOptions, timing?: Timing, cache?: Transcri
   const scanMs = performance.now() - t;
   t = performance.now();
   const hits = cache ? await cache.hits(entries, cutoffMs) : new Map<string, Event[]>();
+  const lookupMs = performance.now() - t;
+  t = performance.now();
   const misses = entries.filter((e) => !hits.has(e.path));
   const reads = new Map<string, Read>();
   let next = 0;
@@ -69,7 +71,9 @@ export async function report(o: ReportOptions, timing?: Timing, cache?: Transcri
   });
   const days = analyzeEvents(events, window);
   const analyzeMs = performance.now() - t;
+  t = performance.now();
   cache?.save(entries.filter((e) => hits.has(e.path)), fresh, Date.now());
-  if (timing) Object.assign(timing, { ...stats, inWindow: entries.length, read: reads.size, bytes, cache: cache ? { hits: hits.size, misses: misses.length } : null, scanMs, readMs, analyzeMs });
+  const saveMs = performance.now() - t;
+  if (timing) Object.assign(timing, { ...stats, inWindow: entries.length, read: reads.size, bytes, cache: cache ? { hits: hits.size, misses: misses.length } : null, scanMs, lookupMs, readMs, analyzeMs, saveMs });
   return days;
 }

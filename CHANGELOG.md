@@ -5,6 +5,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- `--verbose` now accounts for the whole run. New rows time Bun's start
+  and zapara's module load, opening the cache, and saving to it, and
+  `zapara status` adds the write of its status file. The `cache` row now
+  carries the milliseconds spent looking files up in the cache, so `read`
+  counts only the reads of files the cache missed.
+
 ## [0.8.0] - 2026-09-26
 
 ### Added

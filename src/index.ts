@@ -178,8 +178,10 @@ async function main(): Promise<number> {
   const argv = process.argv.slice(2);
   const now = new Date();
   const a = parseArgs(argv, now, process.env, process.stdout.isTTY === true);
-  const timing = a.verbose ? ({} as Timing) : undefined;
+  const timing = a.verbose ? ({ startMs: performance.now() } as Timing) : undefined;
+  const t = performance.now();
   const cache = a.cache ? openCache(process.env) : null;
+  if (timing && a.cache) timing.openMs = performance.now() - t;
   try {
     const code = a.command === "card" ? await card(a, cache, timing) : a.command === "status" ? await status(a, now, cache, timing) : await table(a, now, cache, timing);
     if (timing) process.stderr.write(timingLines(timing));
@@ -202,7 +204,9 @@ async function table(a: Args, now: Date, cache: TranscriptCache | null, timing?:
 async function status(a: Args, now: Date, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
   const days: Day[] = await report({ projects: a.projects, to: a.to, days: a.days, now }, timing, cache);
   const line = renderStatus(statusOf(days[0]!, now));
+  const t = performance.now();
   await writeStatus(line, process.env);
+  if (timing) timing.writeMs = performance.now() - t;
   process.stdout.write(line);
   return 0;
 }
@@ -261,11 +265,15 @@ function timingLines(t: Timing): string {
   const row = (label: string, what: string, ms: number) => `${label.padEnd(8)}${what.padEnd(44)}${String(Math.round(ms)).padStart(7)} ms\n`;
   const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
   return `zapara ${ver} · bun ${Bun.version} · ${process.platform} ${process.arch} · ${cpus().length} cpus\n`
+    + row("start", "bun, modules, arguments", t.startMs ?? 0)
+    + (t.openMs !== undefined ? row("open", "cache", t.openMs) : "")
     + row("scan", `${plural(t.files, "file")}, ${t.inWindow} in window, ${plural(t.tailChecks, "tail check")}`, t.scanMs)
+    + (t.cache ? row("cache", `${plural(t.cache.hits, "hit")}, ${plural(t.cache.misses, "miss", "misses")}`, t.lookupMs) : `${"cache".padEnd(8)}off\n`)
     + row("read", `${plural(t.read, "file")}, ${(t.bytes / 1e6).toFixed(1)} MB, ${READERS} at a time`, t.readMs)
-    + `${"cache".padEnd(8)}${t.cache ? `${plural(t.cache.hits, "hit")}, ${plural(t.cache.misses, "miss", "misses")}` : "off"}\n`
     + row("analyze", "", t.analyzeMs)
+    + (t.cache ? row("save", "cache", t.saveMs) : "")
     + (t.render ? row("render", t.render.format, t.render.ms) : "")
+    + (t.writeMs !== undefined ? row("write", "status file", t.writeMs) : "")
     + row("total", "", t.totalMs ?? performance.now());
 }
 

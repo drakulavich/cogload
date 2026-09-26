@@ -43,8 +43,32 @@ describe("--verbose", () => {
     expect(plain.err).toBe("");
     const lines = r.err.trimEnd().split("\n");
     expect(lines[0]).toMatch(/^zapara \d+\.\d+\.\d+ · bun \d+\.\d+\.\d+ · \w+ \w+ · \d+ cpus$/);
-    expect(lines.slice(1).map((l) => l.split(" ")[0])).toEqual(["scan", "read", "cache", "analyze", "total"]);
-    for (const l of lines.slice(1)) if (!l.startsWith("cache ")) expect(l).toMatch(new RegExp(MS));
+    expect(lines.slice(1).map((l) => l.split(" ")[0])).toEqual(["start", "open", "scan", "cache", "read", "analyze", "save", "total"]);
+    for (const l of lines.slice(1)) expect(l).toMatch(new RegExp(MS));
+  });
+
+  test("without the cache there is nothing to open, look up or save", async () => {
+    const r = await run("--to", "2026-09-14", "--days", "2", "--json", "--verbose", "--no-cache");
+    expect(r.err.trimEnd().split("\n").slice(1).map((l) => l.split(" ")[0])).toEqual(["start", "scan", "cache", "read", "analyze", "total"]);
+    expect(lineOf(r.err, "cache")).toBe("cache   off");
+  });
+
+  test("the rows add up to the total", async () => {
+    // Each row is rounded on its own, so the sum may drift by half a millisecond a row.
+    const r = await run("status", "--verbose");
+    const rows = r.err.trimEnd().split("\n").slice(1).map((l) => [l.split(" ")[0]!, Number(/(\d+) ms$/.exec(l)![1])] as const);
+    const total = rows.pop()![1];
+    const sum = rows.reduce((n, [, ms]) => n + ms, 0);
+    expect(total - sum).toBeLessThanOrEqual(5);
+  });
+
+  test("status adds the write of its file", async () => {
+    const r = await run("status", "--verbose");
+    expect(r.code).toBe(0);
+    expect(lineOf(r.err, "write")).toMatch(new RegExp(String.raw`^write\s+status file` + MS));
+    expect(r.err).not.toContain("/");
+    const grid = await run("--to", "2026-09-14", "--days", "2", "--json", "--verbose");
+    expect(lineOf(grid.err, "write")).toBeUndefined();
   });
 
   test("counts what was scanned and read, and names no path", async () => {
