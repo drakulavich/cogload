@@ -184,12 +184,15 @@ no date can reach the page.
 
 The card is an HTML page, 1200×630 CSS pixels, produced by a pure function
 from the card data, and photographed by a headless browser engine that Bun
-drives through `Bun.WebView` (WebKit on macOS, an installed Chrome
-elsewhere). The output picture is always 2400×1260 pixels: the page is
-loaded in a 2400×1260 viewport with `zoom: 2` on the root element, so the
-engine lays the card out at twice its size and text is rendered at that
-size rather than upscaled; the screenshot is then resized to exactly
-2400×1260 with `Bun.Image` when the device pixel ratio made it larger. PNG
+drives through `Bun.WebView` (WebKit on macOS, an installed Chromium browser
+such as Chrome, Chromium, Brave, or Edge elsewhere; `BUN_CHROME_PATH` can
+select its executable). The output picture is always 2400×1260 pixels: the page
+sets `zoom: 2` on the root element, so the engine lays the card out at twice
+its size and text is rendered at that size rather than upscaled. On WebKit the
+renderer reads the device pixel ratio first and divides both the viewport
+(2400×1260) and the zoom by it, so a 2x screen shoots 2400×1260 directly
+instead of 4800×2520; Chrome shoots at 1x. `Bun.Image` resizes the shot only
+when rounding leaves it off size. PNG
 is the screenshot's own format; WebP is re-encoded from it with `Bun.Image`
 at quality 90.
 
