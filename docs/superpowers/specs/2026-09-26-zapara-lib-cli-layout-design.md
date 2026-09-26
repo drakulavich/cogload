@@ -103,8 +103,9 @@ import each other with `./`, and a sibling feature is always `../<feature>/`.
 
 ### Knip
 
-`knip.json` names the entry points (the `bin` from `package.json`, every
-file under `scripts/` and `tests/`) and the project files (`src/**/*.ts`).
+`knip.json` adds the files under `scripts/` to the entry points Knip finds
+itself (the `bin` from `package.json`, and the test files through its Bun
+plugin), and names the project files (`src/**/*.ts`).
 `knip --include files` fails on a file under `src/` that no entry point
 reaches, since an unused module is deleted, not kept.
 
