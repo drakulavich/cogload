@@ -48,7 +48,7 @@ const uncached = async (projects: string, ...args: string[]) => spawn(await temp
 
 const lineOf = (err: string, label: string) => err.split("\n").find((l) => l.startsWith(`${label} `));
 function hitsOf(err: string): { hits: number; misses: number } {
-  const m = /^cache   (\d+) hits?, (\d+) miss(?:es)?$/.exec(lineOf(err, "cache") ?? "");
+  const m = /^cache   (\d+) hits?, (\d+) miss(?:es)?\s+\d+ ms$/.exec(lineOf(err, "cache") ?? "");
   if (!m) throw new Error("no cache line with counts");
   return { hits: Number(m[1]), misses: Number(m[2]) };
 }

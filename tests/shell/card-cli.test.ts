@@ -23,7 +23,10 @@ afterEach(async () => {
 });
 
 async function run(...args: string[]): Promise<{ code: number; out: string; err: string }> {
-  const p = Bun.spawn(["bun", CLI, "--projects", projects, ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+  return runWith({}, ...args);
+}
+async function runWith(env: Record<string, string>, ...args: string[]): Promise<{ code: number; out: string; err: string }> {
+  const p = Bun.spawn(["bun", CLI, "--projects", projects, ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home, ...env } });
   const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
   return { code, out, err };
 }
@@ -228,16 +231,19 @@ describe("zapara card", () => {
     }
   });
 
-  test.skipIf(webviewMissing !== null)("a picture that cannot be written says the same and names no path", async () => {
-    // The rendered bytes take a different write from the .html page above, so
-    // the picture needs its own proof that no path reaches stderr.
+  // The rendered bytes take a different write from the .html page above, so
+  // the picture needs its own proof that no path reaches stderr.
+  test.skipIf(webviewMissing !== null)("a picture into a missing directory says the same and names no path", async () => {
     const r = await run("card", "--to", "2026-09-20", "--out", join(cwd, "missing", "c.png"));
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
     expect(r.err).toBe("zapara: cannot write the card: check the --out directory\n");
     expect(r.err).not.toContain(cwd);
     expect(r.err).not.toContain("ENOENT");
-    if (process.getuid?.() === 0) return; // root writes into a 0500 directory anyway
+  }, WEBVIEW_TEST_TIMEOUT);
+
+  // root writes into a 0500 directory anyway
+  test.skipIf(webviewMissing !== null || process.getuid?.() === 0)("a picture into a locked directory says the same and names no path", async () => {
     const locked = join(cwd, "locked-png");
     await mkdir(locked);
     await chmod(locked, 0o500);
@@ -251,7 +257,27 @@ describe("zapara card", () => {
     } finally {
       await chmod(locked, 0o700).catch(() => {});
     }
-  }, 30_000);
+  }, WEBVIEW_TEST_TIMEOUT);
+
+  test.skipIf(webviewMissing !== null)("a picture leaves no page behind in the temporary directory, drawn or not", async () => {
+    const tmp = await mkdtemp(join(tmpdir(), "zapara-tmp-"));
+    try {
+      const drawn = await runWith({ TMPDIR: tmp }, "card", "--to", "2026-09-20", "--out", "c.png");
+      expect(drawn.code).toBe(0);
+      const unwritable = await runWith({ TMPDIR: tmp }, "card", "--to", "2026-09-20", "--out", join(cwd, "missing", "c.png"));
+      expect(unwritable.code).toBe(1);
+      expect((await readdir(tmp)).filter((name) => name.startsWith("zapara-card-"))).toEqual([]);
+    } finally { await rm(tmp, { recursive: true, force: true }); }
+  }, WEBVIEW_TEST_TIMEOUT);
+
+  test("a picture with no writable temporary directory exits 1 with one line that names no path", async () => {
+    const tmp = join(cwd, "no-such-tmp");
+    const r = await runWith({ TMPDIR: tmp }, "card", "--to", "2026-09-20", "--out", "c.png");
+    expect(r.code).toBe(1);
+    expect(r.out).toBe("");
+    expect(r.err).toBe("zapara: cannot draw the card: the temporary directory is not writable\n");
+    expect(await files()).toEqual([]);
+  });
 
   test("--out on the grid and --explain on card are usage errors", async () => {
     expect((await run("--out", "x.png")).code).toBe(2);
@@ -259,8 +285,8 @@ describe("zapara card", () => {
     expect((await run("card", "--days", "91", "--out", "x.html")).code).toBe(2);
   });
 
-  test.skipIf(webviewMissing !== null)("--out x.png and --out x.webp are 2400x1260 pictures", async () => {
-    for (const [name, format] of [["x.png", "png"], ["x.webp", "webp"]] as const) {
+  for (const [name, format] of [["x.png", "png"], ["x.webp", "webp"]] as const) {
+    test.skipIf(webviewMissing !== null)(`--out ${name} is a 2400x1260 picture`, async () => {
       const r = await run("card", "--to", "2026-09-20", "--out", name);
       expect(r.code).toBe(0);
       expect(r.out.endsWith(`wrote ${name}\n`)).toBe(true);
@@ -268,11 +294,11 @@ describe("zapara card", () => {
       const bytes = await readFile(join(cwd, name));
       expect(bytes.length).toBeGreaterThan(20_000);
       expect(await new Bun.Image(bytes).metadata()).toMatchObject({ width: 2400, height: 1260, format });
-    }
-  }, WEBVIEW_TEST_TIMEOUT);
+    }, WEBVIEW_TEST_TIMEOUT);
+  }
 
   test.skipIf(webviewMissing !== null)("in a terminal, a picture says it is being drawn and clears that line before the result", async () => {
-    const r = await runHalfTerminal('exec bun "$0" "$@" > out.txt', ["card", "--to", "2026-09-20", "--out", "c.png"], WEBVIEW_TEST_TIMEOUT / 2);
+    const r = await runHalfTerminal('exec bun "$0" "$@" > out.txt', ["card", "--to", "2026-09-20", "--out", "c.png"], (WEBVIEW_TEST_TIMEOUT * 2) / 3);
     expect(r.code).toBe(0);
     expect(r.out).toBe("drawing the card…\r\x1b[K");
     expect(await readFile(join(cwd, "out.txt"), "utf8")).toMatch(/^The Marathoner:.*\nwrote c\.png\n$/);

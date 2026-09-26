@@ -5,6 +5,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- `--verbose` now accounts for the whole run. New rows time Bun's start
+  and zapara's module load, opening the cache, and saving to it, and
+  `zapara status` adds the write of its status file. The `cache` row now
+  carries the milliseconds spent looking files up in the cache, so `read`
+  counts only the reads of files the cache missed.
+- A PNG or WebP card loads its page from a file in the temporary directory
+  instead of a data: URL, and zapara removes that file when the render ends,
+  whether it succeeded or failed. With six processes rendering at once, 0
+  of 288 renders from a file hung, against about 1 in 48 from a data: URL,
+  which ended in `render timed out`. The median render is about 120 ms
+  slower. When the temporary directory cannot be written, zapara exits 1
+  with `cannot draw the card: the temporary directory is not writable`.
+
 ## [0.8.0] - 2026-09-26
 
 ### Added
