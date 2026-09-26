@@ -3,10 +3,8 @@
 // pins as GOLDEN. Run it after any intentional change to the look or the assets and
 // paste the hash; an unintentional change fails the test instead.
 import { join } from "node:path";
-import { cardData } from "../src/card.ts";
-import { cardHtml } from "../src/cardhtml.ts";
-import { loadAssets } from "../src/image.ts";
-import { report } from "../src/report.ts";
+import { cardData, cardHtml, loadAssets } from "../src/lib/card/index.ts";
+import { report } from "../src/lib/report/index.ts";
 
 const projects = join(import.meta.dir, "..", "tests", "fixtures", "busy-week", "projects");
 const card = cardData(await report({ projects, to: "2026-09-20", days: 14 }), { days: 14 });

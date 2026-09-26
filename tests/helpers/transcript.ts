@@ -2,7 +2,7 @@
 // ~/.claude/projects; text is a placeholder. Keep this the only place that knows the shape.
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type { Transcript } from "../../src/types.ts";
+import type { Transcript } from "../../src/lib/types.ts";
 
 let counter = 0;
 const uuid = () => `00000000-0000-4000-8000-${String(++counter).padStart(12, "0")}`;

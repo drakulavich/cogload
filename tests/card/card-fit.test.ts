@@ -2,9 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CardData, Character, Segment } from "../../src/card.ts";
-import { cardHtml } from "../../src/cardhtml.ts";
-import { loadAssets, renderCard } from "../../src/image.ts";
+import type { CardData, Character, Segment } from "../../src/lib/card/index.ts";
+import { cardHtml, loadAssets, renderCard } from "../../src/lib/card/index.ts";
 import { openPage, WEBVIEW_STEP_TIMEOUT, WEBVIEW_TEST_TIMEOUT, webviewMissing } from "../helpers/webview.ts";
 
 const assets = await loadAssets();

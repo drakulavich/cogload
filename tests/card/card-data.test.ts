@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { cardData, sentenceText } from "../../src/card.ts";
-import { report } from "../../src/report.ts";
-import { analyze } from "../../src/analyze.ts";
+import { cardData, sentenceText } from "../../src/lib/card/index.ts";
+import { report } from "../../src/lib/report/index.ts";
+import { analyze } from "../../src/lib/metrics/index.ts";
 import { prompt, transcript } from "../helpers/transcript.ts";
 
 // The 7-day fixture seen through the card's default 14-day window ending on the

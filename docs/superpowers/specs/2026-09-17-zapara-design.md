@@ -282,40 +282,49 @@ empty day table) and exits 0.
 
 ## Architecture
 
-Functional core, imperative shell. The core is pure functions over plain data:
-no file system, no clock, no environment, no output. The shell is six small
-files that do all the I/O and call the core.
+Functional core, imperative shell, grouped by feature. `src/lib/` is the
+library: one folder per feature, each with an `index.ts`. `src/cli/` is the
+command line that calls it. The layout and its reasons are in
+`2026-09-26-zapara-lib-cli-layout-design.md`.
 
 ```
-shell (I/O)
-  src/index.ts       argv → options; calls report(); prints; exit codes; the only try/catch
-  src/report.ts      report(options) → Day[]: lists files (scan), reads them, calls analyze()
-  src/scan.ts        projects dir + cutoff → sorted ScanEntry[] { path, dev, ino, size, mtimeMs }
-                      (fs.stat for mtime)
-  src/image.ts       card assets → CardAssets; card HTML → PNG/WebP file through Bun.WebView and
-                      Bun.Image; the only module allowed to use those or read the assets (see
-                      2026-09-18-zapara-card-design.md)
-  src/statusfile.ts  today's load → ~/.claude/zapara/status.json (see
-                      2026-09-19-zapara-status-file-design.md)
-  src/cache.ts       parsed events cached by a transcript's device and inode; the only module
-                      allowed to use bun:sqlite, or read src/parse.ts and src/types.ts for the
-                      parser fingerprint (see 2026-09-26-zapara-transcript-cache-design.md)
+src/cli/
+  index.ts        the bin: main(), the versions for --verbose, errors → exit codes
+  args.ts         USAGE, HINT, Args, the usage errors, parseArgs(argv, now, env, isTTY, projects)
+  timing.ts       timingLines(timing, env) → the --verbose lines
+  commands.io.ts  grid and day tables, status, card
+src/lib/
+  types.ts        Event, EventKind, Day, HourBucket, LiveBucket, Metrics, Totals, Window, Transcript
+  transcripts/    parse.ts       JSONL text → Event[]
+                  scan.io.ts     projects dir + cutoff → sorted ScanEntry[] { path, dev, ino, size, mtimeMs }
+                  cache.io.ts    parsed events cached by a transcript's device and inode; the only
+                                 module that uses bun:sqlite, and it reads parse.ts and ../types.ts
+                                 for the parser fingerprint (2026-09-26-zapara-transcript-cache-design.md)
+  metrics/        analyze.ts     analyze(transcripts, window) → Day[]; analyzeEvents(events, window)
+                  derive.ts      Event[] + window → Day[] with HourBucket metrics
+                  score.ts       metrics → { index, level, parts }; WEIGHTS, NORMS, LEVELS
+  report/         report.io.ts   report(options) → Day[]: scan, cache lookup, read, analyze
+  text/           render.ts      Day[] → week / day / explain / json strings
+                  format.ts      compact counts and plurals
+  card/           card.ts        Day[] → CardData
+                  cardhtml.ts    CardData + CardAssets → the card page
+                  image.io.ts    reads the assets, renders the page to PNG or WebP through
+                                 Bun.WebView and Bun.Image, opens the result
+                                 (2026-09-18-zapara-card-design.md)
+  status/         status.ts      today's Day → the status line
+                  statusfile.io.ts  the line → ~/.claude/zapara/status.json
+                                 (2026-09-19-zapara-status-file-design.md)
 ```
 
-Three of the shell files write to disk: `src/image.ts` (the card),
-`src/statusfile.ts` (the status file) and `src/cache.ts` (the parse cache);
-the rest only read.
+Two naming rules carry the design. A file named `*.io.ts` may touch the
+world: the file system, the clock, the environment, `Bun`, `process`. Every
+other file under `src/lib/`, and `src/cli/args.ts` and `src/cli/timing.ts`,
+is pure. A feature's `index.ts` is its only door for other features, the CLI,
+tests and scripts; `src/lib/types.ts` is imported directly.
 
-```
-core (pure)
-  src/analyze.ts  analyze(transcripts, window) → Day[]   transcripts = { path, text }[]
-                  analyzeEvents(events, window) → Day[] over events already parsed
-  src/parse.ts    JSONL text → Event[]
-  src/derive.ts   Event[] + window → Day[] with HourBucket metrics (sorts, applies look-back)
-  src/score.ts    metrics → { index, level, parts }; exports WEIGHTS, NORMS, LEVELS
-  src/render.ts   Day[] → string for week / day / explain / json (never writes)
-  src/types.ts    Event, HourBucket, Day, Score, Window
-```
+Three files write to disk: `card/image.io.ts` (the card, and the page it
+renders from, in a temporary directory it removes), `status/statusfile.io.ts`
+(the status file) and `transcripts/cache.io.ts` (the parse cache).
 
 `analyze()` is the core's entry point: it takes transcript contents already in
 memory, in the real JSONL format, plus a window (`{ to, days, now? }`) and
@@ -326,17 +335,16 @@ being written, and every event timestamped after `now` is excluded from that
 day's buckets and totals, even one inside the window, so the snapshot covers
 everything up to `asOf` and nothing after. Fixture tests feed it directly with
 in-memory transcripts and get the statistics back without touching the disk;
-the CLI test and the report
-test cover the shell.
+the CLI tests and the report test cover the shell.
 
-Rules: the shell may import any core module; core modules never import the
-shell (`render` and `derive` import `score` and `types`; `analyze` imports
-`parse` and `derive`; `report` imports `scan`, `cache`, `parse`, `analyze`
-(`analyzeEvents`) and `derive` (`windowBounds`); `index` imports `report`,
-`cache`, `render` and `derive` (`localDate`); nothing imports `index`). Core modules import nothing from
-`node:` or `Bun`. The current time is a parameter, never `Date.now()` inside
-the core. Named exports only. No runtime dependencies; `typescript` is the one
-devDependency, for `tsc --noEmit`.
+`bun run lint` holds the rules, as part of `bun run check`. Biome
+(`biome.json`) fails a pure file that imports `node:` or `bun:` or names
+`Bun`, `process` or `Buffer`, an import that reaches into another feature
+past its `index.ts`, a library file that imports the CLI, and any import
+cycle. Knip (`knip.json`) fails a file under `src/` that nothing uses. The
+current time is a parameter, never `Date.now()` inside the core; that one
+stays a review item.
+Named exports only. No runtime dependencies.
 
 Performance target: a week view over this machine's `~/.claude/projects` (about
 2 900 files, mostly filtered by mtime) under 2 seconds.
