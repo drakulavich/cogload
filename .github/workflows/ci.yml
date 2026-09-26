@@ -8,11 +8,17 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 1.4.0 is the floor package.json declares in engines.bun.
+        bun-version: ["1.4.2", "1.4.0"]
+    name: check (bun ${{ matrix.bun-version }})
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: ${{ matrix.bun-version }}
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run test
