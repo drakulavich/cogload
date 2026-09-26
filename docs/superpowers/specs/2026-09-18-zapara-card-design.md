@@ -296,11 +296,13 @@ with no path. `renderCard` writes the HTML as is when `out` ends in `.html`. Eve
 goes through one helper that maps any failure to the `cannot write the card`
 line above, so no path reaches stderr.
 Otherwise it opens `new Bun.WebView({ width: 2400, height: 1260 })`,
-navigates to a `data:text/html;charset=utf-8` URL of the page, waits until
+writes the page to a 0600 file in a `zapara-card-` temporary directory,
+navigates to its `file://` URL, waits until
 `document.fonts.status` is `loaded` and every `<img>` reports `complete`
 (polled through `evaluate`, 15-second budget), takes a PNG screenshot, resizes
 it to 2400×1260 with `Bun.Image` when it is larger, re-encodes to WebP when
-asked, writes the file, and closes the view (also on failure). A constructor
+asked, writes the file, and closes the view and removes the temporary
+directory (also on failure). A constructor
 or navigation failure whose message says no browser is available becomes the
 `card needs a browser engine` line.
 
