@@ -136,4 +136,16 @@ describe("renderCard", () => {
       expect(await readdir(dir)).toEqual([]);
     } finally { await rm(dir, { recursive: true, force: true }); }
   }, WEBVIEW_TEST_TIMEOUT);
+
+  // A view left open keeps its process alive, so the exit is what shows the close.
+  test.skipIf(webviewMissing !== null)("a render past its budget closes its view, so the process can exit", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zapara-render-"));
+    try {
+      const child = Bun.spawn(["bun", join(import.meta.dir, "../helpers/render-timeout.ts"), join(dir, "c.png")], { stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC" } });
+      const code = await Promise.race([child.exited, Bun.sleep(5_000).then(() => null)]);
+      if (code === null) child.kill();
+      expect(code).toBe(0);
+      expect(await new Response(child.stdout).text()).toBe("render timed out\n");
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  }, WEBVIEW_TEST_TIMEOUT);
 });
