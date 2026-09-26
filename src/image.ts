@@ -21,6 +21,8 @@ export async function loadAssets(): Promise<CardAssets> {
 }
 
 const BACKEND = process.platform === "darwin" ? "webkit" : "chrome";
+export type CardView = Pick<Bun.WebView, "navigate" | "evaluate" | "resize" | "screenshot" | "close">;
+export type OpenView = (options: { width: number; height: number; backend: "webkit" | "chrome" }) => CardView;
 const ENGINE_LINE = "card needs a browser engine: install Google Chrome, or write --out card.html";
 const WRITE_LINE = "cannot write the card: check the --out directory";
 const WIDTH = 2400;
@@ -33,7 +35,7 @@ const READY = 'document.fonts.ready.then(() => document.fonts.status === "loaded
 // on its own view: the first gets half, is closed when it runs out, and the
 // second gets what is left. An engine failure is not retried: it becomes one
 // line that never quotes the engine's text.
-export async function renderCard(html: string, out: string, timeoutMs = 15_000): Promise<void> {
+export async function renderCard(html: string, out: string, timeoutMs = 15_000, openView: OpenView = (o) => new Bun.WebView(o)): Promise<void> {
   const lower = out.toLowerCase();
   if (lower.endsWith(".html")) {
     await write(out, html);
@@ -42,7 +44,7 @@ export async function renderCard(html: string, out: string, timeoutMs = 15_000):
   const end = performance.now() + timeoutMs;
   let bytes: Uint8Array | null;
   try {
-    bytes = (await shoot(html, lower.endsWith(".webp"), timeoutMs / 2)) ?? (await shoot(html, lower.endsWith(".webp"), end - performance.now()));
+    bytes = (await shoot(openView, html, lower.endsWith(".webp"), timeoutMs / 2)) ?? (await shoot(openView, html, lower.endsWith(".webp"), end - performance.now()));
   } catch {
     throw new Error(ENGINE_LINE);
   }
@@ -51,8 +53,8 @@ export async function renderCard(html: string, out: string, timeoutMs = 15_000):
 }
 
 // The picture, or null when the view did not finish within `ms`.
-async function shoot(html: string, webp: boolean, ms: number): Promise<Uint8Array | null> {
-  const view = new Bun.WebView({ width: WIDTH, height: HEIGHT, backend: BACKEND });
+async function shoot(openView: OpenView, html: string, webp: boolean, ms: number): Promise<Uint8Array | null> {
+  const view = openView({ width: WIDTH, height: HEIGHT, backend: BACKEND });
   let timer: ReturnType<typeof setTimeout> | undefined;
   const work = (async () => {
     // WebKit draws at the screen's density: at 2x, a 2400-wide viewport made a
