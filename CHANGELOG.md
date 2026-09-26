@@ -18,6 +18,8 @@ All notable changes to this project are documented here. The format follows
   which ended in `render timed out`. The median render is about 120 ms
   slower. When the temporary directory cannot be written, zapara exits 1
   with `cannot draw the card: the temporary directory is not writable`.
+- When `zapara card` finds no browser engine, the message suggests any
+  Chromium browser, such as Chrome or Edge, instead of only Google Chrome.
 
 ## [0.8.0] - 2026-09-26
 
