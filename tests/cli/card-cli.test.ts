@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cardData, cardHtml, loadAssets } from "../../src/lib/card/index.ts";
@@ -295,6 +295,61 @@ describe("zapara card", () => {
       expect((await readdir(tmp)).filter((name) => name.startsWith("zapara-card-"))).toEqual([]);
     } finally { await rm(tmp, { recursive: true, force: true }); }
   }, WEBVIEW_TEST_TIMEOUT);
+
+  test("a symlink at --out is replaced by the card, its target untouched", async () => {
+    await writeFile(join(cwd, "victim.txt"), "precious\n");
+    await symlink(join(cwd, "victim.txt"), join(cwd, "c.html"));
+    const r = await run("card", "--to", "2026-09-20", "--out", "c.html");
+    expect(r.code).toBe(0);
+    expect(await readFile(join(cwd, "victim.txt"), "utf8")).toBe("precious\n");
+    expect((await lstat(join(cwd, "c.html"))).isFile()).toBe(true);
+    expect(await files()).toEqual(["c.html", "victim.txt"]); // no temporary file left
+  });
+
+  test.skipIf(webviewMissing !== null)("a symlink at the default card in Downloads is replaced, its target untouched", async () => {
+    // An unpacked archive can leave a link by that name in Downloads.
+    await writeFile(join(home, "victim.txt"), "precious\n");
+    await symlink(join(home, "victim.txt"), join(home, "Downloads", "zapara-card.png"));
+    const r = await run("card", "--to", "2026-09-20");
+    expect(r.code).toBe(0);
+    expect(await readFile(join(home, "victim.txt"), "utf8")).toBe("precious\n");
+    expect((await lstat(join(home, "Downloads", "zapara-card.png"))).isFile()).toBe(true);
+    expect(await downloads()).toEqual(["zapara-card.png"]);
+  }, WEBVIEW_TEST_TIMEOUT);
+
+  test.skipIf(webviewMissing !== null)("without --out, a card Downloads cannot take names Downloads, not a flag the person never used", async () => {
+    await mkdir(join(home, "Downloads", "zapara-card.png")); // a directory in the way
+    const r = await run("card", "--to", "2026-09-20");
+    expect(r.code).toBe(1);
+    expect(r.out).toBe("");
+    expect(r.err).toBe("zapara: cannot write zapara-card.png to Downloads: pass --out <path>\n");
+  }, WEBVIEW_TEST_TIMEOUT);
+
+  test.skipIf(webviewMissing !== null)("Ctrl-C while the card is drawn leaves no page in the temporary directory", async () => {
+    const tmp = await mkdtemp(join(tmpdir(), "zapara-tmp-"));
+    try {
+      const p = Bun.spawn(["bun", CLI, "--projects", projects, "card", "--to", "2026-09-20", "--out", "c.png"], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home, TMPDIR: tmp } });
+      const pages = async () => (await readdir(tmp)).filter((name) => name.startsWith("zapara-card-"));
+      // The page is written before the engine starts, and drawing takes a second.
+      while ((await pages()).length === 0 && p.exitCode === null) await Bun.sleep(5);
+      expect(p.exitCode).toBeNull();
+      p.kill("SIGINT");
+      expect(await p.exited).toBe(130);
+      expect(await pages()).toEqual([]);
+      expect(await files()).toEqual([]);
+    } finally { await rm(tmp, { recursive: true, force: true }); }
+  }, WEBVIEW_TEST_TIMEOUT);
+
+  test("the card's mode is the umask's, whether or not the cache is on", async () => {
+    // The cache keeps its own files private; that must not reach a card meant to be shared.
+    const modeOf = async (out: string, ...flags: string[]) => {
+      const p = Bun.spawn(["sh", "-c", 'umask 022; exec bun "$0" "$@"', CLI, "--projects", projects, "card", "--to", "2026-09-20", "--out", out, ...flags], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+      expect(await p.exited).toBe(0);
+      return (await stat(join(cwd, out))).mode & 0o777;
+    };
+    expect(await modeOf("cached.html")).toBe(0o644);
+    expect(await modeOf("uncached.html", "--no-cache")).toBe(0o644);
+  });
 
   test("a picture with no writable temporary directory exits 1 with one line that names no path", async () => {
     const tmp = join(cwd, "no-such-tmp");

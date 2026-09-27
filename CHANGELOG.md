@@ -38,6 +38,17 @@ All notable changes to this project are documented here. The format follows
   character's two highlights instead of a third reading `1 / sessions at
   once`, and a highlight whose value is 1 has a singular caption
   (`1 / session at once`).
+- `zapara card` replaces a symlink at the card's path instead of writing the
+  picture into the file it points to. An archive unpacked into Downloads
+  could leave a `zapara-card.png` link that aimed the card at another file.
+- The card's file mode follows your umask. With the cache on it used to come
+  out 0600, because the cache narrowed the umask for the whole run; the cache
+  now sets its own files' modes and leaves the umask alone.
+- Ctrl-C while `zapara card` draws the picture removes its temporary page
+  instead of leaving it in the temporary directory.
+- Without `--out`, a card that Downloads cannot take says `cannot write
+  zapara-card.png to Downloads: pass --out <path>` instead of pointing at an
+  `--out` directory the person never gave.
 
 ## [0.8.1] - 2026-09-27
 

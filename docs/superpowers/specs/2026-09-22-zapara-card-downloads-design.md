@@ -33,6 +33,10 @@ Where the card goes:
   create it: stderr gets one line, `no Downloads folder: pass --out <path>`,
   exit 1, nothing written. A machine without a Downloads folder is a machine
   where the person wants to say where the file goes.
+- When the card cannot be written there (Downloads is not writable, or a
+  directory sits at `zapara-card.png`), stderr gets one line, `cannot write
+  zapara-card.png to Downloads: pass --out <path>`, exit 1. The card spec's
+  `check the --out directory` would name a flag the person never used.
 - `--out` is unchanged: a relative path is relative to the current directory,
   the extension picks the format, the value is echoed verbatim.
 

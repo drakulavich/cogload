@@ -1,7 +1,7 @@
 import { statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { cardData, cardHtml, loadAssets, openCard, renderCard, sentenceText } from "../lib/card/index.ts";
+import { CardWriteError, cardData, cardHtml, loadAssets, openCard, renderCard, sentenceText } from "../lib/card/index.ts";
 import { report, type Timing } from "../lib/report/index.ts";
 import { renderStatus, statusOf, streakFrom, writeStatus } from "../lib/status/index.ts";
 import { renderDay, renderJson, renderWeek } from "../lib/text/index.ts";
@@ -30,13 +30,13 @@ export async function status(a: Args, now: Date, cache: TranscriptCache | null, 
 }
 
 // The label names the folder, not the path: the CLI never prints a derived path.
-function cardTarget(out: string | null): { path: string; label: string } {
+function cardTarget(out: string | null): { path: string; label: string; unwritable?: string } {
   if (out !== null) return { path: out, label: out };
   const dir = join(homedir(), "Downloads");
   let isDir = false;
   try { isDir = statSync(dir).isDirectory(); } catch {}
   if (!isDir) throw new Error("no Downloads folder: pass --out <path>");
-  return { path: join(dir, "zapara-card.png"), label: "zapara-card.png to Downloads" };
+  return { path: join(dir, "zapara-card.png"), label: "zapara-card.png to Downloads", unwritable: "cannot write zapara-card.png to Downloads: pass --out <path>" };
 }
 
 export async function card(a: Args, now: Date, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
@@ -61,6 +61,9 @@ export async function card(a: Args, now: Date, cache: TranscriptCache | null, ti
   const t = performance.now();
   try {
     await renderCard(cardHtml(data, await loadAssets()), target.path);
+  } catch (e) {
+    // Without --out, "check the --out directory" points at a flag the person never used.
+    throw e instanceof CardWriteError && target.unwritable ? new Error(target.unwritable) : e;
   } finally {
     if (note) process.stderr.write("\r\x1b[K");
   }

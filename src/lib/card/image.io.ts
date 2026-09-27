@@ -1,8 +1,9 @@
 // The only module that reads the card assets, opens a Bun.WebView or Bun.Image,
 // writes the card, and starts another program: the opener that shows it.
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { rmSync } from "node:fs";
+import { mkdtemp, open, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CardAssets } from "./cardhtml.ts";
 
@@ -24,8 +25,13 @@ export async function loadAssets(): Promise<CardAssets> {
 
 const BACKEND = process.platform === "darwin" ? "webkit" : "chrome";
 const ENGINE_LINE = "card needs a browser engine: install a Chromium browser such as Chrome or Edge, or write --out card.html";
-const WRITE_LINE = "cannot write the card: check the --out directory";
+// Thrown for a card that cannot be written, so the caller can name the place it
+// chose; the message is the line for an --out the person gave.
+export class CardWriteError extends Error {
+  constructor() { super("cannot write the card: check the --out directory"); }
+}
 const TEMP_LINE = "cannot draw the card: the temporary directory is not writable";
+const SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
 const WIDTH = 2400;
 const HEIGHT = 1260;
 const READY = 'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
@@ -41,12 +47,20 @@ export async function renderCard(html: string, out: string, timeoutMs = 15_000):
     return;
   }
   const dir = await mkdtemp(join(tmpdir(), "zapara-card-")).catch(() => { throw new Error(TEMP_LINE); });
+  // Ctrl-C (or a hangup, or kill) mid-render would skip the finally below and
+  // leave the page behind: remove it, then end as the signal would have.
+  const onSignal = (signal: NodeJS.Signals): void => {
+    rmSync(dir, { recursive: true, force: true });
+    process.exit(128 + ({ SIGHUP: 1, SIGINT: 2, SIGTERM: 15 } as Record<string, number>)[signal]!);
+  };
+  for (const s of SIGNALS) process.once(s, onSignal);
   let bytes: Uint8Array | null;
   try {
     const page = join(dir, "card.html");
     await writeFile(page, html, { mode: 0o600 }).catch(() => { throw new Error(TEMP_LINE); });
     bytes = await shoot(pathToFileURL(page).href, lower.endsWith(".webp"), timeoutMs).catch(() => { throw new Error(ENGINE_LINE); });
   } finally {
+    for (const s of SIGNALS) process.off(s, onSignal);
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
   if (bytes === null) throw new Error("render timed out");
@@ -85,12 +99,22 @@ async function shoot(url: string, webp: boolean, ms: number): Promise<Uint8Array
   }
 }
 
-// One line for every failure: node's error quotes the path, and the CLI never prints one.
+// The status file's way: a temporary file created exclusively next to the
+// target, then a rename over it, so a symlink at the target (an unpacked
+// archive can leave one in Downloads) is replaced, never written through. The
+// mode is the umask's, as for any file the person makes. One line for every
+// failure: node's error quotes the path, and the CLI never prints one.
 async function write(out: string, data: string | Uint8Array): Promise<void> {
+  const tmp = join(dirname(out), `.${basename(out)}.${process.pid}.${Math.random().toString(36).slice(2, 10)}.tmp`);
+  let created = false;
   try {
-    await writeFile(out, data);
+    const handle = await open(tmp, "wx");
+    created = true;
+    try { await handle.writeFile(data); } finally { await handle.close(); }
+    await rename(tmp, out);
   } catch {
-    throw new Error(WRITE_LINE);
+    if (created) await unlink(tmp).catch(() => {});
+    throw new CardWriteError();
   }
 }
 

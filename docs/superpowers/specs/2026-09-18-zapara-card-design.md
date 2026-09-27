@@ -61,7 +61,13 @@ zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [-
   writable, is not a directory, or the file system is read-only), stderr
   gets one line, `cannot write the card: check the --out directory`, exit 1.
   The message names no path: the error the file system raises quotes the
-  whole path, and the CLI never prints one.
+  whole path, and the CLI never prints one. (Without `--out` the line names
+  the Downloads folder instead; see the downloads spec.)
+- The file is written the status file's way: a temporary file created
+  exclusively in the same directory, then renamed over the path. A symlink
+  at the path is replaced, never written through, and a reader never sees a
+  half-written picture. Its mode is the person's umask, whatever else the run
+  did.
 - Colors and TTY detection do not apply: the card is the same everywhere.
 
 Privacy amendment to the base spec: `card` is the one command that writes a
@@ -314,7 +320,8 @@ navigates to its `file://` URL, waits until
 (polled through `evaluate`, 15-second budget), takes a PNG screenshot, resizes
 it to 2400×1260 with `Bun.Image` when it is larger, re-encodes to WebP when
 asked, writes the file, and closes the view and removes the temporary
-directory (also on failure). A constructor
+directory (also on failure, and on SIGINT, SIGTERM or SIGHUP during the
+render, after which zapara exits 128 plus the signal's number, 130 for Ctrl-C). A constructor
 or navigation failure whose message says no browser is available becomes the
 `card needs a browser engine` line.
 
