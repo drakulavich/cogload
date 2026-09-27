@@ -41,7 +41,7 @@ export function renderWeek(days: Day[], color: boolean): string {
   const reports = days.reduce((s, d) => s + d.totals.reports, 0);
   const decisions = days.reduce((s, d) => s + d.totals.decisions, 0);
   const maxSessions = Math.max(0, ...days.map((d) => d.totals.maxSessions));
-  // Compact counts keep a very active window inside the grid's 100 columns.
+  // Compact counts keep a very active window inside the grid's 98 columns.
   const totals = dim(`  ${hm(active)} active   ${plural(prompts, "prompt")}   ${plural(reports, "report")}   ${plural(decisions, "decision")}   ${plural(maxSessions, "session")} at once`, color);
   return [header, ...rows, "", legend, totals, ...snapshotLine(days[days.length - 1], color)].join("\n");
 }

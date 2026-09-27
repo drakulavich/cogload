@@ -87,7 +87,7 @@ hour   index  level    sess  prompts  intr  rej  quest  plan  mode  ctx-sw  stre
   no reports today
 ```
 
-The grid is a fixed 98 columns wide, 100 with its hour header, and does not reflow, so it needs a terminal at least that wide.
+The grid is a fixed 98 columns wide, its hour header included, and does not reflow, so it needs a terminal at least that wide.
 
 </details>
 
@@ -148,7 +148,7 @@ A run that works exits 0, and so does a window with no data, which prints an emp
 
 ## Status line
 
-A status line wants one number every thirty seconds and cannot wait half a second for a transcript scan, so zapara writes the number down and the status line reads it back. `zapara status` computes today exactly as `zapara today` does, writes it as one line of JSON to `~/.claude/zapara/status.json`, and prints the same line. Only `--projects` applies; the window flags, `--explain` and `--out` are usage errors. There is one file per user, whatever `--projects` said, created with mode `0600` in a directory with mode `0700`; the write goes to a temporary file and is renamed into place, so a reader sees the old line or the new one and never half of one. The file holds the nine values below and nothing else: no path, no project, no session count, no text.
+A status line wants one number every thirty seconds and cannot wait half a second for a transcript scan, so zapara writes the number down and the status line reads it back. `zapara status` computes today exactly as `zapara today` does, writes it as one line of JSON to `~/.claude/zapara/status.json`, and prints the same line. Only `--projects`, `--no-cache` and `--verbose` apply, `--json` and `--no-color` change nothing, and the window flags, `--explain` and `--out` are usage errors. There is one file per user, whatever `--projects` said, created with mode `0600` in a directory with mode `0700`; the write goes to a temporary file and is renamed into place, so a reader sees the old line or the new one and never half of one. The file holds the nine values below and nothing else: no path, no project, no session count, no text.
 
 ```json
 {"schema":1,"asOf":"2026-09-19T12:30:38.300Z","date":"2026-09-19","hour":15,"index":36,"level":"Warming","peak":41,"activeMin":555,"streakMin":166}
@@ -170,11 +170,11 @@ Refreshing is the reader's job, and zapara adds no hook, no timer and no daemon.
 
 ## Privacy
 
-zapara reads `~/.claude/projects/**/*.jsonl`, skipping subagent transcripts under `subagents/`. It picks files by modification time first, and opens one whose modification time is older than the window only to read the last timestamp in its final 64 KB; nothing from that tail is kept or printed. It compares message text against a few fixed markers, for interrupts, tool rejections and inbound agent messages, then discards it. What survives into an event is a timestamp, a session id, an event kind and a token count.
+zapara reads `~/.claude/projects/**/*.jsonl`, skipping subagent transcripts under `subagents/`. It follows no symlink inside that directory, so a project directory that is a symlink is not read; `--projects` itself may be one. It picks files by modification time first, and opens one whose modification time is older than the window only to read the last timestamp in its final 64 KB; nothing from that tail is kept or printed. It compares message text against a few fixed markers, for interrupts, tool rejections and inbound agent messages, then discards it. What survives into an event is a timestamp, a session id, an event kind and a token count.
 
 zapara keeps, writes and prints no message text, prompt length, file path or session title. The CLI never prints a path it derived or read, not even the projects root when it cannot open it. It sends nothing anywhere, installs nothing into Claude Code, and writes no file except the card, the status file and the cache below. While it draws a PNG or WebP, the card's page also sits in the temporary directory as a `0600` file, removed when the render ends.
 
-Between runs, zapara caches each transcript's parsed events in `~/.claude/zapara/cache.db`. A hit still reads the last 4 KiB of the file to confirm it matches the cached row, then skips reading and parsing the rest. A row is keyed by the transcript's device and inode, never by its path or a hash of it. Besides the device and inode, a row stores a fingerprint of the parser that wrote it, the file's size and modification time, a hash of its last 4 KiB, the cutoff its events were parsed with, when the row was last used, and the parsed events themselves. No message text, prompt length, path or title is stored. `--no-cache` runs without reading or writing it.
+Between runs, zapara caches each transcript's parsed events in `~/.claude/zapara/cache.db`. A hit still reads the last 4 KiB of the file to confirm it matches the cached row, then skips reading and parsing the rest. So a changed file is recognised by its size, modification time and last 4 KiB: an edit earlier in the file that keeps its size and modification time is not seen, and `--no-cache` parses everything again. A row is keyed by the transcript's device and inode, never by its path or a hash of it. Besides the device and inode, a row stores a fingerprint of the parser that wrote it, the file's size and modification time, a hash of its last 4 KiB, the cutoff its events were parsed with, when the row was last used, and the parsed events themselves. No message text, prompt length, path or title is stored. `--no-cache` runs without reading or writing it.
 
 ## Limits
 
