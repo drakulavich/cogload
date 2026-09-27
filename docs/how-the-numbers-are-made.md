@@ -234,8 +234,8 @@ contract.
   `--explain`.
 - **A short streak in the table after a long day.** Each row shows the longest
   run that hour held, not the day's longest; the day's longest is on the card,
-  and the one you are in right now is in the status file. Eleven minutes
-  without an action of yours start a new run.
+  and the one you are in right now is in the status file. A gap of more than
+  ten minutes between two of your actions starts a new run.
 - **Fewer active minutes than the session felt.** Minutes count when you were
   present, not when an agent was working alone. The `sess` column still shows
   the agents.

@@ -5,6 +5,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- `--help` says a pipe gets JSON for the grid and a day only; `card` and
+  `status` in a pipe print their usual lines.
+
 ## [0.8.1] - 2026-09-27
 
 ### Changed
