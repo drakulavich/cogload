@@ -30,7 +30,7 @@ const MOTTOS: Record<Character, string> = {
   conductor: "You run agents like an orchestra.",
   supervisor: "Nothing ships without your eyes on it.",
   marathoner: "You do not stop while it compiles.",
-  nightOwl: "The best commits happen late at night.",
+  nightOwl: "The best commits happen after dark.",
 };
 // Rank the third highlight, per active hour. They never touch the index, whose
 // norms stay in score.ts.
@@ -151,9 +151,11 @@ export function cardData(days: Day[], w: { days: number }): CardData | null {
   // A late-night number belongs to the Night Owl alone.
   const rest = POOL.filter((k) => !owned.includes(k) && (k !== "lateShare" || character === "nightOwl"));
   const third = rest.reduce((best, k) => (norms[k] > norms[best] ? k : best));
-  // A third panel that scores nothing ("1 session at once" beside a streak) is
-  // no achievement: the character's own pair then fills the row alone.
-  const keys = norms[third] > 0 ? [...owned, third] : owned;
+  // A panel that scores nothing ("0m longest streak", "1 session at once") is
+  // no achievement and is left out; the rest share the row. The first is the
+  // character's own number and always shows, so the row is never empty.
+  const [first, second] = owned;
+  const keys = [first, ...[second, third].filter((k) => norms[k] > 0)];
   const highlights = keys.map((key) => ({ key, value: values[key], caption: CAPTIONS[key][values[key] === "1" ? 0 : 1] }));
 
   return {
