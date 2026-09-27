@@ -115,8 +115,10 @@ for them and the file may sit in a directory other tools read.
   the same, and deleting a slow run's file would break the promise above.
   Such a leftover is a few hundred bytes with a name no later run picks, and
   a person may delete it by hand.
-- The file is created with mode `0600` (owner read and write). The directory
-  with `0700`. `status.json` itself may be a symlink someone put there;
+- The file is created with mode `0600` (owner read and write), on every
+  write, since each write is a new file. The directory is created with
+  `0700`; one that exists keeps the mode it has, so a mode the person chose
+  is not reset by the next run. `status.json` itself may be a symlink someone put there;
   `rename` replaces the link, it does not write through it.
 - On any error before the rename, the existing `status.json` is left as it
   was: a status line keeps showing the last good snapshot with its own

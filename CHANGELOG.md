@@ -79,7 +79,9 @@ All notable changes to this project are documented here. The format follows
   good. When a lookup fails, `--verbose` prints `cache   off` instead of
   counting every file as a miss.
 - zapara sets the modes of `~/.claude/zapara` (0700) and `cache.db` (0600)
-  only when it creates them, instead of resetting them on every run.
+  only when it creates them, instead of resetting them on every run;
+  `zapara status` no longer resets the directory either. `status.json`
+  is still written 0600 each time.
 - The week grid ends with `as of HH:MM, this hour is still running` when
   `--to` names a day after today, as the JSON's `asOf` already did.
 - A window across a calendar day the time zone skipped (Samoa went from 29
