@@ -423,6 +423,25 @@ describe("zapara card", () => {
     }
   }, 20_000);
 
+  test.skipIf(webviewMissing !== null)("in a terminal, Enter pressed while the card is drawn does not answer the question", async () => {
+    let out = "";
+    const decoder = new TextDecoder();
+    const p = Bun.spawn(["bun", CLI, "--projects", projects, "card", "--to", "2026-09-20", "--out", "c.png"], {
+      cwd,
+      env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home, PATH: `${bin}:${process.env.PATH}`, ZAPARA_TEST_LOG: log },
+      terminal: { cols: 200, rows: 24, data(_t, d) { out += decoder.decode(d); } },
+    });
+    while (!out.includes("drawing the card…") && p.exitCode === null) await Bun.sleep(10);
+    p.terminal!.write("\r");
+    while (!out.includes("open it? [Y/n] ") && p.exitCode === null) await Bun.sleep(20);
+    if (p.exitCode === null) p.terminal!.write("n\r");
+    const code = await p.exited;
+    p.terminal!.close();
+    expect(code).toBe(0);
+    expect(out).toContain("open it? [Y/n] ");
+    expect(await openedWithin(1000)).toEqual([]);
+  }, WEBVIEW_TEST_TIMEOUT);
+
   test("an --out that starts with a dash reaches the opener as a file, not an option", async () => {
     const r = await runInTerminal("y\r", ["card", "--to", "2026-09-20", "--out=-card.html"]);
     expect(r.code).toBe(0);

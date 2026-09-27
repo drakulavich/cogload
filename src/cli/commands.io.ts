@@ -39,6 +39,20 @@ function cardTarget(out: string | null): { path: string; label: string; unwritab
   return { path: join(dir, "zapara-card.png"), label: "zapara-card.png to Downloads", unwritable: "cannot write zapara-card.png to Downloads: pass --out <path>" };
 }
 
+// Keys pressed while the card was drawn answer no question yet asked, so the
+// terminal's pending input is dropped first: tcflush(0, TCIFLUSH). Best effort,
+// where libc can be found; elsewhere the question reads as before.
+const TCIFLUSH: Partial<Record<NodeJS.Platform, { lib: string; queue: number }>> = { darwin: { lib: "libSystem.B.dylib", queue: 1 }, linux: { lib: "libc.so.6", queue: 0 } };
+async function discardTypedInput(): Promise<void> {
+  const c = TCIFLUSH[process.platform];
+  if (!c) return;
+  try {
+    const { dlopen, FFIType } = await import("bun:ffi");
+    const libc = dlopen(c.lib, { tcflush: { args: [FFIType.i32, FFIType.i32], returns: FFIType.i32 } });
+    try { libc.symbols.tcflush(0, c.queue); } finally { libc.close(); }
+  } catch {}
+}
+
 export async function card(a: Args, now: Date, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
   const days: Day[] = await report({ projects: a.projects, to: a.to, days: a.days, now }, timing, cache);
   const data = cardData(days, { days: a.days });
@@ -75,6 +89,7 @@ export async function card(a: Args, now: Date, cache: TranscriptCache | null, ti
   console.log(`${data.name}: ${sentenceText(data.sentence)}\nwrote ${target.label}`);
   if (timing) timing.totalMs = performance.now(); // the wait for an answer is not zapara's time
   if (process.stdin.isTTY && process.stdout.isTTY && process.platform !== "win32") {
+    await discardTypedInput();
     process.stdout.write("open it? [Y/n] ");
     let answer: string | null = null;
     for await (const line of console) { answer = line; break; }

@@ -51,7 +51,10 @@ Offering to open it:
 
 - After the file is written, and only when both stdin and stdout are
   terminals and the platform is not Windows, zapara writes `open it? [Y/n] ` to stdout (no newline) and reads
-  one line from stdin.
+  one line from stdin. Input typed before the question, such as an Enter
+  pressed while the card was drawn, is discarded first (`tcflush` through
+  libc, where it can be loaded), so only a key pressed after the question
+  answers it.
 - An empty line, `y` or `yes` (any case, surrounding whitespace ignored)
   opens the file: `open <file>` on macOS, `xdg-open <file>` elsewhere, where
   `<file>` is the written path made absolute (`resolve()`), so an `--out`

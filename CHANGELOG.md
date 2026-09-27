@@ -85,6 +85,9 @@ All notable changes to this project are documented here. The format follows
 - A window across a calendar day the time zone skipped (Samoa went from 29
   to 31 December 2011) lists that date once as an empty day, instead of
   listing the next day twice with its counts doubled.
+- An Enter pressed while the card is being drawn no longer answers `open
+  it? [Y/n]` before the question is shown: input typed before the question
+  is discarded.
 - An empty value, as in `--projects ''` or `--projects=`, is a usage error,
   `--projects needs a value`, exit 2, instead of `projects directory not
   found`.
