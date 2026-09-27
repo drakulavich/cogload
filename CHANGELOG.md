@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- zapara needs Bun 1.4.2 or newer, up from 1.4.0. CI checks one version, the
+  one it runs on.
 - `--help` says a pipe gets JSON for the grid and a day only; `card` and
   `status` in a pipe print their usual lines.
 - The status file's `peak` counts the last sixty minutes as well as the

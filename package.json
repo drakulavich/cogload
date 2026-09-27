@@ -12,7 +12,7 @@
   "bin": { "zapara": "src/cli/index.ts" },
   "files": ["src/", "assets/fonts/", "assets/characters.webp", "CHANGELOG.md", "!src/**/*.test.ts"],
   "publishConfig": { "access": "public" },
-  "engines": { "bun": ">=1.4.0" },
+  "engines": { "bun": ">=1.4.2" },
   "scripts": {
     "dev": "bun run src/cli/index.ts",
     "stats": "bun scripts/signal-stats.ts",
