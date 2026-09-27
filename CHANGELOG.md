@@ -24,6 +24,12 @@ All notable changes to this project are documented here. The format follows
   1620 late in the evening, and a reader that decodes the file strictly,
   like pult, dropped the whole line as no data.
 
+### Fixed
+- `zapara card` no longer counts records timestamped after the moment it
+  runs, which the grid, the day and `status` already left out. A transcript
+  from a machine whose clock runs ahead could put hours on the card that no
+  other view showed.
+
 ## [0.8.1] - 2026-09-27
 
 ### Changed

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cardData, cardHtml, loadAssets } from "../../src/lib/card/index.ts";
 import { report } from "../../src/lib/report/index.ts";
+import { prompt, writeTree } from "../helpers/transcript.ts";
 import { WEBVIEW_TEST_TIMEOUT, webviewMissing } from "../helpers/webview.ts";
 
 const CLI = join(import.meta.dir, "../../src/cli/index.ts");
@@ -90,6 +91,33 @@ async function runHalfTerminal(script: string, args: string[], limitMs = 5000): 
   p.terminal!.close();
   return { code, out };
 }
+
+// A tree of its own, written into `cwd`, for a card whose numbers the busy-week fixture cannot show.
+async function runOn(tree: string, ...args: string[]): Promise<{ code: number; out: string; err: string }> {
+  const p = Bun.spawn(["bun", CLI, "--projects", tree, ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+  const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
+  return { code, out, err };
+}
+
+describe("the card reads the same hours as the grid", () => {
+  test("a record timestamped after the run's clock is not on the card", async () => {
+    // The CLI's clock cannot be set, so the records sit around the real one: a
+    // lone prompt two hours ago, then three sessions prompting every two
+    // minutes an hour from now (a clock running ahead, or a synced machine).
+    const now = Date.now();
+    const at = (min: number) => new Date(now + min * 60_000).toISOString();
+    const lines = [prompt(at(-120), "aaaaaaaa-1111-4111-8111-111111111111")];
+    for (const sid of ["bbbbbbbb-1111-4111-8111-111111111111", "cccccccc-1111-4111-8111-111111111111", "dddddddd-1111-4111-8111-111111111111"]) {
+      for (let m = 60; m <= 110; m += 2) lines.push(prompt(at(m), sid));
+    }
+    const tree = join(cwd, "tree");
+    await writeTree(tree, [{ path: "-Users-me-proj/s.jsonl", lines, mtime: at(0) }]);
+    const window = ["--to", at(120).slice(0, 10), "--days", "3", "--json", "--no-cache"];
+    const grid = JSON.parse((await runOn(tree, ...window)).out) as { peak: number | null }[];
+    const card = JSON.parse((await runOn(tree, "card", ...window)).out);
+    expect(card.peak.index).toBe(Math.max(...grid.map((d) => d.peak ?? 0)));
+  });
+});
 
 describe("zapara card", () => {
   test("--out x.html writes exactly the cardHtml string and prints the two lines", async () => {

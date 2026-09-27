@@ -35,7 +35,9 @@ zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [-
 ```
 
 - The window flags are the grid's (base spec, CLI), with `--days` defaulting
-  to 14 instead of 7.
+  to 14 instead of 7. So is the clock: the card reads the window with the
+  run's `now`, and a record timestamped after it counts for nothing, as on
+  the grid.
 - `--out` defaults to `zapara-card.png` in the current directory. The format
   is the extension: `.png` or `.webp` for the picture, `.html` for the page
   the picture is taken of (written as is, no browser involved, for checking

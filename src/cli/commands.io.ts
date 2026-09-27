@@ -39,8 +39,8 @@ function cardTarget(out: string | null): { path: string; label: string } {
   return { path: join(dir, "zapara-card.png"), label: "zapara-card.png to Downloads" };
 }
 
-export async function card(a: Args, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
-  const days: Day[] = await report({ projects: a.projects, to: a.to, days: a.days }, timing, cache);
+export async function card(a: Args, now: Date, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
+  const days: Day[] = await report({ projects: a.projects, to: a.to, days: a.days, now }, timing, cache);
   const data = cardData(days, { days: a.days });
   if (data === null) throw new Error(`no activity in the last ${a.days} days`);
   if (a.json) {

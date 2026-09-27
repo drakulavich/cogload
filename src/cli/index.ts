@@ -33,7 +33,7 @@ async function main(): Promise<number> {
   const cache = a.cache ? openCache(process.env) : null;
   if (timing && a.cache) timing.openMs = performance.now() - t;
   try {
-    const code = a.command === "card" ? await card(a, cache, timing) : a.command === "status" ? await status(a, now, cache, timing) : await table(a, now, cache, timing);
+    const code = a.command === "card" ? await card(a, now, cache, timing) : a.command === "status" ? await status(a, now, cache, timing) : await table(a, now, cache, timing);
     if (timing) process.stderr.write(timingLines(timing, runEnv()));
     return code;
   } finally {
