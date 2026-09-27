@@ -27,6 +27,7 @@ describe("one character per fixture", () => {
     const c = cardOf([prompt(at(10, 0), sid("a"))]);
     expect(c.character).toBe("conductor");
     expect(sentenceText(c.sentence)).toBe("1 session at once, 0 context switches in one hour.");
+    expect(c.highlights[0]).toEqual({ key: "peakSessions", value: "1", caption: "session at once" });
   });
 
   test("Conductor: sessions at once and switches in one hour", () => {
@@ -66,8 +67,8 @@ describe("one character per fixture", () => {
       { key: "longestStreak", value: "2h55m", caption: "longest streak" },
       { key: "interrupts", value: "0", caption: "times you stopped Claude" },
     ]);
-    // Every remaining norm is 0, so the third keeps the pool order: peakSessions.
-    expect(c.highlights[2]).toEqual({ key: "peakSessions", value: "1", caption: "sessions at once" });
+    // Every remaining norm is 0 (one session, no switches, reports or tokens), so there is no third.
+    expect(c.highlights).toHaveLength(2);
   });
 
   test("Night Owl: share of hours after midnight", () => {
@@ -135,7 +136,61 @@ describe("ties and eligibility", () => {
   });
 });
 
+describe("third highlight", () => {
+  test("a card whose remaining candidates all score zero shows the character's pair alone", () => {
+    // One session, a prompt every 15 minutes, each followed by a 22 500-token
+    // reply and 7 agent reports: the Supervisor. The prompts are more than 10
+    // minutes apart, so there is no streak; one session, so no switches; no
+    // interrupts. Every candidate for the third slot scores 0, and the one the
+    // pool order used to pick read "1 / sessions at once".
+    const lines = [0, 15, 30, 45].flatMap((m) => [
+      prompt(at(10, m), sid("s")),
+      assistantText(at(10, m + 1), sid("s"), 22_500, nextRequestId()),
+      ...Array.from({ length: 7 }, (_, r) => teammate(at(10, m + 2, 14, r * 1000), sid("s"))),
+    ]);
+    const c = cardOf(lines);
+    expect(c.character).toBe("supervisor");
+    expect(c.highlights).toEqual([
+      { key: "reportsRead", value: "28", caption: "agent reports read" },
+      { key: "tokensRead", value: "90k", caption: "tokens of output read" },
+    ]);
+  });
+});
+
+describe("one figure per fact", () => {
+  // Three hours on three days, each an unbroken run of 40 minutes or more, so the
+  // streak makes it the Marathoner: a calm hour of one session; a warming hour of
+  // two; a heating hour of three sessions and 30 agent reports. Calm is 1 of 3.
+  const a: string[] = [], b: string[] = [], c: string[] = [], d: string[] = [];
+  for (let i = 0; i < 12; i++) a.push(prompt(at(9, i * 5, 14), sid("a")));
+  for (let i = 0; i < 20; i++) (i % 4 === 0 ? b : a).push(prompt(at(9, i * 3, 15), sid(i % 4 === 0 ? "b" : "a")));
+  for (let i = 0; i < 20; i++) [a, c, d][i % 3]!.push(prompt(at(9, i * 3, 16), sid("acd"[i % 3]!)));
+  for (let r = 0; r < 30; r++) a.push(teammate(at(9, 30, 16, r * 1000), sid("a")));
+  const card = cardData(analyze([transcript(a, "p/a.jsonl"), transcript(b, "p/b.jsonl"), transcript(c, "p/c.jsonl"), transcript(d, "p/d.jsonl")], { to: "2026-09-16", days: 3 }), { days: 3 })!;
+
+  test("the sentence's calm share is the legend's, 34% for one hour in three", () => {
+    expect(card.character).toBe("marathoner");
+    expect(card.spectrum).toEqual({ calm: 34, warming: 33, heating: 33, fried: 0 });
+    expect(sentenceText(card.sentence)).toBe("Longest streak 57m without a break, 34% of your hours calm.");
+  });
+});
+
 describe("spectrum rounding", () => {
+  test("a level with hours never reads 0%: one fried hour among 200 calm ones is 1%", () => {
+    // 200 lone calm hours over 7-19 Sep, then one fried hour on the 20th: five
+    // sessions, a prompt every 2 minutes, 3000-token replies, 40 agent reports.
+    // Raw 99.5 / 0 / 0 / 0.5 rounds to 100 / 0 / 0 / 0 by largest remainder;
+    // the fried hour takes its 1 from calm. Its peak reads Fried on the same card.
+    const lines: string[] = [];
+    let n = 0;
+    for (let day = 7; day <= 19 && n < 200; day++) for (let h = 6; h <= 21 && n < 200; h++, n++) lines.push(prompt(at(h, 0, day), sid("a")));
+    for (let i = 0; i < 30; i++) lines.push(prompt(at(10, i * 2, 20), sid("bcdef"[i % 5]!)), assistantText(at(10, i * 2, 20, 5000), sid("bcdef"[i % 5]!), 3000, nextRequestId()));
+    for (let r = 0; r < 40; r++) lines.push(teammate(at(10, 30, 20, r * 1000), sid("b")));
+    const c = cardData(analyze([transcript(lines)], { to: "2026-09-20", days: 14 }), { days: 14 })!;
+    expect(c.peak.level).toBe("Fried");
+    expect(c.spectrum).toEqual({ calm: 99, warming: 0, heating: 0, fried: 1 });
+  });
+
   test("33.3 / 33.3 / 33.3 / 0 rounds to 34 / 33 / 33 / 0 by largest remainder", () => {
     // Three active hours: one prompt (Calm, index 1); five sessions x 3 prompts one
     // minute apart (index 47, Warming); five sessions x 6 prompts two minutes apart

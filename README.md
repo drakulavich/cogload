@@ -93,7 +93,7 @@ The grid is a fixed 98 columns wide, its hour header included, and does not refl
 
 ## Share a card
 
-`zapara card` turns your last two weeks into one picture: a character named after the kind of load that dominates your hours, the sentence behind it, the peak hour, the share of calm, warming, heating and fried hours, and three highlights. It carries no dates and no hour totals, so it does not read as a timesheet.
+`zapara card` turns your last two weeks into one picture: a character named after the kind of load that dominates your hours, the sentence behind it, the peak hour, the share of calm, warming, heating and fried hours, and up to three highlights. It carries no dates and no hour totals, so it does not read as a timesheet.
 
 ```bash
 zapara card                    # writes zapara-card.png to ~/Downloads

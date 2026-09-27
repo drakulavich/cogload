@@ -42,14 +42,15 @@ const OWNED: Record<Character, [HighlightKey, HighlightKey]> = {
   nightOwl: ["lateShare", "longestStreak"],
 };
 const POOL: readonly HighlightKey[] = ["peakSessions", "contextSwitches", "longestStreak", "reportsRead", "tokensRead", "interrupts", "lateShare"];
-const CAPTIONS: Record<HighlightKey, string> = {
-  peakSessions: "sessions at once",
-  contextSwitches: "switches in one hour",
-  longestStreak: "longest streak",
-  reportsRead: "agent reports read",
-  tokensRead: "tokens of output read",
-  interrupts: "times you stopped Claude",
-  lateShare: "of hours after midnight",
+// [for the value "1", for any other]
+const CAPTIONS: Record<HighlightKey, [string, string]> = {
+  peakSessions: ["session at once", "sessions at once"],
+  contextSwitches: ["switch in one hour", "switches in one hour"],
+  longestStreak: ["longest streak", "longest streak"],
+  reportsRead: ["agent report read", "agent reports read"],
+  tokensRead: ["token of output read", "tokens of output read"],
+  interrupts: ["time you stopped Claude", "times you stopped Claude"],
+  lateShare: ["of hours after midnight", "of hours after midnight"],
 };
 
 function formatStreak(min: number): string {
@@ -62,18 +63,24 @@ function formatStreak(min: number): string {
 const percent = (part: number, whole: number): number => Math.round((100 * part) / whole);
 
 // Whole percents that sum to 100: floors first, then one more to the largest
-// remainders, ties resolved in the given order.
+// remainders, ties resolved in the given order. A level with any hours never
+// reads 0%: it takes its 1 from the largest level, which holds 25 or more.
 function spectrumOf(counts: [number, number, number, number], total: number): Spectrum {
   const raw = counts.map((c) => (100 * c) / total);
-  const floors = raw.map((r) => Math.floor(r)) as [number, number, number, number];
-  let left = 100 - floors.reduce((a, b) => a + b, 0);
+  const pct = raw.map((r) => Math.floor(r)) as [number, number, number, number];
+  let left = 100 - pct.reduce((a, b) => a + b, 0);
   const byRemainder = raw.map((r, i) => ({ i, rem: r - Math.floor(r) })).sort((a, b) => b.rem - a.rem || a.i - b.i);
   for (const { i } of byRemainder) {
     if (left === 0) break;
-    floors[i]! += 1;
+    pct[i]! += 1;
     left -= 1;
   }
-  const [calm, warming, heating, fried] = floors;
+  for (const [i, c] of counts.entries()) {
+    if (c === 0 || pct[i] !== 0) continue;
+    pct[pct.indexOf(Math.max(...pct))]! -= 1;
+    pct[i] = 1;
+  }
+  const [calm, warming, heating, fried] = pct;
   return { calm, warming, heating, fried };
 }
 
@@ -109,17 +116,17 @@ export function cardData(days: Day[], w: { days: number }): CardData | null {
   const tokens = sum((b) => b.outputTokens);
   const interrupts = sum((b) => b.interrupts);
   const late = percent(active.filter((b) => b.lateNight).length, n);
-  const calm = percent(count("Calm"), n);
+  // One figure for one fact: the sentence's calm share is the legend's.
+  const spectrum = spectrumOf([count("Calm"), count("Warming"), count("Heating"), count("Fried")], n);
 
   const sentences: Record<Character, Segment[]> = {
     conductor: [strong(plural(maxSessions, "session")), plain(" at once, "), strong(plural(maxSwitches, "context switch", "context switches")), plain(" in one hour.")],
     supervisor: [strong(plural(reports, "agent report")), plain(" and "), strong(plural(tokens, "token", "tokens", formatTokens)), plain(" of output read.")],
-    marathoner: [plain("Longest streak "), strong(formatStreak(maxStreak)), plain(" without a break, "), strong(`${calm}%`), plain(" of your hours calm.")],
+    marathoner: [plain("Longest streak "), strong(formatStreak(maxStreak)), plain(" without a break, "), strong(`${spectrum.calm}%`), plain(" of your hours calm.")],
     nightOwl: [strong(`${late}%`), plain(" of your hours "), strong("after midnight"), plain(".")],
   };
 
   const peakBucket = active.reduce((a, b) => (b.score.index > a.score.index ? b : a));
-  const spectrum = spectrumOf([count("Calm"), count("Warming"), count("Heating"), count("Fried")], n);
 
   const values: Record<HighlightKey, string> = {
     peakSessions: formatCount(maxSessions),
@@ -143,7 +150,10 @@ export function cardData(days: Day[], w: { days: number }): CardData | null {
   // A late-night number belongs to the Night Owl alone.
   const rest = POOL.filter((k) => !owned.includes(k) && (k !== "lateShare" || character === "nightOwl"));
   const third = rest.reduce((best, k) => (norms[k] > norms[best] ? k : best));
-  const highlights = [...owned, third].map((key) => ({ key, value: values[key], caption: CAPTIONS[key] }));
+  // A third panel that scores nothing ("1 session at once" beside a streak) is
+  // no achievement: the character's own pair then fills the row alone.
+  const keys = norms[third] > 0 ? [...owned, third] : owned;
+  const highlights = keys.map((key) => ({ key, value: values[key], caption: CAPTIONS[key][values[key] === "1" ? 0 : 1] }));
 
   return {
     days: w.days,

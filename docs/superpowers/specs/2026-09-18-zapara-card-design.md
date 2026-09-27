@@ -8,7 +8,7 @@ that spec says.
 `zapara card` turns a window of transcripts into one image a person wants to
 send to a colleague: a character that names how they drive Claude Code, one
 sentence with two numbers behind that name, the peak hour, a load spectrum,
-three highlights, and the project's line. It exists to make the tool travel:
+three highlights (two when nothing else scores), and the project's line. It exists to make the tool travel:
 the week heatmap convinces the person who ran it, the card convinces the
 person they show it to.
 
@@ -106,7 +106,8 @@ streak is longest at its last event, and that event falls in one bucket.
 `activeHours` is the count of
 active buckets (used only as a divisor, never shown), `lateShare` is the
 share of active buckets with `lateNight` in whole percent, `calmShare` the
-share of active buckets at Calm, `days` the `--days` value. `CardData`
+spectrum's calm percent (below), so the sentence and the legend under it
+carry one number, `days` the `--days` value. `CardData`
 carries the sentence as segments, `{ text, strong }[]`, and the motto as a
 separate string, so the page can set the bold spans without parsing anything;
 the stdout character line and the JSON `sentence` are the segments joined,
@@ -134,9 +135,16 @@ not handled.
 
 **Spectrum**: the share of active buckets at each level, four whole percents
 that sum to 100 by largest-remainder rounding (a level with no hours is 0).
+A level with at least one hour is at least 1: when the rounding leaves it at
+0, it takes 1 from the largest level (which holds 25 or more). Otherwise one
+fried hour among 200 calm ones reads `100% calm · 0% fried` beside a Fried
+peak pill on the same card.
 
-**Highlights**: three, chosen from this pool. Each has a key, a value string
-and a one-line caption in sentence case that carries the unit. `norm` is the
+**Highlights**: three, chosen from this pool, or two (below). Each has a key,
+a value string and a one-line caption in sentence case that carries the unit;
+when the value is `1` the caption is singular (`session at once`, `switch in
+one hour`, `agent report read`, `token of output read`, `time you stopped
+Claude`). `norm` is the
 value divided by its calibration norm, for ranking:
 
 | Key | Value | Caption | norm |
@@ -155,7 +163,9 @@ Marathoner `longestStreak, interrupts`; Night Owl `lateShare, longestStreak`.
 The third is the remaining key with the largest `norm`; `lateShare` is
 eligible as the third only for the Night Owl (a late-night number on someone
 else's card is exactly the kind of thing they would hide). Ties keep the
-table order. The first three norms in the table are the index's own
+table order. When that largest `norm` is 0 there is no third: every candidate
+left is a zero or a single session, which is not a trait, and the card shows
+the character's pair alone, two panels across the row. The first three norms in the table are the index's own
 (`NORMS.parallelSpan`, `NORMS.supervisionPerHour`, `NORMS.streakMin`), so
 recalibrating one of those in `src/score.ts` also changes which candidate wins
 the third slot; the last four are the card's own `CARD_NORMS`, which rank
@@ -223,7 +233,7 @@ the sentence and the numbers; every small label is JetBrains Mono.
 | Divider | 30 px below, 1 px at 10 % white, 26 px of space after it |
 | Spectrum bar | 8 px tall, radius 4, four segments in order calm, warming, heating, fried, widths in percent, 2-px gaps, segments of 0 % omitted |
 | Legend | 14 px below the bar, JetBrains Mono 12.5 px `#6b6b76`: a 6-px dot, the percent in `#a1a1aa` weight 500, the level name, items separated by two spaces |
-| Highlights | 30 px below, three equal panels with 16-px gaps: radius 12, 1-px border at 10 % white, 2.5 % white fill, inner top highlight, padding 18×16; value Inter 700 38 px, letter-spacing −1.6 px, tabular figures, white; caption 8 px below, JetBrains Mono 12 px `#6b6b76`, sentence case, one line (`sessions at once`, `switches in one hour`, `longest streak`, …) |
+| Highlights | 30 px below, three (or two) equal panels with 16-px gaps: radius 12, 1-px border at 10 % white, 2.5 % white fill, inner top highlight, padding 18×16; value Inter 700 38 px, letter-spacing −1.6 px, tabular figures, white; caption 8 px below, JetBrains Mono 12 px `#6b6b76`, sentence case, one line (`sessions at once`, `switches in one hour`, `longest streak`, …) |
 | Repo link | at (60, 566), two lines: JetBrains Mono 11 px uppercase `#6b6b76`, letter-spacing 1.5 px, `GET YOURS`; 8 px below, JetBrains Mono 500 17 px in the character's light accent, letter-spacing −0.2 px: `github.com/drakulavich/zapara` |
 | Source line | right-aligned to x = 1140 at y = 588, JetBrains Mono 12 px `#a1a1aa`: `computed locally from your Claude Code transcripts · nothing leaves your machine` |
 
@@ -346,7 +356,11 @@ Scenarios:
   where `lateShare` has the largest remaining norm on a non-Night-Owl card
   pins that it is skipped for the third highlight.
 - Spectrum rounding: a fixture whose raw shares are 33.3 / 33.3 / 33.3 / 0
-  pins 34 / 33 / 33 / 0 (largest remainder).
+  pins 34 / 33 / 33 / 0 (largest remainder); a Marathoner fixture of that
+  split pins 34% in the sentence too; 200 calm hours and one fried hour pin
+  99 / 0 / 0 / 1.
+- Highlights: a Supervisor whose remaining candidates all score 0 pins two
+  highlights; one session pins the singular `session at once`.
 - An empty window through `cardData()` is `null`.
 - `cardHtml` on `busy-week`: the page contains the name and the sentence
   once each; the peak pill carries `87 · Fried` in the fried class; the

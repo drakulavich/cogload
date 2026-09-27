@@ -29,6 +29,15 @@ All notable changes to this project are documented here. The format follows
   runs, which the grid, the day and `status` already left out. A transcript
   from a machine whose clock runs ahead could put hours on the card that no
   other view showed.
+- The Marathoner's sentence takes its calm share from the spectrum under it,
+  so one card no longer says 33% calm in the sentence and 34% in the legend.
+- A level with any hours shows at least 1% on the card's spectrum. One fried
+  hour among 200 calm ones used to read `100% calm · 0% fried` beside a
+  Fried peak.
+- A card whose remaining highlight candidates all score zero shows the
+  character's two highlights instead of a third reading `1 / sessions at
+  once`, and a highlight whose value is 1 has a singular caption
+  (`1 / session at once`).
 
 ## [0.8.1] - 2026-09-27
 
