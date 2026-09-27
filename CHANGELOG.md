@@ -38,6 +38,11 @@ All notable changes to this project are documented here. The format follows
   the ceiling the status file promises its readers. It used to write up to
   1620 late in the evening, and a reader that decodes the file strictly,
   like pult, dropped the whole line as no data.
+- A run that finds `~/.claude/zapara/cache.db` unreadable deletes it only
+  if it is still the same file. Two runs that started on a damaged cache
+  could race, and the later one deleted the cache the earlier one had just
+  recreated, so that run went without a cache. The output was right either
+  way.
 - `zapara card` no longer counts records timestamped after the moment it
   runs, which the grid, the day and `status` already left out. A transcript
   from a machine whose clock runs ahead could put hours on the card that no

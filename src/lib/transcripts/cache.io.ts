@@ -152,12 +152,15 @@ export function openCache(env: NodeJS.ProcessEnv): TranscriptCache | null {
       }
     }
     const path = join(dir, "cache.db");
+    // Taken before the open: a run that failed on the old file must not
+    // delete the one another run recreated meanwhile. No file, nothing to delete.
+    const seen = fileId(path);
     try {
       return cacheOn(connect(path), parser, path);
     } catch (e) {
       if (!replaceable(e)) return null;
     }
-    remove(path);
+    if (seen !== null && fileId(path) === seen) remove(path);
     return cacheOn(connect(path), parser, path);
   } catch {
     return null;
