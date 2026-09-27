@@ -38,6 +38,9 @@ itself with an exclusive 0600 open before SQLite opens it (SQLite would create
 it 0644 less the umask; it gives `-wal` and `-shm` the database's mode). The process umask is not
 touched: it would outlive the cache and narrow the card the same run writes,
 so a card written with the cache on came out 0600 and with `--no-cache` 0644.
+Modes are set only when zapara creates the directory or the file; one that
+exists keeps the mode it has, so a mode the person chose is not reset by the
+next run.
 
 ```sql
 PRAGMA user_version = 1;       -- storage format
@@ -207,9 +210,14 @@ The cache is never a reason for a run to fail or to change its answer.
   nothing to the cache.
 - The file is not a database, is corrupt, or has another `user_version`:
   it is deleted along with its WAL files and created again, once; if that
-  fails too, the run goes on without a cache.
+  fails too, the run goes on without a cache. Corruption past the header
+  shows only when the lookup reads a damaged page, so a lookup that fails
+  as corrupt is treated the same way: the file is recreated and the run
+  misses every file and fills the new one.
 - A row whose `events` does not parse or does not have the shape above is a
-  miss.
+  miss, and the row is deleted in the run's write, so the miss's fresh row
+  takes its place; the conditional upsert alone would keep the broken row,
+  which matches on parser, size, mtime and tail.
 - No cache error is printed, and none reaches the exit code.
 
 ## CLI
@@ -217,8 +225,8 @@ The cache is never a reason for a run to fail or to change its answer.
 - `--no-cache` runs without reading or writing the cache, for any command.
   `--help` gains the line `--no-cache        parse every transcript again`.
 - `--verbose` gains one line after `read`:
-  `cache   810 hits, 6 misses` (or `cache   off` with `--no-cache` or when
-  the cache could not be opened).
+  `cache   810 hits, 6 misses` (or `cache   off` with `--no-cache`, when
+  the cache could not be opened, or when its lookup failed).
 - On a miss the `read` line counts only the files that were read.
 
 ## Privacy
@@ -266,7 +274,13 @@ lines on stderr differ by design and are asserted on their own.
   set back with `utimes`: the next run reports that file as a miss and prints
   what `--no-cache` prints.
 - A cache row with garbage in `events`, and a `cache.db` that is plain text,
-  each give the `--no-cache` output and exit 0.
+  each give the `--no-cache` output and exit 0; after the garbage row, the
+  run after next hits every file.
+- A `cache.db` whose header is intact but whose second page is garbage
+  gives the `--no-cache` output, and the run after it hits every file.
+- A lookup that fails prints `cache   off` under `--verbose`.
+- The directory and the database are 0700 and 0600 when created, and keep
+  modes set on them afterwards.
 - An unwritable `~/.claude/zapara` gives the `--no-cache` output and exit 0.
 - The cache files contain neither the fixture's paths nor any of its message
   text, nor the SHA-256 of any fixture path.

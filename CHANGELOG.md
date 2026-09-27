@@ -72,6 +72,14 @@ All notable changes to this project are documented here. The format follows
   path is not a directory` instead of `projects directory not found`.
 - A transcript that starts with a UTF-8 byte order mark, as an editor may
   save it, keeps its first record instead of dropping it as malformed.
+- A cache row whose events no longer decode is rebuilt by the next run
+  instead of missing on every run until its transcript changed.
+- A `cache.db` corrupt past its header is deleted and created again, as
+  one that fails to open already was, instead of leaving the cache off for
+  good. When a lookup fails, `--verbose` prints `cache   off` instead of
+  counting every file as a miss.
+- zapara sets the modes of `~/.claude/zapara` (0700) and `cache.db` (0600)
+  only when it creates them, instead of resetting them on every run.
 - An empty value, as in `--projects ''` or `--projects=`, is a usage error,
   `--projects needs a value`, exit 2, instead of `projects directory not
   found`.

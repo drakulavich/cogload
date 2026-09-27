@@ -10,7 +10,8 @@ import type { Event, EventKind } from "../types.ts";
 
 export type Fresh = { entry: ScanEntry; tail: Uint8Array; fromMs: number; events: Event[] };
 export type TranscriptCache = {
-  hits(entries: ScanEntry[], cutoffMs: number): Promise<Map<string, Event[]>>;
+  // null: the cache failed and is off for this run.
+  hits(entries: ScanEntry[], cutoffMs: number): Promise<Map<string, Event[]> | null>;
   save(hit: ScanEntry[], fresh: Fresh[], nowMs: number): void;
   close(): void;
 };
@@ -97,13 +98,20 @@ class Foreign extends Error {}
 const replaceable = (e: unknown): boolean =>
   e instanceof Foreign || /^SQLITE_(NOTADB|CORRUPT)/.test(String((e as { code?: unknown } | null)?.code));
 
+// Modes are set on what zapara creates; a mode the person set later is theirs.
 function connect(path: string): Database {
   // Made 0600 before SQLite sees it: SQLite would create it 0644 less the
   // umask, and gives -wal and -shm the database file's mode.
-  try { closeSync(openSync(path, "wx", 0o600)); } catch (e) { if ((e as { code?: unknown }).code !== "EEXIST") throw e; }
+  let created = false;
+  try {
+    closeSync(openSync(path, "wx", 0o600));
+    created = true;
+  } catch (e) {
+    if ((e as { code?: unknown }).code !== "EEXIST") throw e;
+  }
   const db = new Database(path, { create: true, strict: true });
   try {
-    chmodSync(path, 0o600);
+    if (created) chmodSync(path, 0o600);
     db.run("PRAGMA busy_timeout = 2000");
     db.run("PRAGMA journal_mode = WAL");
     db.run("PRAGMA synchronous = NORMAL");
@@ -134,6 +142,7 @@ export function openCache(env: NodeJS.ProcessEnv): TranscriptCache | null {
     // creates the database 0600 itself, and SQLite gives its WAL files the
     // database's mode.
     const dir = join(home, ".claude", "zapara");
+    // An existing directory keeps the mode it has.
     for (const d of [join(home, ".claude"), dir]) {
       try {
         mkdirSync(d, { mode: 0o700 });
@@ -142,23 +151,27 @@ export function openCache(env: NodeJS.ProcessEnv): TranscriptCache | null {
         if ((e as { code?: unknown }).code !== "EEXIST") throw e;
       }
     }
-    // `mkdir` leaves an existing directory as it was; tighten ours.
-    chmodSync(dir, 0o700);
     const path = join(dir, "cache.db");
     try {
-      return cacheOn(connect(path), parser);
+      return cacheOn(connect(path), parser, path);
     } catch (e) {
       if (!replaceable(e)) return null;
     }
-    for (const f of [path, `${path}-wal`, `${path}-shm`]) rmSync(f, { force: true });
-    return cacheOn(connect(path), parser);
+    remove(path);
+    return cacheOn(connect(path), parser, path);
   } catch {
     return null;
   }
 }
 
-function cacheOn(db: Database, parser: Uint8Array): TranscriptCache {
+const remove = (path: string): void => { for (const f of [path, `${path}-wal`, `${path}-shm`]) rmSync(f, { force: true }); };
+
+// A file found corrupt only once it is queried (the header was fine) is
+// replaced like one that fails to open, once; this run then misses every file.
+function cacheOn(db: Database, parser: Uint8Array, path: string): TranscriptCache {
   let failed = false;
+  // Rows whose events did not decode: the conditional upsert would keep them.
+  const broken: { dev: number; ino: number }[] = [];
   return {
     async hits(entries, cutoffMs) {
       const found = new Map<string, Event[]>();
@@ -181,12 +194,22 @@ function cacheOn(db: Database, parser: Uint8Array): TranscriptCache {
             if (tail === null || !equal(tailHash(tail), row.tail)) continue;
             const events = decode(row.events);
             if (events !== null) found.set(entry.path, events);
+            else broken.push({ dev: row.dev, ino: row.ino });
           }
         };
         await Promise.all(Array.from({ length: Math.min(READERS, candidates.length) }, reader));
-      } catch {
-        failed = true;
+      } catch (e) {
         found.clear();
+        broken.length = 0;
+        if (!replaceable(e)) { failed = true; return null; }
+        try { db.close(); } catch {}
+        try {
+          remove(path);
+          db = connect(path);
+        } catch {
+          failed = true;
+          return null;
+        }
       }
       return found;
     },
@@ -204,7 +227,9 @@ function cacheOn(db: Database, parser: Uint8Array): TranscriptCache {
                       AND transcript.from_ms <= excluded.from_ms)`,
         );
         const touch = db.query("UPDATE transcript SET used_at = $now WHERE dev = $dev AND ino = $ino");
+        const drop = db.query("DELETE FROM transcript WHERE dev = $dev AND ino = $ino");
         db.transaction(() => {
+          for (const k of broken) drop.run(k);
           for (const { entry: e, tail, fromMs, events } of fresh) {
             if (e.ino === 0 || !events.every((ev) => UUID.test(ev.sessionId))) continue;
             upsert.run({ dev: e.dev, ino: e.ino, parser, size: e.size, mtime: e.mtimeMs, tail, from: fromMs, now: nowMs, events: encode(events) });
