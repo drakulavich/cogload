@@ -150,3 +150,18 @@ describe("status: a streak that began yesterday", () => {
     expect(day.presence).toEqual({ lastAt: "2026-09-14T00:05:00.000Z", streakStartAt: "2026-09-13T23:58:00.000Z" });
   });
 });
+
+describe("status: the streak stays inside the reader contract", () => {
+  const A = "aaaaaaaa-1111-4111-8111-111111111111";
+  // A prompt every five minutes from 20:00 the day before to 23:45: nearly 28
+  // hours. The reader contract bounds streakMin to 0..1500, and a reader treats
+  // anything above as no data, so a longer streak is written as 1500.
+  const marathon = Array.from({ length: 12 * 28 - 2 }, (_, i) => prompt(new Date(Date.parse("2026-09-13T20:00:00.000Z") + i * 300_000).toISOString(), A));
+
+  test("a streak longer than 25 hours is written as 1500 minutes", () => {
+    const now = new Date("2026-09-14T23:50:00.000Z");
+    const day = analyze([transcript(marathon)], { to: "2026-09-14", days: 1, now })[0]!;
+    expect(day.presence!.lastAt).toBe("2026-09-14T23:45:00.000Z");
+    expect(statusOf(day, now).streakMin).toBe(1500);
+  });
+});

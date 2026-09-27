@@ -14,6 +14,10 @@ All notable changes to this project are documented here. The format follows
   failing every command, `status` included, with `Cannot create a string longer
   than 2147483647 characters`. The rest of the report stands, and zapara no
   longer reads such a file into memory at all.
+- `zapara status` writes a streak longer than 25 hours as `"streakMin":1500`,
+  the ceiling the status file promises its readers. It used to write up to
+  1620 late in the evening, and a reader that decodes the file strictly,
+  like pult, dropped the whole line as no data.
 
 ## [0.8.1] - 2026-09-27
 
