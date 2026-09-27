@@ -213,10 +213,16 @@ The cache is never a reason for a run to fail or to change its answer.
   fails too, the run goes on without a cache. Corruption past the header
   shows only when the lookup reads a damaged page, so a lookup that fails
   as corrupt is treated the same way: the file is recreated and the run
-  misses every file and fills the new one. The run deletes the file only
-  if the path still holds the one it opened (same device and inode); if
-  another run has already recreated it, this run opens that one instead,
-  so two runs recovering at once never delete each other's fresh cache.
+  misses every file and fills the new one. Either way the run deletes the
+  file only if the path still holds the one it opened (same device and
+  inode). For a file that fails to open, the run takes that identity
+  before the open, and if there was no file it deletes nothing. If
+  another run has already recreated the file, this run opens that one
+  instead, so a run that failed on the old file never deletes another's
+  fresh cache. The check and the delete are two steps: two runs that fail
+  on the same file within the same instant can both pass the check, and
+  the later delete can take the file the earlier run just made. That
+  run then goes without a cache.
 - A row whose `events` does not parse or does not have the shape above is a
   miss, and the row is deleted in the run's write, so the miss's fresh row
   takes its place; the conditional upsert alone would keep the broken row,
