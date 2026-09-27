@@ -71,17 +71,29 @@ describe("one character per fixture", () => {
     expect(c.highlights).toHaveLength(2);
   });
 
-  test("Night Owl: share of hours after midnight", () => {
+  test("Night Owl: share of hours late at night", () => {
     const c = cardOf(nightOwl);
     expect(c.character).toBe("nightOwl");
     expect(c.name).toBe("The Night Owl");
-    expect(c.motto).toBe("The best commits happen after midnight.");
-    expect(sentenceText(c.sentence)).toBe("100% of your hours after midnight.");
-    expect(c.sentence.filter((s) => s.strong).map((s) => s.text)).toEqual(["100%", "after midnight"]);
+    expect(c.motto).toBe("The best commits happen late at night.");
+    expect(sentenceText(c.sentence)).toBe("100% of your hours late at night.");
+    expect(c.sentence.filter((s) => s.strong).map((s) => s.text)).toEqual(["100%", "late at night"]);
     expect(c.highlights.slice(0, 2)).toEqual([
-      { key: "lateShare", value: "100%", caption: "of hours after midnight" },
+      { key: "lateShare", value: "100%", caption: "of hours late at night" },
       { key: "longestStreak", value: "5m", caption: "longest streak" },
     ]);
+  });
+});
+
+describe("the Night Owl's words", () => {
+  test("a card whose late hours are all 23:xx never says after midnight", () => {
+    // Two prompts at 23:10 and 23:40: hour 23 is late (lateNight covers 23 and
+    // 0-5), so this is the Night Owl at 100%, and none of it is after midnight.
+    const c = cardOf([prompt(at(23, 10), sid("n")), prompt(at(23, 40), sid("n"))]);
+    expect(c.character).toBe("nightOwl");
+    const words = [sentenceText(c.sentence), c.motto, ...c.highlights.map((h) => h.caption)].join(" ");
+    expect(words).not.toContain("midnight");
+    expect(sentenceText(c.sentence)).toBe("100% of your hours late at night.");
   });
 });
 

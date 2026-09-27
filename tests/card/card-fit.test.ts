@@ -17,14 +17,14 @@ const MOTTOS: Record<Character, string> = {
   conductor: "You run agents like an orchestra.",
   supervisor: "Nothing ships without your eyes on it.",
   marathoner: "You do not stop while it compiles.",
-  nightOwl: "The best commits happen after midnight.",
+  nightOwl: "The best commits happen late at night.",
 };
 // Every value at its longest form from the spec's format table.
 const SENTENCES: Record<Character, Segment[]> = {
   conductor: [strong("999B+ sessions"), plain(" at once, "), strong("999B+ context switches"), plain(" in one hour.")],
   supervisor: [strong("999B+ agent reports"), plain(" and "), strong("999B+ tokens"), plain(" of output read.")],
   marathoner: [plain("Longest streak "), strong("999h+"), plain(" without a break, "), strong("100%"), plain(" of your hours calm.")],
-  nightOwl: [strong("100%"), plain(" of your hours "), strong("after midnight"), plain(".")],
+  nightOwl: [strong("100%"), plain(" of your hours "), strong("late at night"), plain(".")],
 };
 const longest = (character: Character): CardData => ({
   days: 90,
@@ -37,7 +37,7 @@ const longest = (character: Character): CardData => ({
   spectrum: { calm: 100, warming: 0, heating: 0, fried: 0 },
   highlights: [
     { key: "interrupts", value: "999B+", caption: "times you stopped Claude" },
-    { key: "lateShare", value: "100%", caption: "of hours after midnight" },
+    { key: "lateShare", value: "100%", caption: "of hours late at night" },
     { key: "longestStreak", value: "999h+", caption: "tokens of output read" },
   ],
 });

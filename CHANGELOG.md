@@ -35,6 +35,10 @@ All notable changes to this project are documented here. The format follows
   runs, which the grid, the day and `status` already left out. A transcript
   from a machine whose clock runs ahead could put hours on the card that no
   other view showed.
+- The Night Owl's card says "late at night" instead of "after midnight" in
+  its sentence, caption and motto. The late hours are 23 and 0 to 5, so a
+  card whose late hours were all 23:xx read "100% of your hours after
+  midnight".
 - The Marathoner's sentence takes its calm share from the spectrum under it,
   so one card no longer says 33% calm in the sentence and 34% in the legend.
 - A level with any hours shows at least 1% on the card's spectrum. One fried

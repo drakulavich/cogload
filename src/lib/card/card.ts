@@ -30,7 +30,7 @@ const MOTTOS: Record<Character, string> = {
   conductor: "You run agents like an orchestra.",
   supervisor: "Nothing ships without your eyes on it.",
   marathoner: "You do not stop while it compiles.",
-  nightOwl: "The best commits happen after midnight.",
+  nightOwl: "The best commits happen late at night.",
 };
 // Rank the third highlight, per active hour. They never touch the index, whose
 // norms stay in score.ts.
@@ -50,7 +50,8 @@ const CAPTIONS: Record<HighlightKey, [string, string]> = {
   reportsRead: ["agent report read", "agent reports read"],
   tokensRead: ["token of output read", "tokens of output read"],
   interrupts: ["time you stopped Claude", "times you stopped Claude"],
-  lateShare: ["of hours after midnight", "of hours after midnight"],
+  // Late is hours 23 and 0-5, so not "after midnight": 23:00 is before it.
+  lateShare: ["of hours late at night", "of hours late at night"],
 };
 
 function formatStreak(min: number): string {
@@ -123,7 +124,7 @@ export function cardData(days: Day[], w: { days: number }): CardData | null {
     conductor: [strong(plural(maxSessions, "session")), plain(" at once, "), strong(plural(maxSwitches, "context switch", "context switches")), plain(" in one hour.")],
     supervisor: [strong(plural(reports, "agent report")), plain(" and "), strong(plural(tokens, "token", "tokens", formatTokens)), plain(" of output read.")],
     marathoner: [plain("Longest streak "), strong(formatStreak(maxStreak)), plain(" without a break, "), strong(`${spectrum.calm}%`), plain(" of your hours calm.")],
-    nightOwl: [strong(`${late}%`), plain(" of your hours "), strong("after midnight"), plain(".")],
+    nightOwl: [strong(`${late}%`), plain(" of your hours "), strong("late at night"), plain(".")],
   };
 
   const peakBucket = active.reduce((a, b) => (b.score.index > a.score.index ? b : a));
