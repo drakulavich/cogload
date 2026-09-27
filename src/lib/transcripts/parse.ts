@@ -59,7 +59,10 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
   // `tool_result` is the machine reporting back.
   const askedIds = new Set<string>();
 
-  for (const line of text.split("\n")) {
+  // Claude Code writes no byte order mark, but an editor can; left in, it would
+  // make the first record invalid JSON.
+  const body = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  for (const line of body.split("\n")) {
     if (line.trim() === "") continue;
     if (lastTs !== null && lastTs < cutoffMs && olderThan(line, cutoffMs)) continue;
     let rec: unknown;

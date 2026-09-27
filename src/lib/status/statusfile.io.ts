@@ -23,9 +23,9 @@ export async function writeStatus(line: string, env: NodeJS.ProcessEnv): Promise
   const tmp = join(dir, `status.json.${process.pid}.${Math.random().toString(36).slice(2, 10)}.tmp`);
   let created = false;
   try {
-    await mkdir(dir, { recursive: true, mode: 0o700 });
-    // `mkdir` leaves an existing directory as it was; tighten it.
-    await chmod(dir, 0o700);
+    // A directory zapara creates is 0700; one that exists keeps the mode the
+    // person gave it.
+    if ((await mkdir(dir, { recursive: true, mode: 0o700 })) !== undefined) await chmod(dir, 0o700);
     const handle = await open(tmp, "wx", 0o600);
     created = true;
     try { await handle.writeFile(line); } finally { await handle.close(); }

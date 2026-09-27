@@ -56,6 +56,41 @@ All notable changes to this project are documented here. The format follows
 - Without `--out`, a card that Downloads cannot take says `cannot write
   zapara-card.png to Downloads: pass --out <path>` instead of pointing at an
   `--out` directory the person never gave.
+- `card --json --out me.png` is a usage error, `--json writes no file; drop
+  --out`, instead of printing the data, writing nothing and exiting 0.
+- A `card` window with no activity names its dates, `no activity from
+  2026-08-01 to 2026-08-31`, instead of `no activity in the last 31 days`,
+  which was false for a window that ended in the past.
+- `card --json` over a window with no activity prints `null` and exits 0,
+  so a script gets a document either way. The picture still exits 1.
+- A projects directory that can be listed but not entered (mode 444) says
+  `projects directory cannot be read (check its permissions)` and exits 1,
+  as one with mode 000 does, instead of reporting no activity.
+- `--projects` pointing at a file, such as one transcript, says `projects
+  path is not a directory` instead of `projects directory not found`.
+- A transcript that starts with a UTF-8 byte order mark, as an editor may
+  save it, keeps its first record instead of dropping it as malformed.
+- A cache row whose events no longer decode is rebuilt by the next run
+  instead of missing on every run until its transcript changed.
+- A `cache.db` corrupt past its header is deleted and created again, as
+  one that fails to open already was, instead of leaving the cache off for
+  good. When a lookup fails, `--verbose` prints `cache   off` instead of
+  counting every file as a miss.
+- zapara sets the modes of `~/.claude/zapara` (0700) and `cache.db` (0600)
+  only when it creates them, instead of resetting them on every run;
+  `zapara status` no longer resets the directory either. `status.json`
+  is still written 0600 each time.
+- The week grid ends with `as of HH:MM, this hour is still running` when
+  `--to` names a day after today, as the JSON's `asOf` already did.
+- A window across a calendar day the time zone skipped (Samoa went from 29
+  to 31 December 2011) lists that date once as an empty day, instead of
+  listing the next day twice with its counts doubled.
+- An Enter pressed while the card is being drawn no longer answers `open
+  it? [Y/n]` before the question is shown: input typed before the question
+  is discarded.
+- An empty value, as in `--projects ''` or `--projects=`, is a usage error,
+  `--projects needs a value`, exit 2, instead of `projects directory not
+  found`.
 
 ## [0.8.1] - 2026-09-27
 

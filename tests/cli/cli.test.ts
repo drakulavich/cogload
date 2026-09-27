@@ -201,6 +201,15 @@ describe("cli", () => {
     }
   });
 
+  test("an empty --projects is a usage error, not a directory that is not found", async () => {
+    const p = Bun.spawn(["bun", CLI, "--projects", "", "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
+    const q = Bun.spawn(["bun", CLI, "--projects=", "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
+    for (const s of [p, q]) {
+      const [err, code] = await Promise.all([new Response(s.stderr).text(), s.exited]);
+      expect([code, err]).toEqual([2, "zapara: --projects needs a value\nrun 'zapara --help' for usage\n"]);
+    }
+  });
+
   test("a value flag given twice is a usage error, not the last value winning", async () => {
     for (const [flag, v] of [["--days", "3"], ["--from", "2026-09-10"], ["--to", "2026-09-14"], ["--projects", root]] as const) {
       expect(await first(flag, v, flag, v)).toEqual([2, `zapara: ${flag} given twice`]);
@@ -224,6 +233,51 @@ describe("cli", () => {
       expect(err).not.toContain(dir);
     } finally {
       await chmod(dir, 0o755).catch(() => {});
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a projects directory that can be listed but not entered says it cannot be read", async () => {
+    if (process.getuid?.() === 0) return; // root bypasses file permissions
+    const dir = await mkdtemp(join(tmpdir(), "zapara-cli-listonly-"));
+    try {
+      await writeTree(dir, [{ path: "-Users-me-proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" }]);
+      await chmod(dir, 0o444);
+      const p = Bun.spawn(["bun", CLI, "--projects", dir, "2026-09-14", "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
+      const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
+      expect([code, out, err]).toEqual([1, "", "zapara: projects directory cannot be read (check its permissions)\n"]);
+    } finally {
+      await chmod(dir, 0o755).catch(() => {});
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a projects path that is a file says it is not a directory, without the path", async () => {
+    const file = join(root, "-Users-me-proj/a.jsonl");
+    const p = Bun.spawn(["bun", CLI, "--projects", file, "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
+    const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
+    expect([code, out, err]).toEqual([1, "", "zapara: projects path is not a directory (pass --projects <dir>)\n"]);
+  });
+
+  test("a calendar day the zone skipped is its own empty day, and the next day is listed once", async () => {
+    // Samoa jumped from 29 to 31 December 2011; 10:00-10:30 on the 31st is 20:00-20:30Z on the 30th.
+    const dir = await mkdtemp(join(tmpdir(), "zapara-cli-apia-"));
+    try {
+      const ts = [0, 5, 10, 15, 20, 25, 30].map((m) => `2011-12-30T20:${String(m).padStart(2, "0")}:00.000Z`);
+      await writeTree(dir, [{ path: "-Users-me-proj/a.jsonl", lines: ts.map((t) => prompt(t, A)), mtime: ts.at(-1)! }]);
+      const args = ["bun", CLI, "--projects", dir, "--to", "2011-12-31", "--days", "3", "--no-color"];
+      const env = { ...process.env, TZ: "Pacific/Apia", HOME: home };
+      const p = Bun.spawn([...args, "--json"], { stdout: "pipe", stderr: "pipe", env });
+      const [out, code] = await Promise.all([new Response(p.stdout).text(), p.exited]);
+      expect(code).toBe(0);
+      const days = JSON.parse(out).map((d: { date: string; totals: { prompts: number } }) => [d.date, d.totals.prompts]);
+      expect(days).toEqual([["2011-12-29", 0], ["2011-12-30", 0], ["2011-12-31", 7]]);
+      let text = "";
+      const t = Bun.spawn(args, { env, terminal: { cols: 200, rows: 24, data(_t, d) { text += new TextDecoder().decode(d); } } });
+      await t.exited;
+      t.terminal!.close();
+      expect(text.split("\r\n").slice(1, 4).map((l) => l.slice(0, 9))).toEqual(["Thu 29/12", "Fri 30/12", "Sat 31/12"]);
+    } finally {
       await rm(dir, { recursive: true, force: true });
     }
   });

@@ -37,6 +37,13 @@ describe("noise in transcripts", () => {
     expect(b.activeMin).toBe(5);
   });
 
+  test("a UTF-8 byte order mark before the first record does not cost that record", () => {
+    // A hand-edited file saved by an editor that writes a BOM.
+    const t = transcript([prompt(at("00"), S), prompt(at("01"), S)]);
+    const b = analyze([{ ...t, text: `\uFEFF${t.text}` }], W)[0]!.buckets[13]!;
+    expect(b.prompts).toBe(2);
+  });
+
   test("bookkeeping records are ignored", () => {
     const b = analyze([transcript([
       JSON.stringify({ type: "last-prompt", leafUuid: "x", sessionId: S }),

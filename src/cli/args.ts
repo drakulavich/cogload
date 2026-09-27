@@ -92,8 +92,9 @@ export function parseArgs(argv: string[], now: Date, env: Record<string, string 
     const eq = arg.startsWith("--") ? arg.indexOf("=") : -1;
     if (eq > 0) { inline = arg.slice(eq + 1); arg = arg.slice(0, eq); }
     const bare = (): void => { if (inline !== null) throw new UsageError(`unknown flag${named(argv[i]!)}`); };
-    // A value that looks like another flag is a usage error (`--projects --json`);
-    // only --days accepts a negative number, so `--days -1` reaches the range check.
+    // A value that looks like another flag is a usage error (`--projects --json`),
+    // and so is an empty one (`--projects=`); only --days accepts a negative
+    // number, so `--days -1` reaches the range check.
     const value = (negativeNumberIsValue = false): string => {
       let v: string;
       if (inline !== null) v = inline;
@@ -102,6 +103,7 @@ export function parseArgs(argv: string[], now: Date, env: Record<string, string 
         if (next === undefined || (next.startsWith("-") && !(negativeNumberIsValue && /^-\d/.test(next)))) throw new UsageError(`${arg} needs a value`);
         v = next;
       }
+      if (v === "") throw new UsageError(`${arg} needs a value`);
       if (seen.has(arg)) throw new UsageError(`${arg} given twice`);
       seen.add(arg);
       return v;
@@ -143,6 +145,7 @@ export function parseArgs(argv: string[], now: Date, env: Record<string, string 
   a.json = a.command === "card" ? jsonFlag : jsonFlag || !isTTY;
   if (a.command !== "day" && a.explain) throw new UsageError("--explain applies to a named day only");
   if (a.command !== "card" && a.out !== null) throw new UsageError("--out applies to card only");
+  if (a.json && a.out !== null) throw new UsageError("--json writes no file; drop --out");
   if (a.out !== null) {
     // Printed back verbatim in `wrote \u2026`, so it must be one plain line.
     if (/[\x00-\x1f\x7f]/.test(a.out)) throw new UsageError("--out must not contain control characters");

@@ -60,12 +60,12 @@ describe("zapara status", () => {
     expect(await tmps(h)).toEqual([]);
   });
 
-  test("a directory left open by something else comes back to 0700", async () => {
+  test("a directory whose mode was set by hand keeps it; the file is still 0600", async () => {
     const h = await home();
-    await mkdir(dirOf(h), { recursive: true, mode: 0o755 });
-    await chmod(dirOf(h), 0o755);
+    await mkdir(dirOf(h), { recursive: true });
+    await chmod(dirOf(h), 0o750);
     expect((await run(h)).code).toBe(0);
-    expect((await stat(dirOf(h))).mode & 0o777).toBe(0o700);
+    expect((await stat(dirOf(h))).mode & 0o777).toBe(0o750);
     expect((await stat(statusPath(h))).mode & 0o777).toBe(0o600);
   });
 

@@ -41,7 +41,8 @@ export async function report(o: ReportOptions, timing?: Timing, cache?: Transcri
   const entries = await scan(o.projects, cutoffMs, stats);
   const scanMs = performance.now() - t;
   t = performance.now();
-  const hits = cache ? await cache.hits(entries, cutoffMs) : new Map<string, Event[]>();
+  const found = cache ? await cache.hits(entries, cutoffMs) : null;
+  const hits = found ?? new Map<string, Event[]>();
   const lookupMs = performance.now() - t;
   t = performance.now();
   const misses = entries.filter((e) => !hits.has(e.path));
@@ -76,6 +77,6 @@ export async function report(o: ReportOptions, timing?: Timing, cache?: Transcri
   t = performance.now();
   cache?.save(entries.filter((e) => hits.has(e.path)), fresh, Date.now());
   const saveMs = performance.now() - t;
-  if (timing) Object.assign(timing, { ...stats, inWindow: entries.length, read: reads.size, bytes, cache: cache ? { hits: hits.size, misses: misses.length } : null, scanMs, lookupMs, readMs, analyzeMs, saveMs });
+  if (timing) Object.assign(timing, { ...stats, inWindow: entries.length, read: reads.size, bytes, cache: found ? { hits: hits.size, misses: misses.length } : null, scanMs, lookupMs, readMs, analyzeMs, saveMs });
   return days;
 }

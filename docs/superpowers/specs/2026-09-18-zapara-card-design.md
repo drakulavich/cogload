@@ -51,8 +51,10 @@ zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [-
   (`The Conductor: 5 sessions at once, 54 context switches in one hour`) and
   `wrote zapara-card.png`, echoing `--out` exactly as given. No other path is
   ever printed.
-- A window with no active hour prints `no activity in the last 14 days`
-  (with the actual `--days`) to stderr, writes nothing, exits 1.
+- A window with no active hour prints `no activity from 2026-09-01 to
+  2026-09-14` (the window's own dates; `no activity on 2026-09-14` for one
+  day) to stderr, writes nothing, exits 1. With `--json` it prints `null`
+  to stdout and exits 0, so a script gets a document either way.
 - When the picture cannot be rendered because no browser engine is available
   (see Rendering), stderr gets one line, `card needs a browser engine:
   install a Chromium browser such as Chrome or Edge, or write --out card.html`, exit 1. A render that

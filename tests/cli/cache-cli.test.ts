@@ -169,14 +169,16 @@ describe("the transcript cache", () => {
     expect(wide.out).toBe((await uncached(projects, "--days", "7")).out);
   });
 
-  test("a row with garbage in events is a miss", async () => {
+  test("a row with garbage in events is a miss, and the miss rebuilds it", async () => {
     const { home, projects } = await setup();
     await spawn(home, projects);
     sql(home, "UPDATE transcript SET events = 'x'");
     const run2 = await spawn(home, projects, "--verbose");
+    const run3 = await spawn(home, projects, "--verbose");
     expect(run2.code).toBe(0);
     expect(run2.out).toBe((await uncached(projects)).out);
     expect(hitsOf(run2.err)).toEqual({ hits: 0, misses: 3 });
+    expect(hitsOf(run3.err)).toEqual({ hits: 3, misses: 0 });
   });
 
   test("a row from another parser is a miss", async () => {
@@ -212,6 +214,34 @@ describe("the transcript cache", () => {
     expect(hitsOf(run3.err)).toEqual({ hits: 3, misses: 0 });
   });
 
+  test("a cache.db corrupt past its header is replaced", async () => {
+    const { home, projects } = await setup();
+    await spawn(home, projects);
+    // The header stays valid, so the file opens; the page after it is garbage.
+    const bytes = await readFile(cacheDb(home));
+    expect(bytes.length).toBeGreaterThan(4096 + 512);
+    bytes.fill(0xab, 4096, 4096 + 512);
+    await writeFile(cacheDb(home), bytes);
+    const run2 = await spawn(home, projects, "--verbose");
+    const run3 = await spawn(home, projects, "--verbose");
+    expect([run2.code, run2.out]).toEqual([0, (await uncached(projects)).out]);
+    expect(hitsOf(run3.err)).toEqual({ hits: 3, misses: 0 });
+  });
+
+  test("runs that find the same corrupt cache.db at once all print what --no-cache prints, and leave a working cache", async () => {
+    const { home, projects } = await setup();
+    await spawn(home, projects);
+    const bytes = await readFile(cacheDb(home));
+    bytes.fill(0xab, 4096, 4096 + 512);
+    await writeFile(cacheDb(home), bytes);
+    const runs = await Promise.all([1, 2, 3, 4].map(() => spawn(home, projects)));
+    const expected = (await uncached(projects)).out;
+    expect(runs.map((r) => [r.code, r.err, r.out === expected])).toEqual(Array(4).fill([0, "", true]));
+    // Were a straggler to delete the file another run had just recreated and
+    // filled, this run would miss.
+    expect(hitsOf((await spawn(home, projects, "--verbose")).err)).toEqual({ hits: 3, misses: 0 });
+  });
+
   test("a transcript with a session id that is not a UUID is never cached", async () => {
     const { home, projects } = await setup();
     const marker = "zapara-private-marker";
@@ -237,6 +267,8 @@ describe("the transcript cache", () => {
     expect(run2.code).toBe(0);
     expect(run2.out).toBe((await uncached(projects)).out);
     expect(rows(home)).toBe(0);
+    // Nothing was looked up, so --verbose claims no hits and no misses.
+    expect(lineOf(run2.err, "cache")).toBe("cache   off");
   });
 
   test("an unwritable ~/.claude/zapara leaves the run as it was", async () => {
@@ -307,6 +339,18 @@ console.log([...seen].sort().join(" "));
     expect(seen).toContain(":600"); // the poller did see the database
     expect(seen.filter((s) => !s.endsWith(":600"))).toEqual([]);
   }, 30_000);
+
+  test("the cache directory and file get private modes when created, and keep the modes a person sets later", async () => {
+    const { home, projects } = await setup();
+    const dir = join(home, ".claude", "zapara");
+    await spawn(home, projects);
+    expect([(await stat(dir)).mode & 0o777, (await stat(cacheDb(home))).mode & 0o777]).toEqual([0o700, 0o600]);
+    await chmod(dir, 0o750);
+    await chmod(cacheDb(home), 0o640);
+    const run2 = await spawn(home, projects, "--verbose");
+    expect(hitsOf(run2.err)).toEqual({ hits: 3, misses: 0 });
+    expect([(await stat(dir)).mode & 0o777, (await stat(cacheDb(home))).mode & 0o777]).toEqual([0o750, 0o640]);
+  });
 
   test("with HOME empty the run works and the cache is off", async () => {
     const { projects } = await setup();

@@ -113,11 +113,11 @@ describe("report", () => {
     });
   });
 
-  test("a non-directory projects root rejects the same way", async () => {
+  test("a non-directory projects root rejects, saying so without the path", async () => {
     await withTempDir(async (dir) => {
       await writeTree(dir, [{ path: "notadir.txt", lines: ["x"], mtime: "2026-09-14T13:00:00.000Z" }]);
       await expect(report({ projects: join(dir, "notadir.txt"), to: "2026-09-14", days: 1 }))
-        .rejects.toThrow("projects directory not found (pass --projects <dir>)");
+        .rejects.toThrow("projects path is not a directory (pass --projects <dir>)");
     });
   });
 });
