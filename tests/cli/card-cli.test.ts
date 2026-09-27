@@ -360,6 +360,14 @@ describe("zapara card", () => {
     expect(await files()).toEqual([]);
   });
 
+  test("--json with --out is a usage error: the data is printed and the picture never written", async () => {
+    for (const out of ["me.png", "me.html"]) {
+      const r = await run("card", "--to", "2026-09-20", "--json", "--out", out);
+      expect([r.code, r.out, r.err]).toEqual([2, "", "zapara: --json writes no file; drop --out\nrun 'zapara --help' for usage\n"]);
+    }
+    expect(await files()).toEqual([]);
+  });
+
   test("--out on the grid and --explain on card are usage errors", async () => {
     expect((await run("--out", "x.png")).code).toBe(2);
     expect((await run("card", "--explain")).code).toBe(2);

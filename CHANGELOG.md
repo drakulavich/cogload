@@ -57,6 +57,13 @@ All notable changes to this project are documented here. The format follows
   zapara-card.png to Downloads: pass --out <path>` instead of pointing at an
   `--out` directory the person never gave.
 
+### Fixed
+- `card --json --out me.png` is a usage error, `--json writes no file; drop
+  --out`, instead of printing the data, writing nothing and exiting 0.
+- An empty value, as in `--projects ''` or `--projects=`, is a usage error,
+  `--projects needs a value`, exit 2, instead of `projects directory not
+  found`.
+
 ## [0.8.1] - 2026-09-27
 
 ### Changed

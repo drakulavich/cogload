@@ -201,6 +201,15 @@ describe("cli", () => {
     }
   });
 
+  test("an empty --projects is a usage error, not a directory that is not found", async () => {
+    const p = Bun.spawn(["bun", CLI, "--projects", "", "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
+    const q = Bun.spawn(["bun", CLI, "--projects=", "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
+    for (const s of [p, q]) {
+      const [err, code] = await Promise.all([new Response(s.stderr).text(), s.exited]);
+      expect([code, err]).toEqual([2, "zapara: --projects needs a value\nrun 'zapara --help' for usage\n"]);
+    }
+  });
+
   test("a value flag given twice is a usage error, not the last value winning", async () => {
     for (const [flag, v] of [["--days", "3"], ["--from", "2026-09-10"], ["--to", "2026-09-14"], ["--projects", root]] as const) {
       expect(await first(flag, v, flag, v)).toEqual([2, `zapara: ${flag} given twice`]);
