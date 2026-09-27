@@ -16,7 +16,7 @@
   "scripts": {
     "dev": "bun run src/cli/index.ts",
     "stats": "bun scripts/signal-stats.ts",
-    "test": "TZ=UTC bun test",
+    "test": "TZ=UTC ZAPARA_NO_WEBVIEW=1 bun test --path-ignore-patterns='**/*.webview.test.ts' && TZ=UTC bun test .webview.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome ci && knip --include files,exports,types",
     "check": "bun run typecheck && bun run lint && bun run test"

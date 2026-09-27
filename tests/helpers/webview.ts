@@ -20,6 +20,13 @@ export const WEBVIEW_STEP_TIMEOUT = WEBVIEW_TEST_TIMEOUT / 3;
 const BACKEND = process.platform === "darwin" ? "webkit" : "chrome";
 const READY = 'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
 
+// `bun run test` runs the *.webview.test.ts files in a process of their own, apart
+// from the many CLI processes the rest spawn, and marks the rest's process with
+// ZAPARA_NO_WEBVIEW. A WebView test in any other file fails here instead of joining them.
+if (process.env.ZAPARA_NO_WEBVIEW) {
+  throw new Error("a test that opens a WebView goes in a *.webview.test.ts file");
+}
+
 export const webviewMissing: string | null = await (async () => {
   try {
     const view = new Bun.WebView({ width: 8, height: 8, backend: BACKEND });
