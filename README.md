@@ -219,7 +219,7 @@ index = round(25*parallel + 15*pace + 30*supervision + 10*reading + 10*streak + 
 
 The norms are the p90 of two weeks of real transcripts on two machines, 116 and 114 active hours. Why each one is what it is, and what surprised me in that data, is in [How the numbers are made](docs/how-the-numbers-are-made.md#5-the-index).
 
-Weights and norms live in one exported constant in `src/score.ts`, so a recalibration is one diff there plus a line in `CHANGELOG.md`.
+Weights and norms live in one exported constant in `src/lib/metrics/score.ts`, so a recalibration is one diff there plus a line in `CHANGELOG.md`.
 
 </details>
 
@@ -265,7 +265,7 @@ Tests are fixture-driven: they build or load transcripts in the real Claude Code
 
 The question comes from Addy Osmani's [Your parallel Agent limit](https://addyosmani.com/blog/cognitive-parallel-agents/). More agents running does not make more of you available, because "your cognitive bandwidth doesn't parallelize", and the cost of the ones you are not looking at is what he calls the ambient anxiety tax: "the part of your mind that can't fully relax because it knows something might be silently going sideways in a thread you haven't checked in twenty minutes." His own ceiling is "somewhere around three to four threads depending on complexity", and his advice is to start with one thread less than feels right.
 
-The index was calibrated before I read that, from the 90th percentile of two weeks on two machines, and it arrived at the same number: `NORMS.parallelSpan` in [src/score.ts](src/score.ts) is 4, so the fifth session running at once spends all 25 points for parallel work.
+The index was calibrated before I read that, from the 90th percentile of two weeks on two machines, and it arrived at the same number: `NORMS.parallelSpan` in [src/lib/metrics/score.ts](src/lib/metrics/score.ts) is 4, so the fifth session running at once spends all 25 points for parallel work.
 
 The post and this tool disagree about what to watch. Osmani's signal is the quality of your own review: you have passed your ceiling when your confidence in what you are accepting starts dropping. A transcript cannot see that. It can see how much model output went past you, which is the `out-tok` column and ten of the hundred points, and it can see the shape of the hour around it. The index is a proxy with a known blind spot, and the number is worth something only next to your memory of the hour it scores.
 

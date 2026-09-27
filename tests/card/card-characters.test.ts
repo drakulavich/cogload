@@ -120,7 +120,7 @@ describe("ties and eligibility", () => {
     //   tokensRead     32500 / (65000 x 1 hour)      = 0.5
     // The streak wins. Under the old norm of 120 it would rank 30/120 = 0.25 and
     // tokensRead would take the slot instead, so this row is what keeps the
-    // card's ranking honest when src/score.ts is recalibrated.
+    // card's ranking honest when src/lib/metrics/score.ts is recalibrated.
     // Conductor 0.83 = (parallel 25 + pace 15 x 11/20 = 8.25) / 40 beats
     // Marathoner 0.75 (the streak part) and Supervisor 0.27, and 10:00 is not
     // late, so the character is the Conductor and the pair is its own.
