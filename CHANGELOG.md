@@ -70,6 +70,8 @@ All notable changes to this project are documented here. The format follows
   as one with mode 000 does, instead of reporting no activity.
 - `--projects` pointing at a file, such as one transcript, says `projects
   path is not a directory` instead of `projects directory not found`.
+- A transcript that starts with a UTF-8 byte order mark, as an editor may
+  save it, keeps its first record instead of dropping it as malformed.
 - An empty value, as in `--projects ''` or `--projects=`, is a usage error,
   `--projects needs a value`, exit 2, instead of `projects directory not
   found`.
