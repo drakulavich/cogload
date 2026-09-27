@@ -16,6 +16,7 @@ const parseDate = (s: string): Date => {
   return new Date(y, m - 1, d); // local midnight
 };
 
+// cutoffMs is the earliest instant read: the look-back, or `streakFrom` when earlier.
 export function windowBounds(w: Window): { startMs: number; endMs: number; cutoffMs: number; dates: string[] } {
   const to = parseDate(w.to);
   const dates: string[] = [];
@@ -25,7 +26,7 @@ export function windowBounds(w: Window): { startMs: number; endMs: number; cutof
   }
   const startMs = parseDate(dates[0]!).getTime();
   const endMs = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1).getTime();
-  return { startMs, endMs, cutoffMs: startMs - LOOKBACK_MS, dates };
+  return { startMs, endMs, cutoffMs: Math.min(startMs - LOOKBACK_MS, w.streakFrom?.getTime() ?? Infinity), dates };
 }
 
 const emptyMetrics = (): Metrics => ({
@@ -175,12 +176,24 @@ function buildDay(date: string, acc: Map<string, Acc>): Day {
   };
 }
 
+// Walks a streak's start back through earlier presence, one gap of at most
+// GAP_MS at a time. `earlier` is ascending and all before `start`.
+function traceBack(start: number, earlier: number[]): number {
+  for (let i = earlier.length - 1; i >= 0 && start - earlier[i]! <= GAP_MS; i--) start = earlier[i]!;
+  return start;
+}
+
 export function derive(events: Event[], w: Window): Day[] {
   const { startMs, endMs, cutoffMs, dates } = windowBounds(w);
+  const lookbackMs = startMs - LOOKBACK_MS;
   // sort() is stable, so events equal on both keys keep their input order.
-  const sorted = events
+  const read = events
     .filter((e) => e.ts >= cutoffMs && e.ts < endMs && (!w.now || e.ts <= w.now.getTime()))
     .sort((a, b) => a.ts - b.ts || compareStrings(a.sessionId, b.sessionId));
+  // Events before the look-back, read only for `streakFrom`, move nothing but
+  // the start of a streak in `presence`.
+  const sorted = read.filter((e) => e.ts >= lookbackMs);
+  const earlier = read.filter((e) => e.ts < lookbackMs && PRESENCE.has(e.kind)).map((e) => e.ts);
   const { acc, carried } = foldEvents(sorted, startMs);
   const days = dates.map((date) => buildDay(date, acc));
   // Only a first day with no action of its own borrows the look-back's streak,
@@ -188,6 +201,9 @@ export function derive(events: Event[], w: Window): Day[] {
   const first = days[0];
   if (first && first.presence === null && carried) {
     first.presence = { lastAt: new Date(carried.ts).toISOString(), streakStartAt: new Date(carried.streakStart).toISOString() };
+  }
+  for (const d of days) {
+    if (d.presence) d.presence.streakStartAt = new Date(traceBack(Date.parse(d.presence.streakStartAt), earlier)).toISOString();
   }
   if (w.now) {
     const today = localDate(w.now);

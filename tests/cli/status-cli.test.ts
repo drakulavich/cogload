@@ -122,6 +122,46 @@ describe("zapara status", () => {
     }
   });
 
+  // A prompt every five minutes for the given hours, the last one five minutes
+  // ago, read by `status` in the zone where the clock now shows `localHour`.
+  // Returns the line and the instant of the streak's first prompt.
+  const statusOfRun = async (hours: number, localHour: number): Promise<{ s: { asOf: string; hour: number; streakMin: number }; start: number }> => {
+    const d = (((localHour - new Date().getUTCHours()) % 24) + 24) % 24;
+    const off = d > 14 ? d - 24 : d;
+    const tz = off >= 0 ? `Etc/GMT-${off}` : `Etc/GMT+${-off}`; // POSIX signs: Etc/GMT-3 is UTC+3
+    const start = Math.floor(Date.now() / 60_000) * 60_000 - hours * 3_600_000;
+    const at = (i: number) => new Date(start + i * 300_000).toISOString();
+    const n = hours * 12;
+    const tree = await mkdtemp(join(tmpdir(), "zapara-status-streak-"));
+    try {
+      await writeTree(tree, [{ path: "-Users-me-proj/t.jsonl", lines: Array.from({ length: n }, (_, i) => prompt(at(i), A)), mtime: at(n - 1) }]);
+      const p = Bun.spawn(["bun", CLI, "status", "--projects", tree], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: tz, NO_COLOR: "1", HOME: await home() } });
+      const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
+      expect([code, err]).toEqual([0, ""]);
+      return { s: JSON.parse(out), start };
+    } finally {
+      await rm(tree, { recursive: true, force: true });
+    }
+  };
+
+  test("just after local midnight a six-hour streak reads six hours, not what the day's look-back sees", async () => {
+    // The day's window looks back only to 21:00 the evening before, three to
+    // five hours from now: the status line used to show that much, and to
+    // jump back up once the next hour had passed.
+    const { s, start } = await statusOfRun(6, 0);
+    expect(s.hour).toBeLessThanOrEqual(1);
+    expect(s.streakMin).toBe(Math.round((Date.parse(s.asOf) - start) / 60_000));
+  });
+
+  test("a 28-hour streak is written as 1500 minutes, the reader contract's ceiling, late in the evening and at noon", async () => {
+    // At 23:xx the day's look-back alone reaches 26 hours back, so the line
+    // used to say 1560 or more, and a strict reader dropped the whole file.
+    // At noon only the streak's own look-back reaches that far, and it must
+    // reach past the ceiling, or the line says a few minutes under it.
+    expect((await statusOfRun(28, 23)).s.streakMin).toBe(1500);
+    expect((await statusOfRun(28, 12)).s.streakMin).toBe(1500);
+  });
+
   test("four runs at once leave one complete line and no temp file", async () => {
     const h = await home();
     const rs = await Promise.all([run(h), run(h), run(h), run(h)]);

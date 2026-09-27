@@ -14,6 +14,17 @@ export type Status = {
   streakMin: number;
 };
 
+// The reader contract's ceiling for activeMin and streakMin (status file spec):
+// a reader treats a larger value as no data, so a longer streak is written as this.
+const MAX_MIN = 1500;
+
+// How far back `status` reads to find where the live streak began: as far as
+// the file can show it, and one gap more, so that a streak longer than that
+// still reaches past the ceiling and reads as MAX_MIN, not a few minutes under.
+export function streakFrom(now: Date): Date {
+  return new Date(now.getTime() - MAX_MIN * 60_000 - GAP_MS);
+}
+
 // index and level are the day's `live` bucket, not the hour's: an hour's bucket
 // is nearly empty just after the hour turns. streakMin is measured against `now`,
 // not the bucket's: it must not reset on the hour or stop between two actions,
@@ -30,7 +41,7 @@ export function statusOf(day: Day, now: Date): Status {
     level: day.live?.score?.level ?? null,
     peak: day.peak,
     activeMin: day.activeMin,
-    streakMin: live ? Math.round((now.getTime() - Date.parse(day.presence!.streakStartAt)) / 60000) : 0,
+    streakMin: live ? Math.min(MAX_MIN, Math.round((now.getTime() - Date.parse(day.presence!.streakStartAt)) / 60000)) : 0,
   };
 }
 

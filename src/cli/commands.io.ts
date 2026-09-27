@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { cardData, cardHtml, loadAssets, openCard, renderCard, sentenceText } from "../lib/card/index.ts";
 import { report, type Timing } from "../lib/report/index.ts";
-import { renderStatus, statusOf, writeStatus } from "../lib/status/index.ts";
+import { renderStatus, statusOf, streakFrom, writeStatus } from "../lib/status/index.ts";
 import { renderDay, renderJson, renderWeek } from "../lib/text/index.ts";
 import type { TranscriptCache } from "../lib/transcripts/index.ts";
 import type { Day } from "../lib/types.ts";
@@ -20,7 +20,7 @@ export async function table(a: Args, now: Date, cache: TranscriptCache | null, t
 
 // The write comes first: a caller never reads a line that was not saved.
 export async function status(a: Args, now: Date, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
-  const days: Day[] = await report({ projects: a.projects, to: a.to, days: a.days, now }, timing, cache);
+  const days: Day[] = await report({ projects: a.projects, to: a.to, days: a.days, now, streakFrom: streakFrom(now) }, timing, cache);
   const line = renderStatus(statusOf(days[0]!, now));
   const t = performance.now();
   await writeStatus(line, process.env);

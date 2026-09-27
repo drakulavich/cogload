@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { chmod, mkdtemp, rm } from "node:fs/promises";
+import { constants } from "node:buffer";
+import { chmod, mkdtemp, open, rm, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { report } from "../../src/lib/report/index.ts";
@@ -83,6 +84,25 @@ describe("report", () => {
       } finally {
         await chmod(secret, 0o644).catch(() => {});
       }
+    });
+  });
+
+  test("a file longer than the longest string the engine can hold is skipped, not fatal", async () => {
+    await withTempDir(async (dir) => {
+      await writeTree(dir, [
+        { path: "proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" },
+      ]);
+      // A sparse file one byte past the limit: it takes no disk and, skipped
+      // by its size, is never read into memory. Read and decoded, it threw
+      // "Cannot create a string longer than 2147483647 characters" and failed
+      // the whole run.
+      const huge = join(dir, "proj/huge.jsonl");
+      const fh = await open(huge, "w");
+      await fh.truncate(constants.MAX_STRING_LENGTH + 1);
+      await fh.close();
+      await utimes(huge, new Date("2026-09-14T13:10:00.000Z"), new Date("2026-09-14T13:10:00.000Z"));
+      const days = await report({ projects: dir, to: "2026-09-14", days: 1 });
+      expect(days[0]!.totals.prompts).toBe(1);
     });
   });
 

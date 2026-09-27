@@ -1,7 +1,9 @@
 export type EventKind = "prompt" | "report" | "output" | "interrupt" | "reject" | "answer" | "question" | "plan_review" | "mode_change" | "activity";
 export type Event = { ts: number; sessionId: string; kind: EventKind; tokens?: number };
 export type Transcript = { path: string; text: string };
-export type Window = { to: string; days: number; now?: Date }; // to = "YYYY-MM-DD" local
+// to = "YYYY-MM-DD" local. `streakFrom` reads further back than the 3 h look-back,
+// for `presence` only: the live streak is traced to its first action, up to it.
+export type Window = { to: string; days: number; now?: Date; streakFrom?: Date };
 export type Metrics = {
   sessions: number; prompts: number; reports: number; outputTokens: number; interrupts: number; rejects: number; questions: number;
   plans: number; modeSwitches: number; decisions: number; contextSwitches: number;
