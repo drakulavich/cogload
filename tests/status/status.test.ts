@@ -60,6 +60,21 @@ describe("status: today's load in nine fields", () => {
     const [day] = analyze([], { to: "2026-09-14", days: 1, now });
     expect(renderStatus(statusOf(day!, now))).toBe('{"schema":1,"asOf":"2026-09-14T09:15:00.000Z","date":"2026-09-14","hour":9,"index":null,"level":null,"peak":null,"activeMin":0,"streakMin":0}\n');
   });
+  test("the peak counts the last sixty minutes too, so the index is never above it", () => {
+    // Three sessions prompting every two minutes from 13:32 to 14:30: each
+    // calendar hour holds half the run, the sixty minutes ending at 14:31 hold
+    // all of it and score above both. Mutation: peak = day.peak.
+    const run = Array.from({ length: 30 }, (_, i) => {
+      const at = new Date(Date.UTC(2026, 8, 14, 13, 32 + i * 2)).toISOString();
+      return prompt(at, S[i % 3]!);
+    });
+    const now = new Date("2026-09-14T14:31:00.000Z");
+    const [day] = analyze([transcript(run)], { to: "2026-09-14", days: 1, now });
+    expect(day!.live!.score!.index).toBeGreaterThan(day!.peak!); // the case: live above every calendar hour
+    const s = statusOf(day!, now);
+    expect(s.peak).toBe(s.index);
+    expect(s.index).toBe(day!.live!.score!.index);
+  });
   test("the index does not reset on the hour: it is the last sixty minutes, not the current bucket", () => {
     // Thirty seconds into hour 14, which has no event of its own. Mutation this
     // pins: index from buckets[now.getHours()], which is null here.
