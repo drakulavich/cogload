@@ -2,7 +2,7 @@
 // the system of record: every doubt here resolves to a miss, and no error leaves.
 import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
-import { chmodSync, closeSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, closeSync, mkdirSync, openSync, readFileSync, rmSync, statSync } from "node:fs";
 import { open } from "node:fs/promises";
 import { join } from "node:path";
 import type { ScanEntry } from "./scan.io.ts";
@@ -166,10 +166,13 @@ export function openCache(env: NodeJS.ProcessEnv): TranscriptCache | null {
 
 const remove = (path: string): void => { for (const f of [path, `${path}-wal`, `${path}-shm`]) rmSync(f, { force: true }); };
 
+const fileId = (path: string): string | null => { try { const s = statSync(path); return `${s.dev}:${s.ino}`; } catch { return null; } };
+
 // A file found corrupt only once it is queried (the header was fine) is
 // replaced like one that fails to open, once; this run then misses every file.
 function cacheOn(db: Database, parser: Uint8Array, path: string): TranscriptCache {
   let failed = false;
+  const opened = fileId(path);
   // Rows whose events did not decode: the conditional upsert would keep them.
   const broken: { dev: number; ino: number }[] = [];
   return {
@@ -204,7 +207,10 @@ function cacheOn(db: Database, parser: Uint8Array, path: string): TranscriptCach
         if (!replaceable(e)) { failed = true; return null; }
         try { db.close(); } catch {}
         try {
-          remove(path);
+          // Only the file this run opened: a different one at the path is
+          // another run's fresh cache. Unlinking a file another run still has
+          // open is fine for a cache: its descriptors stay valid, its writes are lost.
+          if (opened !== null && fileId(path) === opened) remove(path);
           db = connect(path);
         } catch {
           failed = true;

@@ -228,6 +228,20 @@ describe("the transcript cache", () => {
     expect(hitsOf(run3.err)).toEqual({ hits: 3, misses: 0 });
   });
 
+  test("runs that find the same corrupt cache.db at once all print what --no-cache prints, and leave a working cache", async () => {
+    const { home, projects } = await setup();
+    await spawn(home, projects);
+    const bytes = await readFile(cacheDb(home));
+    bytes.fill(0xab, 4096, 4096 + 512);
+    await writeFile(cacheDb(home), bytes);
+    const runs = await Promise.all([1, 2, 3, 4].map(() => spawn(home, projects)));
+    const expected = (await uncached(projects)).out;
+    expect(runs.map((r) => [r.code, r.err, r.out === expected])).toEqual(Array(4).fill([0, "", true]));
+    // Were a straggler to delete the file another run had just recreated and
+    // filled, this run would miss.
+    expect(hitsOf((await spawn(home, projects, "--verbose")).err)).toEqual({ hits: 3, misses: 0 });
+  });
+
   test("a transcript with a session id that is not a UUID is never cached", async () => {
     const { home, projects } = await setup();
     const marker = "zapara-private-marker";
