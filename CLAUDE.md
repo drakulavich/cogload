@@ -17,9 +17,6 @@ confuses you, add one line under Surprises. The design is in
 - **A test asserts what differs with and without the behavior it pins** (#69).
   Tests use fixtures in the real transcript format, through `analyze()`,
   `report()` or the CLI.
-- **Release** in a PR that bumps `package.json` and moves CHANGELOG's
-  Unreleased block under `## [X.Y.Z]`; after the merge, push the tag `vX.Y.Z`.
-  `npm-publish.yml` publishes. Never `npm publish` from a laptop.
 
 ## Surprises
 
