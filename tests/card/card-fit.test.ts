@@ -48,6 +48,7 @@ const MEASURE = `(() => {
   const sentence = q(".sentence"), panel = q(".panel"), repo = q(".repo"), source = q(".source"), row = q(".row");
   const lineHeight = parseFloat(getComputedStyle(sentence).lineHeight);
   return {
+    statCount: document.querySelectorAll(".stat").length,
     sentenceLines: Math.round(sentence.offsetHeight / lineHeight),
     panelOverflow: panel.scrollHeight - panel.clientHeight,
     nameOverflow: q(".name").scrollWidth - q(".name").clientWidth,
@@ -57,7 +58,7 @@ const MEASURE = `(() => {
     footerGap: source.getBoundingClientRect().left - repo.getBoundingClientRect().right,
   };
 })()`;
-type Measure = { sentenceLines: number; panelOverflow: number; nameOverflow: number; rowOverflow: number; legendOverflow: number; valueOverflows: number[]; footerGap: number };
+type Measure = { statCount: number; sentenceLines: number; panelOverflow: number; nameOverflow: number; rowOverflow: number; legendOverflow: number; valueOverflows: number[]; footerGap: number };
 
 describe("the longest values fit the layout", () => {
   for (const character of ["conductor", "supervisor", "marathoner", "nightOwl"] as const) {
@@ -65,6 +66,7 @@ describe("the longest values fit the layout", () => {
       const view = await openPage(cardHtml(longest(character), assets), 2400, 1260);
       try {
         const m = await view.evaluate<Measure>(MEASURE);
+        expect(m.statCount).toBe(3);
         expect(m.sentenceLines).toBeLessThanOrEqual(3);
         expect(m.panelOverflow).toBeLessThanOrEqual(0);
         expect(m.nameOverflow).toBeLessThanOrEqual(0);
@@ -77,6 +79,22 @@ describe("the longest values fit the layout", () => {
       }
     }, WEBVIEW_TEST_TIMEOUT);
   }
+
+  test.skipIf(webviewMissing !== null)("one- and two-panel rows fit the same layout", async () => {
+    for (const count of [1, 2]) {
+      const base = longest("conductor");
+      const view = await openPage(cardHtml({ ...base, highlights: base.highlights.slice(0, count) }, assets), 2400, 1260);
+      try {
+        const m = await view.evaluate<Measure>(MEASURE);
+        expect(m.statCount).toBe(count);
+        expect(m.panelOverflow).toBeLessThanOrEqual(0);
+        expect(m.rowOverflow).toBeLessThanOrEqual(0);
+        for (const o of m.valueOverflows) expect(o).toBeLessThanOrEqual(0);
+      } finally {
+        view.close();
+      }
+    }
+  }, WEBVIEW_TEST_TIMEOUT);
 });
 
 describe("renderCard", () => {
