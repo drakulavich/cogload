@@ -17,7 +17,7 @@ const MOTTOS: Record<Character, string> = {
   conductor: "You run agents like an orchestra.",
   supervisor: "Nothing ships without your eyes on it.",
   marathoner: "You do not stop while it compiles.",
-  nightOwl: "The best commits happen late at night.",
+  nightOwl: "The best commits happen after dark.",
 };
 // Every value at its longest form from the spec's format table.
 const SENTENCES: Record<Character, Segment[]> = {

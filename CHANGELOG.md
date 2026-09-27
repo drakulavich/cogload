@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- The Night Owl's motto is "The best commits happen after dark." It used to
+  repeat the sentence before it: "… of your hours late at night. The best
+  commits happen late at night."
 - zapara needs Bun 1.4.2 or newer, up from 1.4.0. CI checks one version, the
   one it runs on.
 - `--help` says a pipe gets JSON for the grid and a day only; `card` and
@@ -17,6 +20,11 @@ All notable changes to this project are documented here. The format follows
   still covers calendar hours only.
 
 ### Fixed
+- The card no longer shows a highlight worth nothing. A Night Owl whose hours
+  were all at 23:xx showed `0m / longest streak` as its second panel. A second
+  or third highlight that is zero is now left out, and the panels left share
+  the row; the character's own first number always shows, so a card has
+  three, two or one panels.
 - A transcript larger than 2 GiB is skipped like an unreadable file instead of
   failing every command, `status` included, with `Cannot create a string longer
   than 2147483647 characters`. The rest of the report stands, and zapara no

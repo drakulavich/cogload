@@ -63,19 +63,16 @@ describe("one character per fixture", () => {
     expect(c.motto).toBe("You do not stop while it compiles.");
     expect(sentenceText(c.sentence)).toBe("Longest streak 2h55m without a break, 100% of your hours calm.");
     expect(c.sentence.filter((s) => s.strong).map((s) => s.text)).toEqual(["2h55m", "100%"]);
-    expect(c.highlights.slice(0, 2)).toEqual([
-      { key: "longestStreak", value: "2h55m", caption: "longest streak" },
-      { key: "interrupts", value: "0", caption: "times you stopped Claude" },
-    ]);
-    // Every remaining norm is 0 (one session, no switches, reports or tokens), so there is no third.
-    expect(c.highlights).toHaveLength(2);
+    // No interrupts, and every remaining norm is 0 (one session, no switches,
+    // reports or tokens): the streak is the card's only panel.
+    expect(c.highlights).toEqual([{ key: "longestStreak", value: "2h55m", caption: "longest streak" }]);
   });
 
   test("Night Owl: share of hours late at night", () => {
     const c = cardOf(nightOwl);
     expect(c.character).toBe("nightOwl");
     expect(c.name).toBe("The Night Owl");
-    expect(c.motto).toBe("The best commits happen late at night.");
+    expect(c.motto).toBe("The best commits happen after dark.");
     expect(sentenceText(c.sentence)).toBe("100% of your hours late at night.");
     expect(c.sentence.filter((s) => s.strong).map((s) => s.text)).toEqual(["100%", "late at night"]);
     expect(c.highlights.slice(0, 2)).toEqual([
@@ -145,6 +142,29 @@ describe("ties and eligibility", () => {
     expect(c.character).toBe("conductor");
     expect(keys(lines)).toEqual(["peakSessions", "contextSwitches", "longestStreak"]);
     expect(c.highlights[2]).toEqual({ key: "longestStreak", value: "30m", caption: "longest streak" });
+  });
+});
+
+describe("zero highlights", () => {
+  test("a Night Owl whose hours are all 23:xx shows its late share alone, never 0m of streak", () => {
+    // Prompts at 23:10 and 23:40 on two days: 30 minutes apart, so no streak,
+    // one session, nothing else. The Night Owl's second highlight would read
+    // "0m / longest streak", and every candidate for the third scores 0.
+    const lines = [13, 14].flatMap((day) => [prompt(at(23, 10, day), sid("n")), prompt(at(23, 40, day), sid("n"))]);
+    const c = cardData(analyze([transcript(lines)], { to: "2026-09-14", days: 2 }), { days: 2 })!;
+    expect(c.character).toBe("nightOwl");
+    expect(c.highlights).toEqual([{ key: "lateShare", value: "100%", caption: "of hours late at night" }]);
+  });
+
+  test("a Night Owl with a streak keeps it as the second highlight", () => {
+    const c = cardOf(nightOwl);
+    expect(c.highlights.map((h) => `${h.value} ${h.caption}`)).toEqual(["100% of hours late at night", "5m longest streak"]);
+  });
+
+  test("a lone single-prompt hour still has its one panel: the character's own number", () => {
+    // The Conductor by the tie rule: one session is norm 0, no switches is 0, and
+    // nothing else scores, but the first highlight always shows.
+    expect(keys([prompt(at(10, 0), sid("a"))])).toEqual(["peakSessions"]);
   });
 });
 

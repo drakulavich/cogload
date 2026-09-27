@@ -8,7 +8,7 @@ that spec says.
 `zapara card` turns a window of transcripts into one image a person wants to
 send to a colleague: a character that names how they drive Claude Code, one
 sentence with two numbers behind that name, the peak hour, a load spectrum,
-three highlights (two when nothing else scores), and the project's line. It exists to make the tool travel:
+up to three highlights (fewer when a number is zero), and the project's line. It exists to make the tool travel:
 the week heatmap convinces the person who ran it, the card convinces the
 person they show it to.
 
@@ -104,7 +104,7 @@ only for a window of lone single-event hours) the tie rule gives Conductor.
 | conductor | The Conductor | `**{maxSessions} sessions** at once, **{maxContextSwitches} context switches** in one hour.` | `You run agents like an orchestra.` |
 | supervisor | The Supervisor | `**{reports} agent reports** and **{outputTokens} tokens** of output read.` | `Nothing ships without your eyes on it.` |
 | marathoner | The Marathoner | `Longest streak **{streak}** without a break, **{calmShare}%** of your hours calm.` | `You do not stop while it compiles.` |
-| nightOwl | The Night Owl | `**{lateShare}%** of your hours **late at night**.` | `The best commits happen late at night.` |
+| nightOwl | The Night Owl | `**{lateShare}%** of your hours **late at night**.` | `The best commits happen after dark.` |
 
 Where `maxSessions` and `maxContextSwitches` are the window maxima over
 buckets, `reports`, `outputTokens` and `interrupts` are window sums, `streak`
@@ -150,7 +150,7 @@ A level with at least one hour is at least 1: when the rounding leaves it at
 fried hour among 200 calm ones reads `100% calm · 0% fried` beside a Fried
 peak pill on the same card.
 
-**Highlights**: three, chosen from this pool, or two (below). Each has a key,
+**Highlights**: up to three, chosen from this pool (below). Each has a key,
 a value string and a one-line caption in sentence case that carries the unit;
 when the value is `1` the caption is singular (`session at once`, `switch in
 one hour`, `agent report read`, `token of output read`, `time you stopped
@@ -173,9 +173,16 @@ Marathoner `longestStreak, interrupts`; Night Owl `lateShare, longestStreak`.
 The third is the remaining key with the largest `norm`; `lateShare` is
 eligible as the third only for the Night Owl (a late-night number on someone
 else's card is exactly the kind of thing they would hide). Ties keep the
-table order. When that largest `norm` is 0 there is no third: every candidate
-left is a zero or a single session, which is not a trait, and the card shows
-the character's pair alone, two panels across the row. The first three norms in the table are the index's own
+table order. A highlight is an achievement, and a zero is not one: the second
+and the third show only when their `norm` is above 0 (a `norm` of 0 is a
+value of 0, or `1` session at once). So a Night Owl whose hours are all at
+23:xx, with no streak, shows no `0m / longest streak`, and when the largest
+remaining `norm` is 0 there is no third. The first highlight, the
+character's defining number, always shows, so a card has three, two or one
+panels and never none; the panels shown share the row equally. The first
+can itself be 0 only in a corner (a Supervisor whose supervision is all
+permission decisions and context switches, with no agent report), and it
+still shows. The first three norms in the table are the index's own
 (`NORMS.parallelSpan`, `NORMS.supervisionPerHour`, `NORMS.streakMin`), so
 recalibrating one of those in `src/score.ts` also changes which candidate wins
 the third slot; the last four are the card's own `CARD_NORMS`, which rank
@@ -243,7 +250,7 @@ the sentence and the numbers; every small label is JetBrains Mono.
 | Divider | 30 px below, 1 px at 10 % white, 26 px of space after it |
 | Spectrum bar | 8 px tall, radius 4, four segments in order calm, warming, heating, fried, widths in percent, 2-px gaps, segments of 0 % omitted |
 | Legend | 14 px below the bar, JetBrains Mono 12.5 px `#6b6b76`: a 6-px dot, the percent in `#a1a1aa` weight 500, the level name, items separated by two spaces |
-| Highlights | 30 px below, three (or two) equal panels with 16-px gaps: radius 12, 1-px border at 10 % white, 2.5 % white fill, inner top highlight, padding 18×16; value Inter 700 38 px, letter-spacing −1.6 px, tabular figures, white; caption 8 px below, JetBrains Mono 12 px `#6b6b76`, sentence case, one line (`sessions at once`, `switches in one hour`, `longest streak`, …) |
+| Highlights | 30 px below, three, two or one equal panels with 16-px gaps: radius 12, 1-px border at 10 % white, 2.5 % white fill, inner top highlight, padding 18×16; value Inter 700 38 px, letter-spacing −1.6 px, tabular figures, white; caption 8 px below, JetBrains Mono 12 px `#6b6b76`, sentence case, one line (`sessions at once`, `switches in one hour`, `longest streak`, …) |
 | Repo link | at (60, 566), two lines: JetBrains Mono 11 px uppercase `#6b6b76`, letter-spacing 1.5 px, `GET YOURS`; 8 px below, JetBrains Mono 500 17 px in the character's light accent, letter-spacing −0.2 px: `github.com/drakulavich/zapara` |
 | Source line | right-aligned to x = 1140 at y = 588, JetBrains Mono 12 px `#a1a1aa`: `computed locally from your Claude Code transcripts · nothing leaves your machine` |
 
@@ -371,7 +378,9 @@ Scenarios:
   split pins 34% in the sentence too; 200 calm hours and one fried hour pin
   99 / 0 / 0 / 1.
 - Highlights: a Supervisor whose remaining candidates all score 0 pins two
-  highlights; one session pins the singular `session at once`.
+  highlights; a Night Owl at 23:xx with no streak pins one, `lateShare`
+  alone; a Marathoner with no interrupts pins one, its streak alone; one
+  session pins the singular `session at once`.
 - An empty window through `cardData()` is `null`.
 - `cardHtml` on `busy-week`: the page contains the name and the sentence
   once each; the peak pill carries `87 · Fried` in the fried class; the
