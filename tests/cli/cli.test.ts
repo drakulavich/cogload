@@ -237,6 +237,28 @@ describe("cli", () => {
     }
   });
 
+  test("a projects directory that can be listed but not entered says it cannot be read", async () => {
+    if (process.getuid?.() === 0) return; // root bypasses file permissions
+    const dir = await mkdtemp(join(tmpdir(), "zapara-cli-listonly-"));
+    try {
+      await writeTree(dir, [{ path: "-Users-me-proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" }]);
+      await chmod(dir, 0o444);
+      const p = Bun.spawn(["bun", CLI, "--projects", dir, "2026-09-14", "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
+      const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
+      expect([code, out, err]).toEqual([1, "", "zapara: projects directory cannot be read (check its permissions)\n"]);
+    } finally {
+      await chmod(dir, 0o755).catch(() => {});
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a projects path that is a file says it is not a directory, without the path", async () => {
+    const file = join(root, "-Users-me-proj/a.jsonl");
+    const p = Bun.spawn(["bun", CLI, "--projects", file, "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
+    const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
+    expect([code, out, err]).toEqual([1, "", "zapara: projects path is not a directory (pass --projects <dir>)\n"]);
+  });
+
   test("a transcript whose mtime is older than the window is still read when its last record is inside it", async () => {
     // A per-test tree via direct Bun.spawn, not the run() helper: run() already
     // fixes --projects to the suite root, and a second --projects here would be

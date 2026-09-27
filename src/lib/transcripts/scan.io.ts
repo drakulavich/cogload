@@ -1,5 +1,5 @@
-import type { Dirent } from "node:fs";
-import { open, readdir, stat } from "node:fs/promises";
+import { constants, type Dirent } from "node:fs";
+import { access, open, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 // What --verbose reports about the walk: transcripts seen, and how many of them
@@ -9,14 +9,17 @@ export type ScanEntry = { path: string; dev: number; ino: number; size: number; 
 
 // A `subagents` directory holds the parent agent's conversation, not the human's.
 export async function scan(projects: string, cutoffMs: number, stats: ScanStats = { files: 0, tailChecks: 0 }): Promise<ScanEntry[]> {
-  // No path in either message: the CLI never prints one.
+  // No path in any message: the CLI never prints one. A directory that can be
+  // listed but not entered (mode 444) would otherwise read as one with no activity.
   let root;
   try {
-    if (!(await stat(projects)).isDirectory()) throw new Error("not a directory");
+    if (!(await stat(projects)).isDirectory()) throw Object.assign(new Error("not a directory"), { code: "ENOTDIR" });
+    await access(projects, constants.R_OK | constants.X_OK);
     root = await readdir(projects, { withFileTypes: true });
   } catch (err) {
     const code = (err as { code?: string }).code;
     if (code === "EACCES" || code === "EPERM") throw new Error("projects directory cannot be read (check its permissions)");
+    if (code === "ENOTDIR") throw new Error("projects path is not a directory (pass --projects <dir>)");
     throw new Error("projects directory not found (pass --projects <dir>)");
   }
   const out: ScanEntry[] = [];

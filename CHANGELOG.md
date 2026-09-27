@@ -65,6 +65,11 @@ All notable changes to this project are documented here. The format follows
   which was false for a window that ended in the past.
 - `card --json` over a window with no activity prints `null` and exits 0,
   so a script gets a document either way. The picture still exits 1.
+- A projects directory that can be listed but not entered (mode 444) says
+  `projects directory cannot be read (check its permissions)` and exits 1,
+  as one with mode 000 does, instead of reporting no activity.
+- `--projects` pointing at a file, such as one transcript, says `projects
+  path is not a directory` instead of `projects directory not found`.
 - An empty value, as in `--projects ''` or `--projects=`, is a usage error,
   `--projects needs a value`, exit 2, instead of `projects directory not
   found`.
