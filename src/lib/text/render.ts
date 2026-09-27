@@ -16,9 +16,11 @@ const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.g
 // explained rather than silently disagreeing.
 const snapshotLine = (d: Day | undefined, color: boolean): string[] =>
   d?.asOf ? [dim(`  as of ${hhmm(new Date(d.asOf))}, this hour is still running`, color)] : [];
+// The weekday of the calendar date, in UTC: a date the local zone skipped
+// has no local midnight to ask.
 const label = (date: string) => {
   const [y, m, d] = date.split("-").map(Number) as [number, number, number];
-  return `${WEEKDAY[new Date(y, m - 1, d).getDay()]} ${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}`;
+  return `${WEEKDAY[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}`;
 };
 
 export function renderWeek(days: Day[], color: boolean): string {
@@ -43,7 +45,8 @@ export function renderWeek(days: Day[], color: boolean): string {
   const maxSessions = Math.max(0, ...days.map((d) => d.totals.maxSessions));
   // Compact counts keep a very active window inside the grid's 98 columns.
   const totals = dim(`  ${hm(active)} active   ${plural(prompts, "prompt")}   ${plural(reports, "report")}   ${plural(decisions, "decision")}   ${plural(maxSessions, "session")} at once`, color);
-  return [header, ...rows, "", legend, totals, ...snapshotLine(days[days.length - 1], color)].join("\n");
+  // Today need not be the last row: --to may name a later day.
+  return [header, ...rows, "", legend, totals, ...snapshotLine(days.find((d) => d.asOf), color)].join("\n");
 }
 
 const fmtTokens = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));

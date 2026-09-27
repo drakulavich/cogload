@@ -259,6 +259,29 @@ describe("cli", () => {
     expect([code, out, err]).toEqual([1, "", "zapara: projects path is not a directory (pass --projects <dir>)\n"]);
   });
 
+  test("a calendar day the zone skipped is its own empty day, and the next day is listed once", async () => {
+    // Samoa jumped from 29 to 31 December 2011; 10:00-10:30 on the 31st is 20:00-20:30Z on the 30th.
+    const dir = await mkdtemp(join(tmpdir(), "zapara-cli-apia-"));
+    try {
+      const ts = [0, 5, 10, 15, 20, 25, 30].map((m) => `2011-12-30T20:${String(m).padStart(2, "0")}:00.000Z`);
+      await writeTree(dir, [{ path: "-Users-me-proj/a.jsonl", lines: ts.map((t) => prompt(t, A)), mtime: ts.at(-1)! }]);
+      const args = ["bun", CLI, "--projects", dir, "--to", "2011-12-31", "--days", "3", "--no-color"];
+      const env = { ...process.env, TZ: "Pacific/Apia", HOME: home };
+      const p = Bun.spawn([...args, "--json"], { stdout: "pipe", stderr: "pipe", env });
+      const [out, code] = await Promise.all([new Response(p.stdout).text(), p.exited]);
+      expect(code).toBe(0);
+      const days = JSON.parse(out).map((d: { date: string; totals: { prompts: number } }) => [d.date, d.totals.prompts]);
+      expect(days).toEqual([["2011-12-29", 0], ["2011-12-30", 0], ["2011-12-31", 7]]);
+      let text = "";
+      const t = Bun.spawn(args, { env, terminal: { cols: 200, rows: 24, data(_t, d) { text += new TextDecoder().decode(d); } } });
+      await t.exited;
+      t.terminal!.close();
+      expect(text.split("\r\n").slice(1, 4).map((l) => l.slice(0, 9))).toEqual(["Thu 29/12", "Fri 30/12", "Sat 31/12"]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   test("a transcript whose mtime is older than the window is still read when its last record is inside it", async () => {
     // A per-test tree via direct Bun.spawn, not the run() helper: run() already
     // fixes --projects to the suite root, and a second --projects here would be

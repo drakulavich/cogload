@@ -256,6 +256,12 @@ describe("day table", () => {
     expect(renderWeek([closed!], false)).not.toContain("as of");
   });
 
+  test("a week that runs past today still ends with today's snapshot time", () => {
+    const t = transcript([prompt("2026-09-14T13:00:00.000Z", "aaaaaaaa-1111-4111-8111-111111111111")]);
+    const days = analyze([t], { to: "2026-09-15", days: 2, now: new Date("2026-09-14T14:32:00.000Z") });
+    expect(renderWeek(days, false).split("\n").at(-1)).toBe("  as of 14:32, this hour is still running");
+  });
+
   test("--explain appends the six weighted parts, named and in order, and they add up to the index", () => {
     const lines = renderDay(monday, { explain: true, color: false }).split("\n");
     expect(lines[0]!.endsWith("  par  pace   sup  read  strk  late")).toBe(true);

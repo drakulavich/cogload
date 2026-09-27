@@ -16,13 +16,17 @@ const parseDate = (s: string): Date => {
   return new Date(y, m - 1, d); // local midnight
 };
 
+// The dates are counted on the calendar, in UTC: local midnight of a day a
+// zone skipped (Samoa, 30 December 2011) is the next day's, which would list
+// that day twice. The skipped date stays as a day with no hours.
 // cutoffMs is the earliest instant read: the look-back, or `streakFrom` when earlier.
 export function windowBounds(w: Window): { startMs: number; endMs: number; cutoffMs: number; dates: string[] } {
   const to = parseDate(w.to);
+  const [y, m, d] = w.to.split("-").map(Number) as [number, number, number];
   const dates: string[] = [];
   for (let i = w.days - 1; i >= 0; i--) {
-    const d = new Date(to.getFullYear(), to.getMonth(), to.getDate() - i);
-    dates.push(localDate(d));
+    const u = new Date(Date.UTC(y, m - 1, d - i));
+    dates.push(`${u.getUTCFullYear()}-${pad2(u.getUTCMonth() + 1)}-${pad2(u.getUTCDate())}`);
   }
   const startMs = parseDate(dates[0]!).getTime();
   const endMs = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1).getTime();

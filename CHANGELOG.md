@@ -80,6 +80,11 @@ All notable changes to this project are documented here. The format follows
   counting every file as a miss.
 - zapara sets the modes of `~/.claude/zapara` (0700) and `cache.db` (0600)
   only when it creates them, instead of resetting them on every run.
+- The week grid ends with `as of HH:MM, this hour is still running` when
+  `--to` names a day after today, as the JSON's `asOf` already did.
+- A window across a calendar day the time zone skipped (Samoa went from 29
+  to 31 December 2011) lists that date once as an empty day, instead of
+  listing the next day twice with its counts doubled.
 - An empty value, as in `--projects ''` or `--projects=`, is a usage error,
   `--projects needs a value`, exit 2, instead of `projects directory not
   found`.
