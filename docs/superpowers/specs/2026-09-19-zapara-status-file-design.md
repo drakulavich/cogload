@@ -175,7 +175,10 @@ source.
   `JSON.stringify` in the field order above plus the newline. Neither touches
   the clock or the file system. `Status` is the type of the table above.
 - `src/index.ts`: `status` is a fourth command beside `grid`, `day` and
-  `card`; it takes the day path's window (`to = localDate(now)`, `days = 1`),
+  `card`; it takes the day path's window (`to = localDate(now)`, `days = 1`)
+  plus `streakFrom`, 1500 minutes and one 10-minute gap before `now`, which
+  traces the day's `presence.streakStartAt` back past the 3-hour look-back and
+  moves nothing else; `statusOf` caps `streakMin` at 1500. It
   calls `report()`, then `statusOf`, `renderStatus`, `writeStatus`, and prints
   the line. The `asOf`/`now` plumbing from the snapshot change is reused
   unchanged.

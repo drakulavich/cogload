@@ -4,7 +4,7 @@ import { analyzeEvents, windowBounds } from "../metrics/index.ts";
 import { tailHash, type Fresh, type TranscriptCache, parseTranscript, scan, type ScanEntry, type ScanStats } from "../transcripts/index.ts";
 import type { Day, Event } from "../types.ts";
 
-export type ReportOptions = { projects: string; to: string; days: number; now?: Date };
+export type ReportOptions = { projects: string; to: string; days: number; now?: Date; streakFrom?: Date };
 // What --verbose prints about a run: counts and milliseconds, never a path.
 export type Timing = ScanStats & { inWindow: number; read: number; bytes: number; cache: { hits: number; misses: number } | null; startMs?: number; openMs?: number; scanMs: number; lookupMs: number; readMs: number; analyzeMs: number; saveMs: number; render?: { format: string; ms: number }; writeMs?: number; totalMs?: number };
 
@@ -34,7 +34,7 @@ async function readWhole(entry: ScanEntry): Promise<Read> {
 }
 
 export async function report(o: ReportOptions, timing?: Timing, cache?: TranscriptCache | null): Promise<Day[]> {
-  const window = { to: o.to, days: o.days, now: o.now };
+  const window = { to: o.to, days: o.days, now: o.now, streakFrom: o.streakFrom };
   const { cutoffMs } = windowBounds(window);
   const stats: ScanStats = { files: 0, tailChecks: 0 };
   let t = performance.now();

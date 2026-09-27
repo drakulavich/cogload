@@ -218,6 +218,9 @@ would saw from nothing to the hour's number and back every hour. `peak` and
 of the streak you are in to `asOf`, and it is `0` once you have been away more
 than ten minutes. It does not reset at an hour boundary and it grows while you
 sit there, which is what a status line needs and what a bucket cannot give.
+For this one number `status` reads further back than the 3-hour look-back, to
+25 hours before `asOf`, so a streak that crosses midnight is not floored; a
+streak longer than that is written as `1500`, the ceiling the file promises.
 A status line such as [pult](https://github.com/drakulavich/pult)
 reads that file on every render and shows `load 36 · streak 2h46 · day 9h15`:
 the index in the colour of its level, the time since your last ten-minute

@@ -1,2 +1,2 @@
-export { renderStatus, statusOf } from "./status.ts";
+export { renderStatus, statusOf, streakFrom } from "./status.ts";
 export { writeStatus } from "./statusfile.io.ts";
