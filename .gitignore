@@ -3,5 +3,6 @@ coverage/
 .DS_Store
 docs/superpowers/plans/
 .worktrees/
+.claude/worktrees/
 
 zapara-card.png
