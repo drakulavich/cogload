@@ -106,8 +106,9 @@ import each other with `./`, and a sibling feature is always `../<feature>/`.
 `knip.json` adds the files under `scripts/` to the entry points Knip finds
 itself (the `bin` from `package.json`, and the test files through its Bun
 plugin), and names the project files (`src/**/*.ts`).
-`knip --include files` fails on a file under `src/` that no entry point
-reaches, since an unused module is deleted, not kept.
+`knip --include files,exports,types` fails on a file under `src/` that no
+entry point reaches, and on an export or exported type that nothing imports:
+an unused module or export is deleted, not kept.
 
 ## What else moves
 

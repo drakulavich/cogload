@@ -6,9 +6,9 @@ import type { Day, HourBucket, Level, Score } from "../types.ts";
 
 export type Character = "conductor" | "supervisor" | "marathoner" | "nightOwl";
 export type Segment = { text: string; strong: boolean };
-export type HighlightKey = "peakSessions" | "contextSwitches" | "longestStreak" | "reportsRead" | "tokensRead" | "interrupts" | "lateShare";
-export type Highlight = { key: HighlightKey; value: string; caption: string };
-export type Spectrum = { calm: number; warming: number; heating: number; fried: number };
+type HighlightKey = "peakSessions" | "contextSwitches" | "longestStreak" | "reportsRead" | "tokensRead" | "interrupts" | "lateShare";
+type Highlight = { key: HighlightKey; value: string; caption: string };
+type Spectrum = { calm: number; warming: number; heating: number; fried: number };
 export type CardData = {
   days: number;
   character: Character;
