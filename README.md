@@ -17,7 +17,7 @@ Claude Code writes a JSONL transcript for every session under `~/.claude/project
 ## Quick start
 
 ```bash
-# Skip this if you already have Bun 1.4 or newer
+# Skip this if you already have Bun 1.4.2 or newer
 curl -fsSL https://bun.sh/install | bash
 
 # Run it once, without installing
