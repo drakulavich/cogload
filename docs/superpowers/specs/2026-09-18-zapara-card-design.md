@@ -102,7 +102,7 @@ only for a window of lone single-event hours) the tie rule gives Conductor.
 | conductor | The Conductor | `**{maxSessions} sessions** at once, **{maxContextSwitches} context switches** in one hour.` | `You run agents like an orchestra.` |
 | supervisor | The Supervisor | `**{reports} agent reports** and **{outputTokens} tokens** of output read.` | `Nothing ships without your eyes on it.` |
 | marathoner | The Marathoner | `Longest streak **{streak}** without a break, **{calmShare}%** of your hours calm.` | `You do not stop while it compiles.` |
-| nightOwl | The Night Owl | `**{lateShare}%** of your hours **after midnight**.` | `The best commits happen after midnight.` |
+| nightOwl | The Night Owl | `**{lateShare}%** of your hours **late at night**.` | `The best commits happen late at night.` |
 
 Where `maxSessions` and `maxContextSwitches` are the window maxima over
 buckets, `reports`, `outputTokens` and `interrupts` are window sums, `streak`
@@ -111,7 +111,9 @@ presence streak exactly: each bucket reports the longest streak it saw, a
 streak is longest at its last event, and that event falls in one bucket.
 `activeHours` is the count of
 active buckets (used only as a divisor, never shown), `lateShare` is the
-share of active buckets with `lateNight` in whole percent, `calmShare` the
+share of active buckets with `lateNight` (hours 23 and 0 to 5, the base
+spec's) in whole percent, which is why the Night Owl's words say "late at
+night" and not "after midnight": 23:00 is before it, `calmShare` the
 spectrum's calm percent (below), so the sentence and the legend under it
 carry one number, `days` the `--days` value. `CardData`
 carries the sentence as segments, `{ text, strong }[]`, and the motto as a
@@ -161,7 +163,7 @@ value divided by its calibration norm, for ranking:
 | reportsRead | `{reports}` | `agent reports read` | `reports / (12 · activeHours)` |
 | tokensRead | `{outputTokens}` | `tokens of output read` | `outputTokens / (65000 · activeHours)` |
 | interrupts | `{interrupts}` | `times you stopped Claude` | `interrupts / (3 · activeHours)` |
-| lateShare | `{lateShare}%` | `of hours after midnight` | `lateShare / 25` |
+| lateShare | `{lateShare}%` | `of hours late at night` | `lateShare / 25` |
 
 The first two highlights are the character's own pair, in this order: Conductor
 `peakSessions, contextSwitches`; Supervisor `reportsRead, tokensRead`;
