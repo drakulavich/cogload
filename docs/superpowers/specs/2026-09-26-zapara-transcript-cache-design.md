@@ -33,8 +33,9 @@ One SQLite database, `~/.claude/zapara/cache.db`, opened with `bun:sqlite`
 (built into Bun, so the rule of no runtime dependencies holds). `~` is `HOME`
 from the environment, as for the status file: an empty `HOME` means no cache,
 not a fallback path. The directory is created 0700 and the database 0600, by
-`chmod` on each directory as it is made and on the database before its WAL
-files exist (SQLite gives those the database's mode). The process umask is not
+`chmod` on each directory as it is made, and by creating the database
+itself with an exclusive 0600 open before SQLite opens it (SQLite would create
+it 0644 less the umask; it gives `-wal` and `-shm` the database's mode). The process umask is not
 touched: it would outlive the cache and narrow the card the same run writes,
 so a card written with the cache on came out 0600 and with `--no-cache` 0644.
 

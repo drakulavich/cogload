@@ -2,7 +2,7 @@
 // the system of record: every doubt here resolves to a miss, and no error leaves.
 import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
-import { chmodSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, closeSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import { open } from "node:fs/promises";
 import { join } from "node:path";
 import type { ScanEntry } from "./scan.io.ts";
@@ -98,6 +98,9 @@ const replaceable = (e: unknown): boolean =>
   e instanceof Foreign || /^SQLITE_(NOTADB|CORRUPT)/.test(String((e as { code?: unknown } | null)?.code));
 
 function connect(path: string): Database {
+  // Made 0600 before SQLite sees it: SQLite would create it 0644 less the
+  // umask, and gives -wal and -shm the database file's mode.
+  try { closeSync(openSync(path, "wx", 0o600)); } catch (e) { if ((e as { code?: unknown }).code !== "EEXIST") throw e; }
   const db = new Database(path, { create: true, strict: true });
   try {
     chmodSync(path, 0o600);
@@ -128,8 +131,8 @@ export function openCache(env: NodeJS.ProcessEnv): TranscriptCache | null {
     // No process-wide umask: it would also narrow the card this run writes.
     // Each directory is chmodded the moment it is made, so a restrictive umask
     // cannot leave a parent the next level cannot be made in; `connect`
-    // chmods the database before its WAL files exist, and SQLite gives those
-    // the database's mode.
+    // creates the database 0600 itself, and SQLite gives its WAL files the
+    // database's mode.
     const dir = join(home, ".claude", "zapara");
     for (const d of [join(home, ".claude"), dir]) {
       try {
