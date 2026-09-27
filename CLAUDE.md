@@ -22,5 +22,3 @@ confuses you, add one line under Surprises. The design is in
 
 - A PTY merges stdout and stderr. To test one stream in a terminal, send the
   other elsewhere with `runHalfTerminal` (`tests/cli/card-cli.test.ts`).
-- Under a full `bun test`, a WebView test can hit its 15 s timeout. Rerun that
-  file alone before debugging it.
