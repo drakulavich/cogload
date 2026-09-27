@@ -209,11 +209,19 @@ describe("zapara card", () => {
     expect(await readdir(home)).not.toContain("Downloads"); // never created
   });
 
-  test("an empty window exits 1 with one line and writes nothing", async () => {
+  test("an empty window exits 1 with one line that names the window, and writes nothing", async () => {
     const r = await run("card", "--to", "2026-08-20", "--days", "3", "--out", "x.html");
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
-    expect(r.err).toBe("zapara: no activity in the last 3 days\n");
+    expect(r.err).toBe("zapara: no activity from 2026-08-18 to 2026-08-20\n");
+    const one = await run("card", "--to", "2026-08-20", "--days", "1", "--out", "x.html");
+    expect([one.code, one.err]).toEqual([1, "zapara: no activity on 2026-08-20\n"]);
+    expect(await files()).toEqual([]);
+  });
+
+  test("an empty window with --json prints null and exits 0", async () => {
+    const r = await run("card", "--to", "2026-08-20", "--days", "3", "--json");
+    expect([r.code, r.out, r.err]).toEqual([0, "null\n", ""]);
     expect(await files()).toEqual([]);
   });
 

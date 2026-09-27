@@ -42,11 +42,15 @@ function cardTarget(out: string | null): { path: string; label: string; unwritab
 export async function card(a: Args, now: Date, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
   const days: Day[] = await report({ projects: a.projects, to: a.to, days: a.days, now }, timing, cache);
   const data = cardData(days, { days: a.days });
-  if (data === null) throw new Error(`no activity in the last ${a.days} days`);
+  // A script asking for the data gets a document either way; a picture of nothing is an error.
+  if (data === null && a.json) { console.log("null"); return 0; }
+  const from = days[0]!.date;
+  const to = days[days.length - 1]!.date;
+  if (data === null) throw new Error(from === to ? `no activity on ${to}` : `no activity from ${from} to ${to}`);
   if (a.json) {
     const round2 = (x: number): number => Math.round(x * 100) / 100;
     const json = {
-      from: days[0]!.date, to: days[days.length - 1]!.date, days: data.days, character: data.character, name: data.name,
+      from, to, days: data.days, character: data.character, name: data.name,
       sentence: sentenceText(data.sentence), motto: data.motto,
       shares: { conductor: round2(data.shares.conductor), supervisor: round2(data.shares.supervisor), marathoner: round2(data.shares.marathoner), nightOwl: round2(data.shares.nightOwl) },
       peak: data.peak, spectrum: data.spectrum, highlights: data.highlights,

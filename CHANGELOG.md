@@ -60,6 +60,11 @@ All notable changes to this project are documented here. The format follows
 ### Fixed
 - `card --json --out me.png` is a usage error, `--json writes no file; drop
   --out`, instead of printing the data, writing nothing and exiting 0.
+- A `card` window with no activity names its dates, `no activity from
+  2026-08-01 to 2026-08-31`, instead of `no activity in the last 31 days`,
+  which was false for a window that ended in the past.
+- `card --json` over a window with no activity prints `null` and exits 0,
+  so a script gets a document either way. The picture still exits 1.
 - An empty value, as in `--projects ''` or `--projects=`, is a usage error,
   `--projects needs a value`, exit 2, instead of `projects directory not
   found`.
