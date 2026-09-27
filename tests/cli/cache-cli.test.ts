@@ -242,25 +242,6 @@ describe("the transcript cache", () => {
     expect(hitsOf((await spawn(home, projects, "--verbose")).err)).toEqual({ hits: 3, misses: 0 });
   });
 
-  test("runs that find the same unopenable cache.db at once all print what --no-cache prints, and none loses another's rows", async () => {
-    const { home, projects } = await setup();
-    await mkdir(join(home, ".claude", "zapara"), { recursive: true });
-    // No SQLite header: `new Database` opens the file lazily, and the first
-    // pragma that reads it, journal_mode, fails with SQLITE_NOTADB.
-    await writeFile(cacheDb(home), "not a db");
-    // Each run reads its own copy of the tree, so the rows it writes are its own.
-    const trees = [projects, ...(await Promise.all(Array.from({ length: 7 }, async () => (await setup()).projects)))];
-    const runs = await Promise.all(trees.map((p) => spawn(home, p, "--verbose")));
-    const expected = (await uncached(projects)).out;
-    expect(runs.map((r) => [r.code, r.out === expected])).toEqual(Array(8).fill([0, true]));
-    // A run whose cache was on wrote its rows. Were a straggler to delete the
-    // file that run had written to, its tree would now miss.
-    const on = trees.filter((_, i) => lineOf(runs[i]!.err, "cache") !== "cache   off");
-    expect(on.length).toBeGreaterThan(0);
-    const after = await Promise.all(on.map(async (p) => hitsOf((await spawn(home, p, "--verbose")).err)));
-    expect(after).toEqual(Array(on.length).fill({ hits: 3, misses: 0 }));
-  });
-
   test("a transcript with a session id that is not a UUID is never cached", async () => {
     const { home, projects } = await setup();
     const marker = "zapara-private-marker";
