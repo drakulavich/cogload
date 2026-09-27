@@ -60,8 +60,9 @@ export async function renderCard(html: string, out: string, timeoutMs = 15_000):
     await writeFile(page, html, { mode: 0o600 }).catch(() => { throw new Error(TEMP_LINE); });
     bytes = await shoot(pathToFileURL(page).href, lower.endsWith(".webp"), timeoutMs).catch(() => { throw new Error(ENGINE_LINE); });
   } finally {
-    for (const s of SIGNALS) process.off(s, onSignal);
+    // The handlers stay until the page is gone: a signal during this rm still cleans up.
     await rm(dir, { recursive: true, force: true }).catch(() => {});
+    for (const s of SIGNALS) process.off(s, onSignal);
   }
   if (bytes === null) throw new Error("render timed out");
   await write(out, bytes);
