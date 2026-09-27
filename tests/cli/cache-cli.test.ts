@@ -259,6 +259,20 @@ describe("the transcript cache", () => {
     }
   });
 
+  test("under an open umask the cache's directories and files are still private", async () => {
+    // zapara no longer narrows the process umask (that reached the card), so the
+    // cache sets its own modes: umask 000 would otherwise leave 0777 and 0644.
+    const { home, projects } = await setup();
+    const p = Bun.spawn(["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+    expect(await p.exited).toBe(0);
+    const zapara = join(home, ".claude", "zapara");
+    const mode = async (p: string) => (await stat(p)).mode & 0o777;
+    expect([await mode(join(home, ".claude")), await mode(zapara)]).toEqual([0o700, 0o700]);
+    const files = (await Array.fromAsync(new Bun.Glob("cache.db*").scan(zapara))).sort();
+    expect(files).toContain("cache.db");
+    for (const f of files) expect([f, await mode(join(zapara, f))]).toEqual([f, 0o600]);
+  });
+
   test("with HOME empty the run works and the cache is off", async () => {
     const { projects } = await setup();
     const run = await spawn("", projects, "--verbose");

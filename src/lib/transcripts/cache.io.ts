@@ -125,9 +125,21 @@ export function openCache(env: NodeJS.ProcessEnv): TranscriptCache | null {
   if (!home) return null;
   try {
     const parser = fingerprint();
-    process.umask(0o077);
+    // No process-wide umask: it would also narrow the card this run writes.
+    // Each directory is chmodded the moment it is made, so a restrictive umask
+    // cannot leave a parent the next level cannot be made in; `connect`
+    // chmods the database before its WAL files exist, and SQLite gives those
+    // the database's mode.
     const dir = join(home, ".claude", "zapara");
-    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    for (const d of [join(home, ".claude"), dir]) {
+      try {
+        mkdirSync(d, { mode: 0o700 });
+        chmodSync(d, 0o700);
+      } catch (e) {
+        if ((e as { code?: unknown }).code !== "EEXIST") throw e;
+      }
+    }
+    // `mkdir` leaves an existing directory as it was; tighten ours.
     chmodSync(dir, 0o700);
     const path = join(dir, "cache.db");
     try {

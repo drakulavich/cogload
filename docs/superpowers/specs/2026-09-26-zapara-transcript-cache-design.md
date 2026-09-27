@@ -32,8 +32,11 @@ speed.
 One SQLite database, `~/.claude/zapara/cache.db`, opened with `bun:sqlite`
 (built into Bun, so the rule of no runtime dependencies holds). `~` is `HOME`
 from the environment, as for the status file: an empty `HOME` means no cache,
-not a fallback path. The directory is created 0700 and the database 0600, with
-the umask set first, as `writeStatus` does.
+not a fallback path. The directory is created 0700 and the database 0600, by
+`chmod` on each directory as it is made and on the database before its WAL
+files exist (SQLite gives those the database's mode). The process umask is not
+touched: it would outlive the cache and narrow the card the same run writes,
+so a card written with the cache on came out 0600 and with `--no-cache` 0644.
 
 ```sql
 PRAGMA user_version = 1;       -- storage format
