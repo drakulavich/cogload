@@ -94,11 +94,16 @@ async function write(out: string, data: string | Uint8Array): Promise<void> {
   }
 }
 
-// Absolute, so `-card.html` is never an option. `sh … &` with SIGHUP ignored:
-// a detached Bun.spawn child, or one in a terminal zapara leads, dies with zapara.
+// Absolute, so `-card.html` is never an option.
 export function openCard(path: string): void {
-  const opener = process.platform === "darwin" ? "open" : "xdg-open";
+  startInBackground([process.platform === "darwin" ? "open" : "xdg-open", resolve(path)]);
+}
+
+// The only place src/ starts another program; lint/no-bun-spawn.grit bans Bun.spawn
+// elsewhere. `sh … &` with SIGHUP ignored: a detached Bun.spawn child, or one in a
+// terminal zapara leads, dies with zapara. A program that fails to start is ignored.
+function startInBackground(command: string[]): void {
   try {
-    Bun.spawnSync(["sh", "-c", 'trap "" HUP; "$0" "$@" </dev/null >/dev/null 2>&1 &', opener, resolve(path)], { stdin: "ignore", stdout: "ignore", stderr: "ignore" });
+    Bun.spawnSync(["sh", "-c", 'trap "" HUP; "$0" "$@" </dev/null >/dev/null 2>&1 &', ...command], { stdin: "ignore", stdout: "ignore", stderr: "ignore" });
   } catch {}
 }

@@ -1,0 +1,12 @@
+language js
+
+or {
+  `Bun.spawn`,
+  `Bun.spawnSync`
+} as $call where {
+  register_diagnostic(
+    span = $call,
+    message = "A program started with Bun.spawn dies with zapara. Start it through startInBackground in src/lib/card/image.io.ts, which runs it under sh with SIGHUP ignored.",
+    severity = "error"
+  )
+}
