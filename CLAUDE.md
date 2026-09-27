@@ -1,62 +1,32 @@
 # CLAUDE.md
 
-Project rules for every coding agent working here. The design is in
-`docs/superpowers/specs/2026-09-17-zapara-design.md`; when this file and the
-spec disagree, say so instead of picking one. Below the rules is the list of
-mistakes actually made in this repo that nothing yet prevents; a line leaves
-when a test or CI step comes to catch it.
+This file holds only what an agent got wrong here and no check catches yet.
+`bun run check` (typecheck, Biome, Knip, tests) enforces the layout, the pure
+core and how tests import, and its messages say where code goes. When a check
+starts catching a line below, delete the line. If something here surprises or
+confuses you, add one line under Surprises. The design is in
+`docs/superpowers/specs/`; when it and the code disagree, say so.
 
 ## Rules
 
-- **Bun runs the TypeScript directly.** No build step, no `dist/`, no bundler.
-  `bin` points at `src/index.ts` with a `#!/usr/bin/env bun` shebang. The only
-  devDependency is `typescript`, for `bun run typecheck`. No runtime dependencies.
-- **Releases go through `npm-publish.yml` only.** On `main`, bump `version`
-  in `package.json` and move the CHANGELOG's Unreleased entries under
-  `## [X.Y.Z]`, then push the tag `vX.Y.Z`. The workflow re-runs the check,
-  publishes with OIDC provenance and creates the GitHub release from that
-  block, and refuses anything that does not line up. Never publish from a
-  laptop.
-- **Functional core, imperative shell.** `src/index.ts`, `src/report.ts`,
-  `src/scan.ts`, `src/image.ts`, `src/statusfile.ts` and `src/cache.ts` are the
-  only files that touch argv, stdout, the file system or the clock;
-  `src/image.ts` is the only one that may use `Bun.WebView` or `Bun.Image` or
-  read the card assets, or start another program (the opener that shows the
-  card); `src/cache.ts` is the only one that may use `bun:sqlite`, and it reads
-  `src/parse.ts` and `src/types.ts` to fingerprint the parser. Three files may
-  write to disk: `src/image.ts` (the card), `src/statusfile.ts` (the status
-  file) and `src/cache.ts` (the transcript cache). Everything else is pure
-  functions over plain data: `analyze()` takes transcript text already in
-  memory and a window with an explicit `now`, and returns the `Day[]` the CLI
-  prints; `render` and `cardHtml` return strings. A core module that imports
-  from `node:` or `Bun`, or calls `Date.now()`, is a bug.
-- **Tests are fixture-driven, in the real transcript format.** A test builds or
-  loads transcripts (in memory for `analyze()`, or a projects tree on disk for
-  the CLI) shaped exactly like Claude Code writes them (`type`, `timestamp`, `sessionId`, `isMeta`, `isSidechain`,
-  `message.content` blocks, `permission-mode` records, `<session>/subagents/`),
-  runs the pipeline through `analyze()`, `report()` or the CLI, and asserts the
-  statistics that come out. Edge cases and negative cases (malformed lines,
-  subagent trees, mtime cutoffs, missing roots) are fixtures too. Tests never
-  import `parse`, `derive` or `scan`; refactoring internals must not touch a
-  test. Unit tests are the exception, not the norm: `score.test.ts` is the one
-  allowed, because a formula table reads better than a fixture.
-- **Follow Kent Beck's Test Desiderata**: behavioral, structure-insensitive,
-  deterministic, fast, readable, specific. A failure must name the behavior
-  that broke, not the function that changed. Fixed `--to` and `now`, `TZ=UTC`,
-  explicit mtimes.
-- **A test asserts what differs with and without the behavior it pins.** A test
-  that would still pass without that behavior is a bug.
-- **Never print a stack trace.** The CLI prints one line to stderr and exits 1,
-  or one line plus a hint to --help and exits 2. A bad transcript line, an
-  unreadable file or a broken directory is skipped, never fatal.
-- **Privacy contract.** Message text is compared against fixed markers and
-  discarded. No text, prompt length, file path or title is kept, written or
-  printed. A change to this needs the spec updated first.
-- **Index weights and norms live in one constant in `src/score.ts`.** Calibration
-  is one diff there plus a CHANGELOG line. The card's ranking norms
-  (`CARD_NORMS` in `src/card.ts`) order highlights on a picture and never enter
-  the index.
+- **Privacy.** No message text, prompt length, file path or title is kept,
+  written or printed, and that includes an error message that echoes a flag's
+  value (#3 printed the `--projects` path). Changing this needs the spec first.
+- **A flag lands with its behavior.** #3 parsed `--explain` before it did
+  anything. A value flag rejects a value that starts with `-`.
+- **A test asserts what differs with and without the behavior it pins** (#69).
+  Tests use fixtures in the real transcript format, through `analyze()`,
+  `report()` or the CLI.
+- **Release** in a PR that bumps `package.json` and moves CHANGELOG's
+  Unreleased block under `## [X.Y.Z]`; after the merge, push the tag `vX.Y.Z`.
+  `npm-publish.yml` publishes. Never `npm publish` from a laptop.
 
-## Mistakes made here
+## Surprises
 
-(none yet)
+- A program zapara starts in the background dies with zapara when started
+  through `Bun.spawn` with `detached`. Start it through
+  `sh -c 'trap "" HUP; "$0" "$@" … &'`.
+- A PTY merges stdout and stderr. To test one stream in a terminal, send the
+  other elsewhere with `runHalfTerminal` (`tests/cli/card-cli.test.ts`).
+- Under a full `bun test`, a WebView test can hit its 15 s timeout. Rerun that
+  file alone before debugging it.
