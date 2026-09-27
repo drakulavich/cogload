@@ -56,8 +56,6 @@ All notable changes to this project are documented here. The format follows
 - Without `--out`, a card that Downloads cannot take says `cannot write
   zapara-card.png to Downloads: pass --out <path>` instead of pointing at an
   `--out` directory the person never gave.
-
-### Fixed
 - `card --json --out me.png` is a usage error, `--json writes no file; drop
   --out`, instead of printing the data, writing nothing and exiting 0.
 - A `card` window with no activity names its dates, `no activity from
