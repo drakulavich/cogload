@@ -77,13 +77,15 @@ Content: exactly one line of JSON, no trailing spaces, a newline at the end.
 | `hour` | The local hour that contains `asOf`, `0`..`23`. |
 | `index` | The load index of the sixty minutes ending at `asOf`, `0`..`100`, or `null` when they hold no session. |
 | `level` | That index's level, `Calm`, `Warming`, `Heating` or `Fried`, or `null` with `index`. A reader colours by this field so it never needs the thresholds. |
-| `peak` | The day's peak index so far, or `null` on a day with no activity. |
+| `peak` | The day's peak index so far, counting the sixty minutes ending at `asOf` as well as the day's calendar hours, so `index` is never above it; `null` when both are `null`. |
 | `activeMin` | Minutes of your presence in the day so far: the 5-minute slots covered by your actions and the gaps of at most 10 minutes between them; `0` on a day with no action of yours. |
 | `streakMin` | Minutes of your live presence streak as of `asOf`: from the streak's first human action to `asOf`, when your last action is no more than 10 minutes before `asOf`; `0` once you have been away longer. Not the hour's bucket. |
 
 `hour` is the clock; `index` and `level` describe the sixty minutes ending at
 `asOf` (the day's `live` bucket, see `2026-09-22-zapara-live-index-design.md`);
-`peak` and `activeMin` describe the day; `streakMin` describes now, and is the one
+`peak` and `activeMin` describe the day (`peak` includes the live `index`: sixty
+minutes that straddle two calendar hours can score above either of them, and a
+status line reading `load 13 · peak 11` would contradict itself); `streakMin` describes now, and is the one
 field that keeps growing while you sit there. It is computed from the day's
 `presence` (`lastAt`, `streakStartAt`) against `asOf`, so it does not reset at
 an hour boundary and does not wait for your next action to grow. On a day with no activity the

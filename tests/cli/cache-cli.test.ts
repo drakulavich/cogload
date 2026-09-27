@@ -259,6 +259,55 @@ describe("the transcript cache", () => {
     }
   });
 
+  test("under an open umask the cache's directories and files are still private", async () => {
+    // zapara no longer narrows the process umask (that reached the card), so the
+    // cache sets its own modes: umask 000 would otherwise leave 0777 and 0644.
+    const { home, projects } = await setup();
+    const p = Bun.spawn(["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+    expect(await p.exited).toBe(0);
+    const zapara = join(home, ".claude", "zapara");
+    const mode = async (p: string) => (await stat(p)).mode & 0o777;
+    expect([await mode(join(home, ".claude")), await mode(zapara)]).toEqual([0o700, 0o700]);
+    const files = (await Array.fromAsync(new Bun.Glob("cache.db*").scan(zapara))).sort();
+    expect(files).toContain("cache.db");
+    for (const f of files) expect([f, await mode(join(zapara, f))]).toEqual([f, 0o600]);
+  });
+
+  test("under an open umask a fresh cache.db and its WAL files are never seen with a mode but 0600", async () => {
+    // The mode after the run is not enough: SQLite creates a missing database
+    // 0644 less the umask, and a chmod after it leaves that mode visible for a
+    // moment. A second process stats the three files for the whole run. It can
+    // only miss a loose mode, never invent one, so this never fails on a
+    // database created 0600; on the chmod-after code it saw 644 in 40 of 40 runs.
+    const { home, projects } = await setup();
+    const zapara = join(home, ".claude", "zapara");
+    await mkdir(zapara, { recursive: true, mode: 0o700 });
+    const db = join(zapara, "cache.db");
+    const stop = join(home, "stop");
+    const poller = join(home, "poll.ts");
+    await writeFile(poller, `import { existsSync, statSync } from "node:fs";
+const [db, stop] = process.argv.slice(2);
+const seen = new Set();
+console.log("ready");
+for (let i = 0, until = Date.now() + 20000; Date.now() < until; i++) {
+  for (const f of [db, db + "-wal", db + "-shm"]) { try { seen.add(f.slice(db.length) + ":" + (statSync(f).mode & 0o777).toString(8)); } catch {} }
+  if (i % 100 === 0 && existsSync(stop)) break;
+}
+console.log([...seen].sort().join(" "));
+`);
+    const watch = Bun.spawn(["bun", poller, db, stop], { stdout: "pipe" });
+    const lines = watch.stdout.pipeThrough(new TextDecoderStream()).getReader();
+    let out = (await lines.read()).value ?? "";
+    expect(out).toStartWith("ready");
+    const run = Bun.spawn(["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+    expect(await run.exited).toBe(0);
+    await writeFile(stop, "");
+    for (let r = await lines.read(); !r.done; r = await lines.read()) out += r.value;
+    const seen = out.split("\n")[1]!.split(" ");
+    expect(seen).toContain(":600"); // the poller did see the database
+    expect(seen.filter((s) => !s.endsWith(":600"))).toEqual([]);
+  }, 30_000);
+
   test("with HOME empty the run works and the cache is off", async () => {
     const { projects } = await setup();
     const run = await spawn("", projects, "--verbose");

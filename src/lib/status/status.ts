@@ -26,20 +26,22 @@ export function streakFrom(now: Date): Date {
 }
 
 // index and level are the day's `live` bucket, not the hour's: an hour's bucket
-// is nearly empty just after the hour turns. streakMin is measured against `now`,
+// is nearly empty just after the hour turns. peak folds the live index in: sixty
+// minutes across two hours can score above both, and index must never exceed peak. streakMin is measured against `now`,
 // not the bucket's: it must not reset on the hour or stop between two actions,
 // and it is over once the last action is more than GAP_MS behind `now`.
 export function statusOf(day: Day, now: Date): Status {
   const hour = now.getHours();
+  const index = day.live?.score?.index ?? null;
   const live = day.presence !== null && now.getTime() - Date.parse(day.presence.lastAt) <= GAP_MS;
   return {
     schema: 1,
     asOf: day.asOf ?? now.toISOString(),
     date: day.date,
     hour,
-    index: day.live?.score?.index ?? null,
+    index,
     level: day.live?.score?.level ?? null,
-    peak: day.peak,
+    peak: index === null ? day.peak : Math.max(index, day.peak ?? 0),
     activeMin: day.activeMin,
     streakMin: live ? Math.min(MAX_MIN, Math.round((now.getTime() - Date.parse(day.presence!.streakStartAt)) / 60000)) : 0,
   };

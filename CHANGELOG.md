@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 - `--help` says a pipe gets JSON for the grid and a day only; `card` and
   `status` in a pipe print their usual lines.
+- The status file's `peak` counts the last sixty minutes as well as the
+  day's calendar hours, so `index` is never above it. Sixty minutes that
+  straddle two hours can score above both, and a status line could read
+  `load 13 · peak 11`. `peak` in `--json`, the grid and the day table
+  still covers calendar hours only.
 
 ### Fixed
 - A transcript larger than 2 GiB is skipped like an unreadable file instead of
@@ -23,6 +28,34 @@ All notable changes to this project are documented here. The format follows
   the ceiling the status file promises its readers. It used to write up to
   1620 late in the evening, and a reader that decodes the file strictly,
   like pult, dropped the whole line as no data.
+- `zapara card` no longer counts records timestamped after the moment it
+  runs, which the grid, the day and `status` already left out. A transcript
+  from a machine whose clock runs ahead could put hours on the card that no
+  other view showed.
+- The Night Owl's card says "late at night" instead of "after midnight" in
+  its sentence, caption and motto. The late hours are 23 and 0 to 5, so a
+  card whose late hours were all 23:xx read "100% of your hours after
+  midnight".
+- The Marathoner's sentence takes its calm share from the spectrum under it,
+  so one card no longer says 33% calm in the sentence and 34% in the legend.
+- A level with any hours shows at least 1% on the card's spectrum. One fried
+  hour among 200 calm ones used to read `100% calm · 0% fried` beside a
+  Fried peak.
+- A card whose remaining highlight candidates all score zero shows the
+  character's two highlights instead of a third reading `1 / sessions at
+  once`, and a highlight whose value is 1 has a singular caption
+  (`1 / session at once`).
+- `zapara card` replaces a symlink at the card's path instead of writing the
+  picture into the file it points to. An archive unpacked into Downloads
+  could leave a `zapara-card.png` link that aimed the card at another file.
+- The card's file mode follows your umask. With the cache on it used to come
+  out 0600, because the cache narrowed the umask for the whole run; the cache
+  now sets its own files' modes and leaves the umask alone.
+- Ctrl-C while `zapara card` draws the picture removes its temporary page
+  instead of leaving it in the temporary directory.
+- Without `--out`, a card that Downloads cannot take says `cannot write
+  zapara-card.png to Downloads: pass --out <path>` instead of pointing at an
+  `--out` directory the person never gave.
 
 ## [0.8.1] - 2026-09-27
 

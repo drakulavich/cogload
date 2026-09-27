@@ -8,7 +8,7 @@ that spec says.
 `zapara card` turns a window of transcripts into one image a person wants to
 send to a colleague: a character that names how they drive Claude Code, one
 sentence with two numbers behind that name, the peak hour, a load spectrum,
-three highlights, and the project's line. It exists to make the tool travel:
+three highlights (two when nothing else scores), and the project's line. It exists to make the tool travel:
 the week heatmap convinces the person who ran it, the card convinces the
 person they show it to.
 
@@ -35,7 +35,9 @@ zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [-
 ```
 
 - The window flags are the grid's (base spec, CLI), with `--days` defaulting
-  to 14 instead of 7.
+  to 14 instead of 7. So is the clock: the card reads the window with the
+  run's `now`, and a record timestamped after it counts for nothing, as on
+  the grid.
 - `--out` defaults to `zapara-card.png` in the current directory. The format
   is the extension: `.png` or `.webp` for the picture, `.html` for the page
   the picture is taken of (written as is, no browser involved, for checking
@@ -59,7 +61,13 @@ zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [-
   writable, is not a directory, or the file system is read-only), stderr
   gets one line, `cannot write the card: check the --out directory`, exit 1.
   The message names no path: the error the file system raises quotes the
-  whole path, and the CLI never prints one.
+  whole path, and the CLI never prints one. (Without `--out` the line names
+  the Downloads folder instead; see the downloads spec.)
+- The file is written the status file's way: a temporary file created
+  exclusively in the same directory, then renamed over the path. A symlink
+  at the path is replaced, never written through, and a reader never sees a
+  half-written picture. Its mode is the person's umask, whatever else the run
+  did.
 - Colors and TTY detection do not apply: the card is the same everywhere.
 
 Privacy amendment to the base spec: `card` is the one command that writes a
@@ -94,7 +102,7 @@ only for a window of lone single-event hours) the tie rule gives Conductor.
 | conductor | The Conductor | `**{maxSessions} sessions** at once, **{maxContextSwitches} context switches** in one hour.` | `You run agents like an orchestra.` |
 | supervisor | The Supervisor | `**{reports} agent reports** and **{outputTokens} tokens** of output read.` | `Nothing ships without your eyes on it.` |
 | marathoner | The Marathoner | `Longest streak **{streak}** without a break, **{calmShare}%** of your hours calm.` | `You do not stop while it compiles.` |
-| nightOwl | The Night Owl | `**{lateShare}%** of your hours **after midnight**.` | `The best commits happen after midnight.` |
+| nightOwl | The Night Owl | `**{lateShare}%** of your hours **late at night**.` | `The best commits happen late at night.` |
 
 Where `maxSessions` and `maxContextSwitches` are the window maxima over
 buckets, `reports`, `outputTokens` and `interrupts` are window sums, `streak`
@@ -103,8 +111,11 @@ presence streak exactly: each bucket reports the longest streak it saw, a
 streak is longest at its last event, and that event falls in one bucket.
 `activeHours` is the count of
 active buckets (used only as a divisor, never shown), `lateShare` is the
-share of active buckets with `lateNight` in whole percent, `calmShare` the
-share of active buckets at Calm, `days` the `--days` value. `CardData`
+share of active buckets with `lateNight` (hours 23 and 0 to 5, the base
+spec's) in whole percent, which is why the Night Owl's words say "late at
+night" and not "after midnight": 23:00 is before it, `calmShare` the
+spectrum's calm percent (below), so the sentence and the legend under it
+carry one number, `days` the `--days` value. `CardData`
 carries the sentence as segments, `{ text, strong }[]`, and the motto as a
 separate string, so the page can set the bold spans without parsing anything;
 the stdout character line and the JSON `sentence` are the segments joined,
@@ -132,9 +143,16 @@ not handled.
 
 **Spectrum**: the share of active buckets at each level, four whole percents
 that sum to 100 by largest-remainder rounding (a level with no hours is 0).
+A level with at least one hour is at least 1: when the rounding leaves it at
+0, it takes 1 from the largest level (which holds 25 or more). Otherwise one
+fried hour among 200 calm ones reads `100% calm · 0% fried` beside a Fried
+peak pill on the same card.
 
-**Highlights**: three, chosen from this pool. Each has a key, a value string
-and a one-line caption in sentence case that carries the unit. `norm` is the
+**Highlights**: three, chosen from this pool, or two (below). Each has a key,
+a value string and a one-line caption in sentence case that carries the unit;
+when the value is `1` the caption is singular (`session at once`, `switch in
+one hour`, `agent report read`, `token of output read`, `time you stopped
+Claude`). `norm` is the
 value divided by its calibration norm, for ranking:
 
 | Key | Value | Caption | norm |
@@ -145,7 +163,7 @@ value divided by its calibration norm, for ranking:
 | reportsRead | `{reports}` | `agent reports read` | `reports / (12 · activeHours)` |
 | tokensRead | `{outputTokens}` | `tokens of output read` | `outputTokens / (65000 · activeHours)` |
 | interrupts | `{interrupts}` | `times you stopped Claude` | `interrupts / (3 · activeHours)` |
-| lateShare | `{lateShare}%` | `of hours after midnight` | `lateShare / 25` |
+| lateShare | `{lateShare}%` | `of hours late at night` | `lateShare / 25` |
 
 The first two highlights are the character's own pair, in this order: Conductor
 `peakSessions, contextSwitches`; Supervisor `reportsRead, tokensRead`;
@@ -153,7 +171,9 @@ Marathoner `longestStreak, interrupts`; Night Owl `lateShare, longestStreak`.
 The third is the remaining key with the largest `norm`; `lateShare` is
 eligible as the third only for the Night Owl (a late-night number on someone
 else's card is exactly the kind of thing they would hide). Ties keep the
-table order. The first three norms in the table are the index's own
+table order. When that largest `norm` is 0 there is no third: every candidate
+left is a zero or a single session, which is not a trait, and the card shows
+the character's pair alone, two panels across the row. The first three norms in the table are the index's own
 (`NORMS.parallelSpan`, `NORMS.supervisionPerHour`, `NORMS.streakMin`), so
 recalibrating one of those in `src/score.ts` also changes which candidate wins
 the third slot; the last four are the card's own `CARD_NORMS`, which rank
@@ -221,7 +241,7 @@ the sentence and the numbers; every small label is JetBrains Mono.
 | Divider | 30 px below, 1 px at 10 % white, 26 px of space after it |
 | Spectrum bar | 8 px tall, radius 4, four segments in order calm, warming, heating, fried, widths in percent, 2-px gaps, segments of 0 % omitted |
 | Legend | 14 px below the bar, JetBrains Mono 12.5 px `#6b6b76`: a 6-px dot, the percent in `#a1a1aa` weight 500, the level name, items separated by two spaces |
-| Highlights | 30 px below, three equal panels with 16-px gaps: radius 12, 1-px border at 10 % white, 2.5 % white fill, inner top highlight, padding 18×16; value Inter 700 38 px, letter-spacing −1.6 px, tabular figures, white; caption 8 px below, JetBrains Mono 12 px `#6b6b76`, sentence case, one line (`sessions at once`, `switches in one hour`, `longest streak`, …) |
+| Highlights | 30 px below, three (or two) equal panels with 16-px gaps: radius 12, 1-px border at 10 % white, 2.5 % white fill, inner top highlight, padding 18×16; value Inter 700 38 px, letter-spacing −1.6 px, tabular figures, white; caption 8 px below, JetBrains Mono 12 px `#6b6b76`, sentence case, one line (`sessions at once`, `switches in one hour`, `longest streak`, …) |
 | Repo link | at (60, 566), two lines: JetBrains Mono 11 px uppercase `#6b6b76`, letter-spacing 1.5 px, `GET YOURS`; 8 px below, JetBrains Mono 500 17 px in the character's light accent, letter-spacing −0.2 px: `github.com/drakulavich/zapara` |
 | Source line | right-aligned to x = 1140 at y = 588, JetBrains Mono 12 px `#a1a1aa`: `computed locally from your Claude Code transcripts · nothing leaves your machine` |
 
@@ -302,7 +322,8 @@ navigates to its `file://` URL, waits until
 (polled through `evaluate`, 15-second budget), takes a PNG screenshot, resizes
 it to 2400×1260 with `Bun.Image` when it is larger, re-encodes to WebP when
 asked, writes the file, and closes the view and removes the temporary
-directory (also on failure). A constructor
+directory (also on failure, and on SIGINT, SIGTERM or SIGHUP during the
+render, after which zapara exits 128 plus the signal's number, 130 for Ctrl-C). A constructor
 or navigation failure whose message says no browser is available becomes the
 `card needs a browser engine` line.
 
@@ -344,7 +365,11 @@ Scenarios:
   where `lateShare` has the largest remaining norm on a non-Night-Owl card
   pins that it is skipped for the third highlight.
 - Spectrum rounding: a fixture whose raw shares are 33.3 / 33.3 / 33.3 / 0
-  pins 34 / 33 / 33 / 0 (largest remainder).
+  pins 34 / 33 / 33 / 0 (largest remainder); a Marathoner fixture of that
+  split pins 34% in the sentence too; 200 calm hours and one fried hour pin
+  99 / 0 / 0 / 1.
+- Highlights: a Supervisor whose remaining candidates all score 0 pins two
+  highlights; one session pins the singular `session at once`.
 - An empty window through `cardData()` is `null`.
 - `cardHtml` on `busy-week`: the page contains the name and the sentence
   once each; the peak pill carries `87 · Fried` in the fried class; the
