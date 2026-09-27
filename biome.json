@@ -29,6 +29,15 @@
   "overrides": [
     {
       "includes": [
+        "src/**/*.ts",
+        "!src/lib/card/image.io.ts"
+      ],
+      "plugins": [
+        "./lint/no-bun-spawn.grit"
+      ]
+    },
+    {
+      "includes": [
         "src/lib/**/*.ts",
         "!src/lib/**/*.io.ts",
         "src/cli/args.ts",
