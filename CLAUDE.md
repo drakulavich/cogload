@@ -23,9 +23,6 @@ confuses you, add one line under Surprises. The design is in
 
 ## Surprises
 
-- A program zapara starts in the background dies with zapara when started
-  through `Bun.spawn` with `detached`. Start it through
-  `sh -c 'trap "" HUP; "$0" "$@" … &'`.
 - A PTY merges stdout and stderr. To test one stream in a terminal, send the
   other elsewhere with `runHalfTerminal` (`tests/cli/card-cli.test.ts`).
 - Under a full `bun test`, a WebView test can hit its 15 s timeout. Rerun that
