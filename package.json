@@ -1,6 +1,6 @@
 {
   "name": "@drakulavich/zapara",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "Cognitive load index for people driving Claude Code, computed locally from transcripts",
   "license": "MIT",
   "author": "Anton Yakutovich",

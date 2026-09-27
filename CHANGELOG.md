@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-27
+
 ### Changed
 - The Night Owl's motto is "The best commits happen after dark." It used to
   repeat the sentence before it: "… of your hours late at night. The best
