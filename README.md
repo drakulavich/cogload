@@ -162,7 +162,7 @@ A status line wants one number every thirty seconds and cannot wait half a secon
 | `hour` | The local hour that contains `asOf`, `0`..`23`. |
 | `index` | The load index of the sixty minutes ending at `asOf`, `0`..`100`, or `null` when they hold no session. It does not reset at an hour boundary: the hour buckets of `zapara today` are calendar hours, this one is the clock's last hour. |
 | `level` | That index's level, `Calm`, `Warming`, `Heating` or `Fried`, or `null` with `index`. A reader colors by this field so it never needs the thresholds. |
-| `peak` | The day's peak index so far, or `null` on a day with no activity. |
+| `peak` | The day's peak index so far, including the last sixty minutes, so it is never below `index`; `null` on a day with no activity. |
 | `activeMin` | Minutes of your presence in the day so far: the 5-minute slots covered by your actions and the gaps of at most 10 minutes between them; `0` on a day with no action of yours. |
 | `streakMin` | Minutes of your live presence streak as of `asOf`: from the streak's first action to `asOf`, when your last action is no more than 10 minutes before `asOf`; `0` once you have been away longer. It keeps growing while you sit there, and it does not reset at an hour boundary. |
 

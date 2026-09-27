@@ -93,8 +93,11 @@ status-file spec, the two rows now read:
 | `index` | The load index of the sixty minutes ending at `asOf`, `0`..`100`, or `null` when they hold no session. |
 | `level` | That index's level, `Calm`, `Warming`, `Heating` or `Fried`, or `null` with `index`. A reader colours by this field so it never needs the thresholds. |
 
-`hour` keeps its meaning, the local hour containing `asOf`. `peak` and
-`activeMin` stay the day's; `streakMin` stays live. The sentence "`hour`,
+`hour` keeps its meaning, the local hour containing `asOf`. `activeMin` stays
+the day's. `peak` is the day's peak folded with the live index (amended
+2026-09-27): the larger of the two, so the file's `index` is never above its
+`peak`. `Day.peak` itself, in `--json`, the grid and the day table, stays over
+calendar hours only; `streakMin` stays live. The sentence "`hour`,
 `index` and `level` describe the bucket of the current hour" becomes "`hour`
 is the clock; `index` and `level` describe the last sixty minutes".
 
@@ -160,7 +163,8 @@ format, `TZ=UTC`, each with the one-line mutation that fails it:
   when nothing else differs. Mutation: take `lateNight` from the window's
   first hour.
 - **Nothing in the window.** Activity at 09:00, `now` 14:00: `live.score` is
-  `null`, `statusOf` gives `index` and `level` `null`, `peak` still the day's.
+  `null`, `statusOf` gives `index` and `level` `null`, `peak` still the day's
+  (folding a `null` live index changes nothing).
   Mutation: score an empty metrics object.
 - **Only the open day carries it.** A two-day window with `now` on the second
   day: `days[0].live` is `undefined`, `days[1].live` is set; a window run
