@@ -11,7 +11,7 @@ const strong = (text: string): Segment => ({ text, strong: true });
 const plain = (text: string): Segment => ({ text, strong: false });
 
 // Names and mottos are spelled out here on purpose: the test pins the page against
-// the spec's copy, not against whatever src/card.ts exports.
+// the spec's copy, not against whatever src/lib/card/card.ts exports.
 const NAMES: Record<Character, string> = { conductor: "The Conductor", supervisor: "The Supervisor", marathoner: "The Marathoner", nightOwl: "The Night Owl" };
 const MOTTOS: Record<Character, string> = {
   conductor: "You run agents like an orchestra.",

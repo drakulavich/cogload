@@ -143,7 +143,7 @@ switch, 30 000 output tokens, a streak of 15 minutes, at 14:00.
 The index is rounded once, from the unrounded sum; the parts that `--explain`
 prints are rounded to one decimal for display, so they can add up to a number
 one off from the index while the index is right. Weights, norms and level
-bounds live in one constant in `src/score.ts`; a recalibration is one diff
+bounds live in one constant in `src/lib/metrics/score.ts`; a recalibration is one diff
 there plus a CHANGELOG line.
 
 The norms come from two machines, 14 days each, of real transcripts covering
@@ -197,7 +197,7 @@ window: The Conductor (parallel and
 pace), The Supervisor (supervision and reading), The Marathoner (streak), The
 Night Owl (late). Each share is that character's points as a fraction of the
 most it could have had; the highest wins, ties in that order. The highlights
-are ranked against norms in `src/card.ts` that order a picture and never enter
+are ranked against norms in `src/lib/card/card.ts` that order a picture and never enter
 the index. The card spec has the rest.
 
 **The status file** (`zapara status`) writes today's current hour to
@@ -251,5 +251,5 @@ contract.
 - `docs/superpowers/specs/2026-09-17-zapara-design.md`: events, buckets, metrics, the index, the CLI.
 - `docs/superpowers/specs/2026-09-18-zapara-card-design.md`: the card's data and picture.
 - `docs/superpowers/specs/2026-09-19-zapara-status-file-design.md`: the status file and the reader's contract.
-- `src/score.ts`: the one place weights, norms and levels live.
+- `src/lib/metrics/score.ts`: the one place weights, norms and levels live.
 - `CHANGELOG.md`: every calibration and rule change, with its reason.
