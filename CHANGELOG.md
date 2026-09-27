@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 - `--help` says a pipe gets JSON for the grid and a day only; `card` and
   `status` in a pipe print their usual lines.
+- The status file's `peak` counts the last sixty minutes as well as the
+  day's calendar hours, so `index` is never above it. Sixty minutes that
+  straddle two hours can score above both, and a status line could read
+  `load 13 · peak 11`. `peak` in `--json`, the grid and the day table
+  still covers calendar hours only.
 
 ### Fixed
 - A transcript larger than 2 GiB is skipped like an unreadable file instead of
@@ -23,14 +28,6 @@ All notable changes to this project are documented here. The format follows
   the ceiling the status file promises its readers. It used to write up to
   1620 late in the evening, and a reader that decodes the file strictly,
   like pult, dropped the whole line as no data.
-
-- The status file's `peak` counts the last sixty minutes as well as the
-  day's calendar hours, so `index` is never above it. Sixty minutes that
-  straddle two hours can score above both, and a status line could read
-  `load 13 · peak 11`. `peak` in `--json`, the grid and the day table
-  still covers calendar hours only.
-
-### Fixed
 - `zapara card` no longer counts records timestamped after the moment it
   runs, which the grid, the day and `status` already left out. A transcript
   from a machine whose clock runs ahead could put hours on the card that no
