@@ -9,6 +9,12 @@ All notable changes to this project are documented here. The format follows
 - `--help` says a pipe gets JSON for the grid and a day only; `card` and
   `status` in a pipe print their usual lines.
 
+### Fixed
+- A transcript larger than 2 GiB is skipped like an unreadable file instead of
+  failing every command, `status` included, with `Cannot create a string longer
+  than 2147483647 characters`. The rest of the report stands, and zapara no
+  longer reads such a file into memory at all.
+
 ## [0.8.1] - 2026-09-27
 
 ### Changed

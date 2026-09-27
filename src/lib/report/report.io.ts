@@ -1,3 +1,4 @@
+import { constants } from "node:buffer";
 import { open } from "node:fs/promises";
 import { analyzeEvents, windowBounds } from "../metrics/index.ts";
 import { tailHash, type Fresh, type TranscriptCache, parseTranscript, scan, type ScanEntry, type ScanStats } from "../transcripts/index.ts";
@@ -14,11 +15,15 @@ export const READERS = 16;
 type Read = { bytes: Buffer; stable: ScanEntry | null };
 
 // `stable` only when both fstat agree and every byte was read: a file written
-// during the read is used for this run and never cached.
+// during the read is used for this run and never cached. UTF-8 decodes to at
+// most one UTF-16 unit per byte, so a file within the engine's longest string
+// always decodes; a longer one is skipped like an unreadable one, before its
+// bytes are read, since decoding it would throw and fail the whole run.
 async function readWhole(entry: ScanEntry): Promise<Read> {
   const fh = await open(entry.path, "r");
   try {
     const before = await fh.stat();
+    if (before.size > constants.MAX_STRING_LENGTH) throw new Error("longer than a string can hold");
     const bytes = await fh.readFile();
     const after = await fh.stat();
     const same = before.dev === after.dev && before.ino === after.ino && before.size === after.size && before.mtimeMs === after.mtimeMs && before.size === bytes.length;
