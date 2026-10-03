@@ -88,8 +88,8 @@ the CLI only, and the paragraph says what the optional plugin does.
 .claude-plugin/marketplace.json     marketplace "zapara", one plugin: ./plugin
 plugin/
   .claude-plugin/plugin.json        name "cognitive-load", version 0.1.0, types
-  hooks/hooks.json                  { "modules": ["./register.tsx"] }
-  hooks/register.tsx                the hooks above and the band
+  hooks/hooks.json                  { "modules": ["./register.ts"] }
+  hooks/register.ts                 the hooks above and the band
   types/index.d.ts                  PluginState["cognitive-load"]: { status }
   tests/register.test.ts
 ```
@@ -100,6 +100,9 @@ Install:
 /plugin marketplace add drakulavich/zapara
 /plugin install cognitive-load@zapara
 ```
+
+The module is plain TypeScript with no JSX: the band is built with the
+engine's global `h` and the elements from `$.ui.resolve(e)`.
 
 `plugin/` is not in `package.json`'s `files`, so the npm package does not
 change. The plugin has its own version, starting at 0.1.0, not tied to
