@@ -101,8 +101,10 @@ Install:
 /plugin install cognitive-load@zapara
 ```
 
-The module is plain TypeScript with no JSX: the band is built with the
-engine's global `h` and the elements from `$.ui.resolve(e)`.
+The module is plain TypeScript with no JSX: the band is built by calling
+the element constructors from `$.ui.resolve(e)` directly
+(`Text({ color, children })`), which are typed to return a `RenderElement`;
+the global `h` without JSX is typed too loosely for a render hook.
 
 `plugin/` is not in `package.json`'s `files`, so the npm package does not
 change. The plugin has its own version, starting at 0.1.0, not tied to
