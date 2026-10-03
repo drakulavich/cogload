@@ -163,6 +163,11 @@ source.
   `bun`-locating wrapper (pult's) can fall back to `bunx @drakulavich/zapara
   status`. When neither is found the reader shows the file it has, or
   nothing, and never an error.
+- A reader may instead run `zapara status` itself and decode the line it
+  prints by the same rules, since that line equals the file's content. Such
+  a reader judges no staleness and reads no file; the `cognitive-load`
+  plugin does this after every turn
+  (`2026-10-03-zapara-cognitive-load-plugin-design.md`).
 
 ## Architecture
 

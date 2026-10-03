@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- The `cognitive-load` Claude Code plugin shows the current load above the
+  prompt. Install it from this repository's marketplace
+  (`/plugin marketplace add drakulavich/zapara`, then
+  `/plugin install cognitive-load@zapara`); the npm package is unchanged.
+
 ## [0.9.0] - 2026-09-27
 
 ### Changed
