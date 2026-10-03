@@ -107,7 +107,7 @@ describe('reading', () => {
     await start($)
     await turn($)
     expect(await band($)).toContain('Heating 68')
-    expect(logs).toEqual(['cognitive-load: exit 1'])
+    expect(logs).toEqual(['exit 1'])
   })
 
   test('a failed first run draws no band', async ($, on) => {
@@ -122,6 +122,7 @@ describe('reading', () => {
     ['a level without an index', line({ index: null, level: 'Calm' })],
     ['an index out of range', line({ index: 101 })],
     ['asOf two minutes ahead', line({ asOf: '2026-10-03T10:02:00.000Z' })],
+    ['asOf without an instant timezone', line({ asOf: '2026-10-03' })],
     ['two lines', `warning\n${line()}`],
   ] as const) {
     test(`rejects ${name}`, async ($, on) => {
@@ -129,7 +130,7 @@ describe('reading', () => {
       engine(on, [{ stdout }], logs)
       await start($)
       expect(await band($)).toBe(ENGINE_BAND)
-      expect(logs).toEqual(['cognitive-load: bad line'])
+      expect(logs).toEqual(['bad line'])
     })
   }
 
@@ -146,7 +147,7 @@ describe('reading', () => {
     expect(await band($)).toBe(ENGINE_BAND)
     await turn($)
     expect(await band($)).toContain('Heating 68')
-    expect(logs).toEqual(['cognitive-load: not found'])
+    expect(logs).toEqual(['not found'])
   })
 
   test('the run that finishes last wins', async ($, on) => {
@@ -175,7 +176,7 @@ describe('reading', () => {
     engine(on, ['timeout'], logs)
     await start($)
     await clock.advance(0)
-    expect(logs).toEqual(['cognitive-load: timeout'])
+    expect(logs).toEqual(['timeout'])
   })
 
   test('never shows or logs stderr or stdout', async ($, on) => {

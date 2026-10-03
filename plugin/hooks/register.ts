@@ -25,7 +25,8 @@ const decodeStatus = (stdout: string, nowMs: number): Status | null => {
   }
   if (typeof s !== 'object' || s === null || Array.isArray(s)) return null
   const o = s as Record<string, unknown>
-  const asOf = typeof o.asOf === 'string' ? Date.parse(o.asOf) : Number.NaN
+  const isIsoInstant = typeof o.asOf === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(o.asOf)
+  const asOf = isIsoInstant ? Date.parse(o.asOf as string) : Number.NaN
   const isLevel = o.index === null ? o.level === null : LEVELS.includes(o.level as Level)
   const isValid =
     o.schema === 1 &&
@@ -39,7 +40,19 @@ const decodeStatus = (stdout: string, nowMs: number): Status | null => {
     isLevel &&
     isInt(o.activeMin, 0, 1500) &&
     isInt(o.streakMin, 0, 1500)
-  return isValid ? (o as Status) : null
+  return isValid
+    ? {
+        schema: 1,
+        asOf: o.asOf as string,
+        date: o.date as string,
+        hour: o.hour as number,
+        index: o.index as number | null,
+        level: o.level as Level | null,
+        peak: o.peak as number | null,
+        activeMin: o.activeMin as number,
+        streakMin: o.streakMin as number,
+      }
+    : null
 }
 
 const formatMinutes = (min: number): string =>
@@ -61,7 +74,7 @@ const refresh = async ($: EngineInterface) => {
   } catch {
     failure = (await $.clock.now()) - startedAt >= RUN_TIMEOUT_MS ? 'timeout' : 'not found'
   }
-  $.ui.log(`cognitive-load: ${failure}`, { to: 'debug' })
+  $.ui.log(failure, { to: 'debug' })
 }
 
 export const register: Register = on => {
