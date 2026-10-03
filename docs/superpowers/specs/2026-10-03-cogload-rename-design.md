@@ -35,9 +35,29 @@ nothing: the cache is rebuilt by one full scan, and the status file is
 written by the first `cogload status`. `~/.claude/zapara/` is left as it
 is. The README says it can be deleted once the person no longer runs zapara.
 
-There is no `zapara` alias command and no last zapara release. The old
-package gets `npm deprecate @drakulavich/zapara "renamed to
-@drakulavich/cogload"`; its installs keep working until removed.
+## The `zapara` alias
+
+For a while `zapara` keeps answering. `@drakulavich/cogload` declares two
+`bin` entries, `cogload` and `zapara`, pointing at the same
+`src/cli/index.ts`. Run as `zapara`, it does exactly what `cogload` does,
+with the same data directory, and first writes one line to stderr:
+
+```
+zapara is now cogload; the zapara command goes away in 1.0.0
+```
+
+stdout is unchanged, so readers of `zapara status` keep working: pult starts
+it with stderr closed, and the plugin 0.1.0 reads stdout only. The command
+name is taken from `process.argv[1]`'s base name. The alias goes in 1.0.0, a
+tracked issue.
+
+Both packages installed globally would claim the `zapara` bin. The README's
+install section says to run `bun remove -g @drakulavich/zapara` first, and
+the CHANGELOG entry repeats it.
+
+There is no last zapara release. The old package gets `npm deprecate
+@drakulavich/zapara "renamed to @drakulavich/cogload"`; its installs keep
+working until removed.
 
 GitHub redirects the old repository name, so existing clones, the
 `drakulavich/zapara` marketplace URL and links in old issues keep working.
@@ -73,16 +93,23 @@ the new name if npmjs.com allows it before the first version, or publish
 - Existing tests change their expected strings and paths only; the count
   stays the same. A test that asserted `.claude/zapara` asserts
   `.claude/cogload`.
-- `tests/cli/package.test.ts` pins the package name and the `bin` entry.
-- `git grep -i zapara` outside `docs/superpowers/specs/`, `CHANGELOG.md`
-  history and the README's "Where it comes from" finds nothing.
+- `tests/cli/package.test.ts` pins the package name and both `bin` entries.
+- The CLI run through a `zapara` symlink to `src/cli/index.ts`: `status`
+  prints the same stdout as `cogload status` and the notice line on stderr;
+  run as `cogload`, stderr is empty.
+- `git grep -i zapara` outside `docs/superpowers/specs/`, `CHANGELOG.md`,
+  the README's "Where it comes from" and install note, and the alias (its
+  `bin` entry, the notice and their tests) finds nothing.
 - The plugin's tests expect `["cogload", "status"]`.
 
 ## Definition of done
 
 - `bun run check` and `claude plugin test plugin` pass in CI.
 - `git grep -i zapara` finds only the places named above.
-- `bun pm pack --dry-run` shows `@drakulavich/cogload` with bin `cogload`.
+- `bun pm pack --dry-run` shows `@drakulavich/cogload` with bins `cogload`
+  and `zapara`.
+- After `bun add -g @drakulavich/cogload`, both `cogload status` and
+  `zapara status` work, and only the second prints the notice.
 - After release: `bunx @drakulavich/cogload@latest status` writes
   `~/.claude/cogload/status.json`; the plugin installed from
   `drakulavich/cogload` draws the band; pult with `--cogload` shows the load.
