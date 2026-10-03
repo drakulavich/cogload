@@ -139,6 +139,41 @@ Checks:
   without credentials; if they do not, the step stays local and the PR says
   so.
 
+## User scenarios
+
+The unit cases prove the hooks; these prove what a person sees in a real
+Claude Code session. Each runs `claude --plugin-dir plugin --debug-file
+<tmp>/debug.log` in a tmux window of a fixed size, sends a short prompt with
+`tmux send-keys`, and reads the screen with `tmux capture-pane -p`. They need
+a logged-in Claude Code, so they run on a developer's machine, not in CI; the
+implementation PR carries the captured screens as evidence.
+
+Most scenarios put a stub `zapara` first on `PATH`: a shell script in a temp
+directory that prints a fixed status line, exits with a given code, or sleeps.
+The stub never touches `~/.claude/zapara`. Scenarios 1 and 2 use the real
+zapara.
+
+| # | Setup | Action | Expected on screen |
+|---|---|---|---|
+| 1 | Real zapara 0.9.0 on `PATH`, activity today | Start a session | The band appears without a prompt being sent; its index equals `zapara status` run in another terminal within the same minute |
+| 2 | As 1 | Send two prompts, a minute apart | The band changes after a turn, and after each turn matches a fresh `zapara status` |
+| 3 | Stub prints a Fried line | Start, send one prompt | `█ Fried 92 · …` in Fried's colour |
+| 4 | Stub prints a Heating line, then is edited to exit 1 | Send a prompt after the edit | The Heating line stays; `debug.log` has `exit 1` |
+| 5 | Stub sleeps 15 s | Send a prompt | The answer arrives without waiting for the stub; no band; `debug.log` has `timeout` |
+| 6 | No `zapara` on `PATH` | Start, send a prompt | No band, nothing about zapara in the transcript; `debug.log` has `not found` |
+| 7 | Stub prints `index: null` | Start | No band |
+| 8 | Stub prints a line with `schema` 2 | Start | No band; `debug.log` has `bad line` |
+| 9 | Stub as 3, tmux window 45 columns wide | Start, then widen to 120 | `█ Fried 92` only, then the full line |
+| 10 | Stub as 3, three sessions in three windows | One prompt in each | All three bands show the same line; no window shows an error |
+| 11 | Stub as 3 | `/reload-plugins` | The band is back at once with the same line, before any new turn |
+| 12 | Installed from the marketplace (`/plugin marketplace add` with the branch's local checkout, `/plugin install cognitive-load@zapara`) | Restart, send a prompt; then `/plugin uninstall` | The band appears; after uninstall and restart it is gone and `~/.claude/zapara` is unchanged by the uninstall |
+| 13 | Stub writes `/Users/secret/path` and a prompt-like sentence to stderr and exits 1 | Send a prompt | Neither string is on the screen or in `debug.log` |
+
+Scenario 5 also checks the turn: the answer arrives within a few seconds of
+the same prompt without the plugin. Scenario 12 is the only one that goes
+through the install commands a person types; the rest load the folder with
+`--plugin-dir`.
+
 ## README, CHANGELOG, status spec
 
 - README: a section "Inside Claude Code" with the two install commands, what
@@ -166,9 +201,8 @@ refreshes between turns.
 - `bun run check` passes, and `plugin/` is in none of `tsc`'s or Knip's
   inputs.
 - CI runs validate and test, or the PR states why it cannot.
-- Loaded with `claude --plugin-dir plugin` on a machine with zapara 0.9.0 on
-  `PATH`: the band appears after the first turn, its index equals
-  `zapara status`'s, and it changes after a later turn.
+- All thirteen user scenarios pass, with the captured screen of each in the
+  implementation PR.
 - `bun pm pack --dry-run` lists no file under `plugin/` or
   `.claude-plugin/`.
 - README, CHANGELOG and the status spec carry the changes listed above.
