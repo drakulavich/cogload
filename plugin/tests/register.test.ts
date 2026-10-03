@@ -21,11 +21,13 @@ const line = (fields: Record<string, unknown> = {}): string =>
   })}\n`
 
 type Answer = { exitCode: number; stdout: string; stderr?: string }
-type Run = Partial<Answer> | 'not found' | Promise<Answer>
+type Run = Partial<Answer> | 'not found' | 'timeout' | Promise<Answer>
+
+let clock: ReturnType<typeof mock.clock>
 
 // The engine beneath the plugin: each queued answer is one `zapara status` run.
 const engine = (on: On, runs: Run[], logs: string[] = []) => {
-  mock.clock(on, { now: NOW })
+  clock = mock.clock(on, { now: NOW })
   on('session.start', () => ({ cwd: '/' }))
   on('turn.complete', () => ({ text: '' }))
   on('ui.log', (_$, e) => {
@@ -40,15 +42,27 @@ const engine = (on: On, runs: Run[], logs: string[] = []) => {
     expect(e.argv).toEqual(['zapara', 'status'])
     const run = runs.shift()
     if (run === undefined || run === 'not found') return { deny: 'zapara: command not found' }
+    if (run === 'timeout') {
+      await clock.advance(10_000)
+      return { deny: 'zapara: still running' }
+    }
     return {
       value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false, ...(await run) },
     }
   })
 }
 
-const start = ($: Engine) => $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-const turn = ($: Engine) =>
+// The plugin's run outlives the hook, so each helper lets it settle.
+const start = async ($: Engine) => {
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await clock.advance(0)
+}
+const turnOnly = ($: Engine) =>
   $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't', reason: 'answer' })
+const turn = async ($: Engine) => {
+  await turnOnly($)
+  await clock.advance(0)
+}
 
 const mount = ($: Engine, props: { bodyColumns?: number; hasSurvey?: boolean } = {}, surface: (typeof SURFACES)[number] = 'terminal') =>
   $.ui.mount({
@@ -142,11 +156,26 @@ describe('reading', () => {
     })
     engine(on, [{ stdout: line() }, first, { stdout: line({ index: 71 }) }])
     await start($)
-    const slow = turn($)
+    await turnOnly($)
     await turn($)
     finishFirst({ exitCode: 0, stdout: line({ index: 69 }) })
-    await slow
+    await clock.advance(0)
     expect(await band($)).toContain('Heating 69')
+  })
+
+  test('a run that never ends does not hold the turn', async ($, on) => {
+    engine(on, [{ stdout: line() }, new Promise<Answer>(() => {})])
+    await start($)
+    expect(await turnOnly($)).toEqual({ text: '' })
+    expect(await band($)).toContain('Heating 68')
+  })
+
+  test('a run that hits the timeout logs timeout', async ($, on) => {
+    const logs: string[] = []
+    engine(on, ['timeout'], logs)
+    await start($)
+    await clock.advance(0)
+    expect(logs).toEqual(['cognitive-load: timeout'])
   })
 
   test('never shows or logs stderr or stdout', async ($, on) => {

@@ -45,32 +45,36 @@ const decodeStatus = (stdout: string, nowMs: number): Status | null => {
 const formatMinutes = (min: number): string =>
   min < 60 ? `${min}m` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`
 
+const RUN_TIMEOUT_MS = 10_000
+
 const refresh = async ($: EngineInterface) => {
   let failure: string
+  const startedAt = await $.clock.now()
   try {
-    const r = await $.process.run(['zapara', 'status'], { timeoutMs: 10_000 })
+    const r = await $.process.run(['zapara', 'status'], { timeoutMs: RUN_TIMEOUT_MS })
     const decoded = r.exitCode === 0 ? decodeStatus(r.stdout, await $.clock.now()) : null
     if (decoded) {
       await update($, status, () => decoded)
       return
     }
     failure = r.exitCode === 0 ? 'bad line' : `exit ${r.exitCode}`
-  } catch (err) {
-    failure = err instanceof Error && /timed? ?out/i.test(err.message) ? 'timeout' : 'not found'
+  } catch {
+    failure = (await $.clock.now()) - startedAt >= RUN_TIMEOUT_MS ? 'timeout' : 'not found'
   }
   $.ui.log(`cognitive-load: ${failure}`, { to: 'debug' })
 }
 
 export const register: Register = on => {
+  // Not awaited: the engine holds the turn until these hooks return.
   on('session.start', async ($, e, next) => {
     const result = await next(e)
-    await refresh($)
+    refresh($).catch(() => {})
     return result
   })
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
-    await refresh($)
+    refresh($).catch(() => {})
     return result
   })
 

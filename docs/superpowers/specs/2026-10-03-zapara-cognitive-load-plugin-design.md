@@ -44,8 +44,12 @@ instead runs `zapara status` itself and reads the line it prints, which the
 status spec already makes equal to the file's content.
 
 1. On `session.start`, after `next(e)` resolves, and on `turn.complete`, after
-   `next(e)` resolves, the plugin calls
-   `$.process.run(["zapara", "status"], { timeoutMs: 10000 })`.
+   `next(e)` resolves, the plugin starts
+   `$.process.run(["zapara", "status"], { timeoutMs: 10000 })` and returns
+   without waiting for it. The engine holds the turn until a `turn.complete`
+   hook returns: awaiting the run made a hung `zapara` cost every turn ten
+   seconds (user scenario 5, first run). A run still going when the module
+   unloads is dropped quietly.
 2. It decodes stdout by the status spec's reader rules, unchanged: one JSON
    object, `schema` 1, `asOf` no later than 60 seconds after the plugin's
    clock (`$.clock.now()`), every field in its range, `level` `null` exactly
@@ -58,16 +62,17 @@ status spec already makes equal to the file's content.
    that does not decode) keeps the last good reading, or no band when there is
    none, and writes one line with `$.ui.log(..., { to: "debug" })` naming the
    kind of failure: `not found`, `exit <code>`, `timeout`, `bad line`. Never
-   stderr, never stdout, never a path.
+   stderr, never stdout, never a path. A rejected run is `timeout` when ten
+   seconds or more passed on `$.clock` since it started, else `not found`;
+   the rejection's message says neither.
 
 No timer and no staleness check. The number changes when the person acts, and
 every turn ends with a run. Between turns `streakMin` stands still; the streak
 itself ends after ten minutes away, so the band is at most one turn behind.
 
 A run took 117 to 262 ms on 2026-10-03 (`$.process.run` from a throwaway mod,
-zapara 0.8.1, warm and cold cache). Time inside `$` calls does not count
-against a hook's 10-second budget, and the hooks call `next(e)` first, so a
-slow run never holds the person's turn. Runs from several sessions at once
+zapara 0.8.1, warm and cold cache). The hooks do not wait for the run, so a
+slow one never holds the person's turn. Runs from several sessions at once
 are harmless: the status file is written atomically, as the status spec says.
 
 `zapara` is found on the `PATH` Claude Code was started with. A Homebrew Bun
