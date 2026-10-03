@@ -5,3 +5,5 @@ docs/superpowers/plans/
 .worktrees/
 
 zapara-card.png
+plugin/tsconfig.json
+plugin/.claude-plugin/types/

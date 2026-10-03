@@ -166,13 +166,30 @@ A status line wants one number every thirty seconds and cannot wait half a secon
 | `activeMin` | Minutes of your presence in the day so far: the 5-minute slots covered by your actions and the gaps of at most 10 minutes between them; `0` on a day with no action of yours. |
 | `streakMin` | Minutes of your live presence streak as of `asOf`: from the streak's first action to `asOf`, when your last action is no more than 10 minutes before `asOf`; `0` once you have been away longer. It keeps growing while you sit there, and it does not reset at an hour boundary. |
 
-Refreshing is the reader's job, and zapara adds no hook, no timer and no daemon. A reader that finds the file stale or missing starts `zapara status` detached and draws what it has, which is also how the file first comes to exist on a machine that never ran zapara. The rest of the contract, from strict decoding to concurrent runs, is in [the status file spec](docs/superpowers/specs/2026-09-19-zapara-status-file-design.md); [pult](https://github.com/drakulavich/pult) is the reader that exists, with a five-minute threshold.
+Refreshing is the reader's job, and zapara adds no hook, no timer and no daemon. A reader that finds the file stale or missing starts `zapara status` detached and draws what it has, which is also how the file first comes to exist on a machine that never ran zapara. The rest of the contract, from strict decoding to concurrent runs, is in [the status file spec](docs/superpowers/specs/2026-09-19-zapara-status-file-design.md). Two readers exist: [pult](https://github.com/drakulavich/pult), with a five-minute threshold, and the `cognitive-load` plugin below, which runs `zapara status` itself after every turn and reads the line it prints.
+
+## Inside Claude Code
+
+The `cognitive-load` plugin draws the same number above the Claude Code prompt:
+
+```
+▓ Heating 68 · peak 81 · streak 2h40 · active 6h15
+```
+
+Install it from this repository's marketplace, in Claude Code:
+
+```
+/plugin marketplace add drakulavich/zapara
+/plugin install cognitive-load@zapara
+```
+
+The plugin runs `zapara status` when a session starts and after every turn, so `zapara` has to be on the `PATH` Claude Code was started with; a Homebrew Bun leaves `~/.bun/bin` off it. The band is coloured by level, keeps only `▓ Heating 68` when it is under 50 columns wide, and is not drawn when the last sixty minutes hold no session. When a run fails, the band keeps the last good reading, or stays away if there is none, and the reason goes to Claude Code's debug log (`claude --debug`) as one of `not found`, `exit <code>`, `timeout` or `bad line`. The plugin is not part of the npm package; [its spec](docs/superpowers/specs/2026-10-03-zapara-cognitive-load-plugin-design.md) has the rest.
 
 ## Privacy
 
 zapara reads `~/.claude/projects/**/*.jsonl`, skipping subagent transcripts under `subagents/`. It follows no symlink inside that directory, so a project directory that is a symlink is not read; `--projects` itself may be one. It picks files by modification time first, and opens one whose modification time is older than the window only to read the last timestamp in its final 64 KB; nothing from that tail is kept or printed. It compares message text against a few fixed markers, for interrupts, tool rejections and inbound agent messages, then discards it. What survives into an event is a timestamp, a session id, an event kind and a token count.
 
-zapara keeps, writes and prints no message text, prompt length, file path or session title. The CLI never prints a path it derived or read, not even the projects root when it cannot open it. It sends nothing anywhere, installs nothing into Claude Code, and writes no file except the card, the status file and the cache below. While it draws a PNG or WebP, the card's page also sits in the temporary directory as a `0600` file, removed when the render ends.
+zapara keeps, writes and prints no message text, prompt length, file path or session title. The CLI never prints a path it derived or read, not even the projects root when it cannot open it. It sends nothing anywhere, installs nothing into Claude Code, and writes no file except the card, the status file and the cache below. The optional `cognitive-load` plugin runs `zapara status` and keeps the nine values of its line in the session's state; it reads no transcript, prompt or tool call and never keeps or logs what the command printed. While it draws a PNG or WebP, the card's page also sits in the temporary directory as a `0600` file, removed when the render ends.
 
 Between runs, zapara caches each transcript's parsed events in `~/.claude/zapara/cache.db`. A hit still reads the last 4 KiB of the file to confirm it matches the cached row, then skips reading and parsing the rest. So a changed file is recognised by its size, modification time and last 4 KiB: an edit earlier in the file that keeps its size and modification time is not seen, and `--no-cache` parses everything again. A row is keyed by the transcript's device and inode, never by its path or a hash of it. Besides the device and inode, a row stores a fingerprint of the parser that wrote it, the file's size and modification time, a hash of its last 4 KiB, the cutoff its events were parsed with, when the row was last used, and the parsed events themselves. No message text, prompt length, path or title is stored. `--no-cache` runs without reading or writing it.
 

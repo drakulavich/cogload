@@ -19,3 +19,5 @@ jobs:
       - run: bun run test
         env:
           ZAPARA_REQUIRE_WEBVIEW: "1"
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: claude plugin validate . && claude plugin validate plugin && claude plugin test plugin
