@@ -34,8 +34,9 @@ What the author sees:
    `No overrides in 14 days.`
 7. With no hold, a Calm reading draws no band.
 
-Held: prompts with `e.origin.kind` `composer` (typed at the terminal) or
-`bridge` (Remote Control). Never held: answers to Claude's questions and
+Held: prompts with `e.origin.kind` `composer` (Enter at the prompt, typed or
+queued, or a click on a transcript link) or `bridge` (Remote Control). Never
+held: answers to Claude's questions and
 permission prompts (dialogs, not prompts), slash commands (`command.run`),
 and prompts from notifications, other sessions, scheduled triggers and
 plugins.
