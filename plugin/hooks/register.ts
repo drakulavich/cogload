@@ -95,6 +95,12 @@ const startRestIfDue = async ($: EngineInterface, s: Status) => {
 }
 
 const RUN_TIMEOUT_MS = 10_000
+const REFRESH_MS = 60_000
+
+const take = async ($: EngineInterface, s: Status) => {
+  await startRestIfDue($, s)
+  await update($, status, () => s)
+}
 
 const refresh = async ($: EngineInterface) => {
   let failure = ''
@@ -111,9 +117,14 @@ const refresh = async ($: EngineInterface) => {
     $.ui.log(failure, { to: 'debug' })
     return
   }
-  const s = decoded
-  await startRestIfDue($, s)
-  await update($, status, () => s)
+  await $.store.set('reading', decoded)
+  await take($, decoded)
+}
+
+const tick = async ($: EngineInterface) => {
+  const reading = (await $.store.get('reading')) as Status | undefined
+  if (reading !== undefined && (await $.clock.now()) - Date.parse(reading.asOf) < REFRESH_MS) await take($, reading)
+  else await refresh($)
 }
 
 export const register: Register = on => {
@@ -122,6 +133,9 @@ export const register: Register = on => {
     const result = await next(e)
     await $.command.register({ name: 'overrides', description: 'Rest overrides of the last 14 days, with their reasons' })
     refresh($).catch(() => {})
+    $.clock.every(REFRESH_MS, () => {
+      tick($).catch(() => {})
+    })
     return result
   })
 
@@ -162,7 +176,7 @@ export const register: Register = on => {
     const until = await restUntil($, now)
     if (until === null && s.level === 'Calm') return next(e)
     const parts = [`${GLYPH[s.level]} ${s.level} ${s.index}`]
-    if (until !== null) parts.push(`rest until ${clockTime(until)}`)
+    if (until !== null) parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`)
     else if (e.props.bodyColumns >= NARROW) {
       if (s.peak !== null) parts.push(`peak ${s.peak}`)
       if (s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
