@@ -22,7 +22,7 @@ code with at most 3 stars, none about Claude Code.
 | Card file | `zapara-card.png` | `cogload-card.png` |
 | Message prefix | `zapara: …` | `cogload: …` |
 | Plugin marketplace | `zapara` | `cogload` |
-| Plugin | `cognitive-load` 0.1.0 runs `zapara status` | `cognitive-load` 0.2.0 runs `cogload status` |
+| Plugin | `cognitive-load` 0.3.0 runs `zapara status` | `cognitive-load` 0.4.0 runs `cogload status` |
 
 The plugin keeps its name: `/plugin install cognitive-load@cogload` reads
 well. The status file's format and `schema` 1 do not change; only its
@@ -35,6 +35,11 @@ nothing: the cache is rebuilt by one full scan, and the status file is
 written by the first `cogload status`. `~/.claude/zapara/` is left as it
 is. The README says it can be deleted once the person no longer runs zapara.
 
+The plugin's own store starts over too. Claude Code keys it by plugin and
+marketplace, so `cognitive-load` from the `cogload` marketplace finds no
+`restUntil`, `spent`, `reading` or `overrides`: a rest in progress ends, and
+`/overrides` lists nothing until the next override. The README says so.
+
 ## The `zapara` alias
 
 For a while `zapara` keeps answering. `@drakulavich/cogload` declares two
@@ -46,8 +51,8 @@ with the same data directory, and first writes one line to stderr:
 zapara is now cogload; the zapara command goes away in 1.0.0
 ```
 
-stdout is unchanged, so readers of `zapara status` keep working: pult starts
-it with stderr closed, and the plugin 0.1.0 reads stdout only. The command
+stdout is unchanged, so readers of `zapara status` keep working: the plugin
+0.3.0 reads stdout only. The command
 name is taken from `process.argv[1]`'s base name. The alias goes in 1.0.0, a
 tracked issue.
 
@@ -73,11 +78,12 @@ GitHub redirects the old repository name, so existing clones, the
    publishing for `@drakulavich/cogload` (see Open question).
 3. Release 0.10.0 by tag, as `npm-publish.yml` does today.
 4. `npm deprecate` the old package.
-5. pult: its `--zapara` flag becomes `--cogload`, it reads
-   `~/.claude/cogload/status.json` and starts `cogload status`; a pult PR.
-6. dotfiles: the status line in `claude/settings.ayak-air.json` and
-   `claude/settings.ayak-PAI-FGWWC4TN29.json` passes `--cogload`, and the
-   project description in `settings.ayak-air.json` names cogload.
+5. dotfiles: the status line in `claude/settings.ayak-air.json` and
+   `claude/settings.ayak-PAI-FGWWC4TN29.json` drops `--zapara`, since the
+   band shows the load and pult is not moved to cogload. In
+   `settings.ayak-air.json` the marketplace key `zapara` becomes `cogload`,
+   `enabledPlugins` names `cognitive-load@cogload`, and the project
+   description names cogload.
 
 ## Open question for the person
 
@@ -112,5 +118,5 @@ the new name if npmjs.com allows it before the first version, or publish
   `zapara status` work, and only the second prints the notice.
 - After release: `bunx @drakulavich/cogload@latest status` writes
   `~/.claude/cogload/status.json`; the plugin installed from
-  `drakulavich/cogload` draws the band; pult with `--cogload` shows the load.
+  `drakulavich/cogload` draws the band.
 - `npm view @drakulavich/zapara deprecated` prints the rename notice.
