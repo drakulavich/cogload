@@ -194,11 +194,5 @@ implementation PR carries the captured screens.
 
 - The 40-minute trigger, the Fried trigger and the ten-minute pause are
   guesses taken from zapara's own norms; the author has not confirmed them.
-- The hold applies to every session at once; holding only the session that
-  crossed is simpler and weaker.
-- An override lifts the hold for the rest of the streak; lifting it for one
-  prompt would cost more per use.
-- Hiding the band while Calm came from the closed #106 and is kept here
-  without an explicit yes.
 - That answers and slash commands bypass `prompt.submit` is read off the
   types, not run; scenario 4 settles it before merge.
