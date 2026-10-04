@@ -18,7 +18,7 @@ flowchart LR
   D --> G["grid, day table, JSON"]
   D --> C["card<br/>character, highlights, picture"]
   D --> ST["status.json<br/>the last hour, for a status line"]
-  ST --> PU["pult --zapara<br/>load 36 · streak 2h46 · day 9h15"]
+  ST --> CL["cognitive-load band<br/>▓ Heating 68 · peak 81 · streak 2h40"]
 ```
 
 The shell is the scan, the CLI, the card's picture step and the status-file
@@ -221,12 +221,13 @@ sit there, which is what a status line needs and what a bucket cannot give.
 For this one number `status` reads further back than the 3-hour look-back, to
 25 hours before `asOf`, so a streak that crosses midnight is not floored; a
 streak longer than that is written as `1500`, the ceiling the file promises.
-A status line such as [pult](https://github.com/drakulavich/pult)
-reads that file on every render and shows `load 36 · streak 2h46 · day 9h15`:
-the index in the colour of its level, the time since your last ten-minute
-break, and the day's presence so far. When the file is older than five minutes
-the reader starts `zapara status` in the background and reads the fresh file
-on the next render. The status-file spec holds the format and the reader's
+A status line reads that file on every render and shows the index in the
+colour of its level, the time since your last ten-minute break, and the day's
+presence so far. When the file is older than the reader's threshold, it starts
+`zapara status` in the background and reads the fresh file on the next render.
+The `cognitive-load` plugin runs `zapara status` itself instead, after every
+turn and once a minute, and draws the same numbers above the Claude Code
+prompt. The status-file spec holds the format and the reader's
 contract.
 
 ## 8. Things that look like bugs and are not
