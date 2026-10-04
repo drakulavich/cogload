@@ -26,8 +26,8 @@ What the author sees:
    zapara's gap (`GAP_MS`), so the streak is over and the next starts at 0.
 5. A prompt whose first line is `override: <reason>`, the reason at least
    three words, lifts the hold for the rest of this streak. The first line is
-   removed and the rest is sent; when nothing is left, nothing is sent and a
-   toast says `Rest lifted.` The band then shows `overrides this week: 2`
+   removed and the rest is sent; when nothing is left, the prompt is dropped
+   with the reason `Rest lifted.` The band then shows `overrides this week: 2`
    while the count is above 0.
 6. `/overrides` prints the overrides of the last 14 days, newest first:
    `Thu 03 Oct 14:25  prod is down, fixing it`, or
@@ -50,20 +50,20 @@ streak, which absorbs rounding and readings from different sessions.
 `$.store` (shared by every session, kept across reloads and restarts):
 
 ```ts
-rest: { until: number; streakStart: number } | undefined
+restUntil: number | undefined
 spent: number | undefined                    // start of the streak that last held
 overrides: { at: number; reason: string }[]  // older than 14 days dropped on each write
 ```
 
-- On each decoded reading, after the MVP stores it: `streakMin` ≥ 40 or
+- On each decoded reading, before it is stored (so the redraw it causes
+  shows the rest): `streakMin` ≥ 40 or
   `level` Fried, and this start more than ten minutes from `spent` (or no
-  `spent`) → `rest = { until: now + 10 min, streakStart }`, `spent` = this
-  start, toast. A streak holds once: answering Claude during the rest can
+  `spent`) → `restUntil = now + 10 min`, `spent` = this start, toast. A streak holds once: answering Claude during the rest can
   keep the streak alive, and it must not hold again.
 - On `prompt.submit` from `composer` or `bridge` with `now` before
-  `rest.until`: an override deletes `rest` and appends `{ at: now, reason }`;
-  anything else returns `{ drop: <the reason above> }`. A passed `rest` is
-  deleted on the next look.
+  `restUntil`: an override deletes `restUntil` and appends `{ at: now, reason }`;
+  anything else returns `{ drop: <the reason above> }`. A `restUntil` in the past holds nothing; it is
+  overwritten by the next rest.
 - The band reads the store when it draws; the hold is checked against
   `$.clock` at Enter. The band is not redrawn on a timer, so it can say
   `rest until 14:32` a little past 14:32.
@@ -135,11 +135,11 @@ case asserts what differs with and without the behaviour it pins (CLAUDE.md):
 3. During a rest, `composer` and `bridge` prompts are dropped with the time.
 4. During a rest, `peer`, `task-notification`, `scheduled-trigger` and a
    plugin's own prompt pass.
-5. At `until` + 1 s a `composer` prompt passes and `rest` is gone.
+5. At `until` + 1 s a `composer` prompt passes.
 6. `override: prod is down` + a second line → the second line is sent,
-   `rest` gone, `overrides` holds `now` and `prod is down`;
-   `override: ok` → dropped; `override: prod is down` alone → nothing sent,
-   `Rest lifted.`
+   the next prompt passes, `/overrides` lists `prod is down`;
+   `override: ok` → dropped; `override: prod is down` alone → dropped with
+   `Rest lifted.`, and the next prompt passes.
 7. After a rest, the same streak at 55 min → no new rest; a new streak at
    40 → a new rest.
 8. Band: `rest until 14:32` at 120 and 40 columns; none for Calm without a
