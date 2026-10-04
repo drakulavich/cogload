@@ -192,7 +192,5 @@ implementation PR carries the captured screens.
 
 ## Open Questions
 
-- The 40-minute trigger, the Fried trigger and the ten-minute pause are
-  guesses taken from zapara's own norms; the author has not confirmed them.
 - That answers and slash commands bypass `prompt.submit` is read off the
   types, not run; scenario 4 settles it before merge.
