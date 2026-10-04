@@ -35,12 +35,12 @@ behave as `2026-10-04-zapara-forced-rest-design.md` says.
 - `session.start` starts `$.clock.every(60_000, tick)` after its first
   refresh. `tick` uses the stored `reading` when `now - asOf` is under 60
   seconds, the way pult judges its file by `asOf`; otherwise it runs
-  `zapara status` as a turn does. Turns and `session.start` always run it. The timer lives until the module reloads; a reload fires
-  `session.start` again, which starts a new one.
+  `zapara status` as a turn does. Turns and `session.start` always run it.
+  The timer lives until the module reloads; a reload fires `session.start`
+  again, which starts a new one.
 - Each reading a tick takes is written to `$.state`, so the band redraws
-  once a minute. The band computes the
-  minutes left from `$.clock` when it draws. No `$.ui.invalidate`, no second
-  timer.
+  once a minute. The band computes the minutes left from `$.clock` when it
+  draws. No `$.ui.invalidate`, no second timer.
 - A run that fails keeps the last reading and logs as the MVP does; the band
   then redraws at the next good run.
 - Runs from the timer and from a turn may overlap; the MVP already keeps the
