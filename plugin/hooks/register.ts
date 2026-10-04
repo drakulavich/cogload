@@ -13,7 +13,8 @@ const CLOCK_SKEW_MS = 60_000
 const REST_AFTER_MIN = 40 // NORMS.streakMin in src/lib/metrics/score.ts
 const REST_MS = 10 * 60_000 // GAP_MS in src/lib/metrics
 const HELD: readonly string[] = ['composer', 'bridge']
-const DAY_MS = 24 * 60 * 60_000
+const WEEK_MS = 7 * 24 * 60 * 60_000
+const KEEP_OVERRIDES_MS = 2 * WEEK_MS
 const OVERRIDE = /^override:(.*)$/
 
 type Override = { at: number; reason: string }
@@ -131,9 +132,9 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'overrides' }, async $ => {
-    const list = await overridesSince($, (await $.clock.now()) - 14 * DAY_MS)
+    const list = await overridesSince($, (await $.clock.now()) - KEEP_OVERRIDES_MS)
     if (list.length === 0) return { text: 'No overrides in 14 days.' }
-    return { text: [...list].reverse().map(o => `${when(o.at)}  ${o.reason}`).join('\n') }
+    return { text: list.reverse().map(o => `${when(o.at)}  ${o.reason}`).join('\n') }
   })
 
   on('prompt.submit', async ($, e, next) => {
@@ -145,7 +146,7 @@ export const register: Register = on => {
     const reason = OVERRIDE.exec(first)?.[1].trim() ?? ''
     if (reason.split(/\s+/).length >= 3) {
       await $.store.delete('restUntil')
-      await $.store.set('overrides', [...(await overridesSince($, now - 14 * DAY_MS)), { at: now, reason }])
+      await $.store.set('overrides', [...(await overridesSince($, now - KEEP_OVERRIDES_MS)), { at: now, reason }])
       const text = body.join('\n').trim()
       return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
     }
@@ -157,7 +158,8 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const s = await read($, status)
     if (e.props.hasSurvey || s === null || s.index === null || s.level === null) return next(e)
-    const until = await restUntil($, await $.clock.now())
+    const now = await $.clock.now()
+    const until = await restUntil($, now)
     if (until === null && s.level === 'Calm') return next(e)
     const parts = [`${GLYPH[s.level]} ${s.level} ${s.index}`]
     if (until !== null) parts.push(`rest until ${clockTime(until)}`)
@@ -166,7 +168,7 @@ export const register: Register = on => {
       if (s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
       parts.push(`active ${formatMinutes(s.activeMin)}`)
     }
-    const overrides = (await overridesSince($, (await $.clock.now()) - 7 * DAY_MS)).length
+    const overrides = (await overridesSince($, now - WEEK_MS)).length
     if (overrides > 0) parts.push(`overrides this week: ${overrides}`)
     const { Text } = $.ui.resolve(e)
     return Text({ color: COLOR[s.level], children: parts.join(' · ') })
