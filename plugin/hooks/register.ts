@@ -77,6 +77,11 @@ const overridesSince = async ($: EngineInterface, since: number): Promise<Overri
   return Array.isArray(list) ? (list as Override[]).filter(o => o.at > since) : []
 }
 
+const when = (ms: number): string => {
+  const [weekday, month, day] = new Date(ms).toDateString().split(' ')
+  return `${weekday} ${day} ${month} ${clockTime(ms)}`
+}
+
 const startRestIfDue = async ($: EngineInterface, s: Status) => {
   if (s.streakMin < REST_AFTER_MIN && s.level !== 'Fried') return
   const streakStart = Date.parse(s.asOf) - s.streakMin * 60_000
@@ -114,6 +119,7 @@ export const register: Register = on => {
   // Not awaited: the engine holds the turn until these hooks return.
   on('session.start', async ($, e, next) => {
     const result = await next(e)
+    await $.command.register({ name: 'overrides', description: 'Rest overrides of the last 14 days, with their reasons' })
     refresh($).catch(() => {})
     return result
   })
@@ -122,6 +128,12 @@ export const register: Register = on => {
     const result = await next(e)
     refresh($).catch(() => {})
     return result
+  })
+
+  on('command.run', { command: 'overrides' }, async $ => {
+    const list = await overridesSince($, (await $.clock.now()) - 14 * DAY_MS)
+    if (list.length === 0) return { text: 'No overrides in 14 days.' }
+    return { text: [...list].reverse().map(o => `${when(o.at)}  ${o.reason}`).join('\n') }
   })
 
   on('prompt.submit', async ($, e, next) => {

@@ -30,6 +30,7 @@ const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [],
   clock = mock.clock(on, { now: NOW })
   mock.store(on, store)
   on('prompt.submit', (_$, e) => ({ text: e.text }))
+  on('command.register', (_$, e) => ({ value: { command: e.name } }))
   on('ui.toast', (_$, e) => {
     toasts.push(e.text)
     return { value: undefined }
@@ -399,5 +400,32 @@ describe('override', () => {
     engine(on, [{ stdout: line() }], [], [], { overrides: [{ at: NOW - 8 * DAY_MS, reason: 'old one here' }] })
     await start($)
     expect(await band($, { bodyColumns: 40 })).toBe('▓ Heating 68')
+  })
+})
+
+const when = (ms: number) => {
+  const [weekday, month, day] = new Date(ms).toDateString().split(' ')
+  return `${weekday} ${day} ${month} ${hhmm(ms)}`
+}
+
+describe('/overrides', () => {
+  test('lists the last 14 days, newest first, with reasons', async ($, on) => {
+    engine(on, [], [], [], {
+      overrides: [
+        { at: NOW - 15 * DAY_MS, reason: 'too old to list' },
+        { at: NOW - 9 * DAY_MS, reason: 'deploy went wrong' },
+        { at: NOW - 2 * DAY_MS, reason: 'prod is down, fixing it' },
+      ],
+    })
+    await start($)
+    expect(await $.command.run({ command: 'overrides' })).toEqual({
+      text: `${when(NOW - 2 * DAY_MS)}  prod is down, fixing it\n${when(NOW - 9 * DAY_MS)}  deploy went wrong`,
+    })
+  })
+
+  test('says so when there are none', async ($, on) => {
+    engine(on, [])
+    await start($)
+    expect(await $.command.run({ command: 'overrides' })).toEqual({ text: 'No overrides in 14 days.' })
   })
 })
