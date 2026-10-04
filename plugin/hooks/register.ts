@@ -13,6 +13,10 @@ const CLOCK_SKEW_MS = 60_000
 const REST_AFTER_MIN = 40 // NORMS.streakMin in src/lib/metrics/score.ts
 const REST_MS = 10 * 60_000 // GAP_MS in src/lib/metrics
 const HELD: readonly string[] = ['composer', 'bridge']
+const DAY_MS = 24 * 60 * 60_000
+const OVERRIDE = /^override:(.*)$/
+
+type Override = { at: number; reason: string }
 
 const isInt = (v: unknown, min: number, max: number): v is number =>
   Number.isInteger(v) && (v as number) >= min && (v as number) <= max
@@ -68,6 +72,11 @@ const restUntil = async ($: EngineInterface, now: number): Promise<number | null
   return typeof until === 'number' && now < until ? until : null
 }
 
+const overridesSince = async ($: EngineInterface, since: number): Promise<Override[]> => {
+  const list = await $.store.get('overrides')
+  return Array.isArray(list) ? (list as Override[]).filter(o => o.at > since) : []
+}
+
 const startRestIfDue = async ($: EngineInterface, s: Status) => {
   if (s.streakMin < REST_AFTER_MIN && s.level !== 'Fried') return
   const streakStart = Date.parse(s.asOf) - s.streakMin * 60_000
@@ -120,6 +129,14 @@ export const register: Register = on => {
     const now = await $.clock.now()
     const until = await restUntil($, now)
     if (until === null) return next(e)
+    const [first, ...body] = e.text.split('\n')
+    const reason = OVERRIDE.exec(first)?.[1].trim() ?? ''
+    if (reason.split(/\s+/).length >= 3) {
+      await $.store.delete('restUntil')
+      await $.store.set('overrides', [...(await overridesSince($, now - 14 * DAY_MS)), { at: now, reason }])
+      const text = body.join('\n').trim()
+      return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
+    }
     return {
       drop: `Rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min). Start with "override: <reason>" to go on.`,
     }
@@ -137,6 +154,8 @@ export const register: Register = on => {
       if (s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
       parts.push(`active ${formatMinutes(s.activeMin)}`)
     }
+    const overrides = (await overridesSince($, (await $.clock.now()) - 7 * DAY_MS)).length
+    if (overrides > 0) parts.push(`overrides this week: ${overrides}`)
     const { Text } = $.ui.resolve(e)
     return Text({ color: COLOR[s.level], children: parts.join(' · ') })
   })

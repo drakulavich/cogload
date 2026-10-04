@@ -358,3 +358,46 @@ describe('rest', () => {
     expect(await band($)).toBe(`░ Calm 20 · rest until ${hhmm(NOW + REST_MS)}`)
   })
 })
+
+const DAY_MS = 24 * 60 * 60_000
+
+describe('override', () => {
+  test('a reason of three words lifts the rest and sends the rest of the prompt', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    await start($)
+    expect(await typed($, 'override: prod is down\nfix the hotfix')).toEqual({ text: 'fix the hotfix' })
+    expect(await typed($, 'next')).toEqual({ text: 'next' })
+    expect(await band($)).toBe('▓ Heating 68 · peak 81 · streak 40m · active 6h15 · overrides this week: 1')
+  })
+
+  test('a reason of one word does not', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    await start($)
+    expect(await typed($, 'override: ok\nfix it')).toEqual(DROP(NOW + REST_MS, 10))
+  })
+
+  test('an override alone lifts the rest and sends nothing', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    await start($)
+    expect(await typed($, 'override: prod is down')).toEqual({ drop: 'Rest lifted.' })
+    expect(await typed($, 'next')).toEqual({ text: 'next' })
+  })
+
+  test('the band counts the overrides of the last seven days', async ($, on) => {
+    engine(on, [{ stdout: line() }], [], [], {
+      overrides: [
+        { at: NOW - 8 * DAY_MS, reason: 'old one here' },
+        { at: NOW - 6 * DAY_MS, reason: 'deploy went wrong' },
+        { at: NOW - DAY_MS, reason: 'prod is down' },
+      ],
+    })
+    await start($)
+    expect(await band($, { bodyColumns: 40 })).toBe('▓ Heating 68 · overrides this week: 2')
+  })
+
+  test('no count with none in seven days', async ($, on) => {
+    engine(on, [{ stdout: line() }], [], [], { overrides: [{ at: NOW - 8 * DAY_MS, reason: 'old one here' }] })
+    await start($)
+    expect(await band($, { bodyColumns: 40 })).toBe('▓ Heating 68')
+  })
+})
