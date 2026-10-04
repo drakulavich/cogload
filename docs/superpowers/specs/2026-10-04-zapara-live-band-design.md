@@ -15,9 +15,11 @@ turn.
 
 With a one-minute timer:
 
-1. The plugin runs `zapara status` every 60 seconds as well, in every session
-   running it. A reading that is due for a rest starts it then, with the
-   same toast as after a turn.
+1. Every 60 seconds each session takes a fresh reading: the last one any
+   session of the plugin got, when its `asOf` is under 60 seconds old, else a
+   new `zapara status` run. However many sessions are open, that is about one
+   run a minute, as with pult. A reading that is due for a rest starts it
+   then, with the same toast as after a turn.
 2. During a rest the band reads `▓ Heating 68 · rest until 10:27 (7 min)`,
    the minutes left rounded up, and the count goes down once a minute.
 3. Within a minute after the rest ends, the band drops `rest until` and goes
@@ -28,11 +30,15 @@ behave as `2026-10-04-zapara-forced-rest-design.md` says.
 
 ### How
 
-- `session.start` starts `$.clock.every(60_000, () => refresh($))` after its
-  first refresh. The timer lives until the module reloads; a reload fires
+- Every reading that decodes, from any session, is also written to `$.store`
+  as `reading`, beside `restUntil`.
+- `session.start` starts `$.clock.every(60_000, tick)` after its first
+  refresh. `tick` uses the stored `reading` when `now - asOf` is under 60
+  seconds, the way pult judges its file by `asOf`; otherwise it runs
+  `zapara status` as a turn does. Turns and `session.start` always run it. The timer lives until the module reloads; a reload fires
   `session.start` again, which starts a new one.
-- Each run that decodes writes the reading to `$.state`, and its `asOf` is
-  new every time, so the band redraws once a minute. The band computes the
+- Each reading a tick takes is written to `$.state`, so the band redraws
+  once a minute. The band computes the
   minutes left from `$.clock` when it draws. No `$.ui.invalidate`, no second
   timer.
 - A run that fails keeps the last reading and logs as the MVP does; the band
@@ -40,13 +46,16 @@ behave as `2026-10-04-zapara-forced-rest-design.md` says.
 - Runs from the timer and from a turn may overlap; the MVP already keeps the
   run that finishes last.
 
-Cost: one `zapara status` per minute per session, 117 to 262 ms each (measured
-2026-10-03 with zapara 0.8.1). Ten sessions are ten runs a minute.
+Cost: about one `zapara status` a minute across all sessions, plus one per
+turn. A run took 107 ms warm and 399 ms with a transcript being written
+(2026-10-04, 490 transcripts, `--verbose`). The stored reading is shared only
+by sessions of the plugin; `~/.claude/zapara/status.json` is not read, so a
+stub `zapara` in the user scenarios does not race the real one.
 
 ## Tech Stack
 
 Claude Code 2.1.289 plugin of function hooks, plain TypeScript, as in the
-plugin today. New engine noun: `$.clock.every`.
+plugin today. New engine noun: `$.clock.every`; `$.store` gains `reading`.
 
 ## Commands
 
@@ -87,6 +96,8 @@ code:
    `(7 min)` three minutes and a timer run later.
 4. A timer run after the rest ends draws the normal line, without
    `rest until`.
+5. A tick whose stored `reading` is 30 seconds old does not run
+   `zapara status`; one 61 seconds old does; with none stored, it runs.
 
 User scenarios, tmux, `--plugin-dir plugin`, the stub `zapara` from #107 that
 derives `streakMin` from a fixed start:
@@ -101,13 +112,13 @@ derives `streakMin` from a fixed start:
 
 - Always: `claude plugin test plugin` and `bun run check` before each commit.
 - Ask first: a period other than 60 s, a timer anywhere but `session.start`,
-  skipping runs based on other sessions' readings.
+  reading `~/.claude/zapara/status.json`.
 - Never: a timer that outlives a reload, more than one timer per session.
 
 ## Success Criteria
 
 - `claude plugin validate plugin` passes; `claude plugin test plugin` passes
-  every existing case and 1 to 4, each failing when its behaviour is removed.
+  every existing case and 1 to 5, each failing when its behaviour is removed.
 - `bun run check` passes; `git diff origin/main -- src tests` is empty.
 - User scenarios 1 to 3 pass, with captured screens in the implementation PR.
 - README "Inside Claude Code" says the band refreshes every minute and counts
