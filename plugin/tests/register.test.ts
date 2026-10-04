@@ -20,14 +20,22 @@ const line = (fields: Record<string, unknown> = {}): string =>
     ...fields,
   })}\n`
 
+const live =
+  (start: () => number, fields: Record<string, unknown> = {}) =>
+  (): Partial<Answer> => ({
+    stdout: line({ asOf: new Date(clock.now()).toISOString(), streakMin: Math.floor((clock.now() - start()) / 60_000), ...fields }),
+  })
+
 type Answer = { exitCode: number; stdout: string; stderr?: string }
-type Run = Partial<Answer> | 'not found' | 'timeout' | Promise<Answer>
+type Run = Partial<Answer> | 'not found' | 'timeout' | Promise<Answer> | (() => Partial<Answer>)
 
 let clock: ReturnType<typeof mock.clock>
+let runCount = 0
 
 // The engine beneath the plugin: each queued answer is one `zapara status` run.
 const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [], store: Record<string, unknown> = {}) => {
   clock = mock.clock(on, { now: NOW })
+  runCount = 0
   mock.store(on, store)
   on('prompt.submit', (_$, e) => ({ text: e.text }))
   on('command.register', (_$, e) => ({ value: { command: e.name } }))
@@ -47,7 +55,8 @@ const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [],
   })
   on('process.run', async (_$, e) => {
     expect(e.argv).toEqual(['zapara', 'status'])
-    const run = runs.shift()
+    runCount++
+    const run = typeof runs[0] === 'function' ? runs[0]() : runs.shift()
     if (run === undefined || run === 'not found') return { deny: 'zapara: command not found' }
     if (run === 'timeout') {
       await clock.advance(10_000)
@@ -321,25 +330,16 @@ describe('rest', () => {
 
   test('a streak rests once; a new streak rests again', async ($, on) => {
     const toasts: string[] = []
-    engine(
-      on,
-      [
-        { stdout: line({ streakMin: 40 }) },
-        { stdout: line({ streakMin: 55, asOf: '2026-10-03T10:14:30.000Z' }) },
-        { stdout: line({ streakMin: 40, asOf: '2026-10-03T11:30:00.000Z' }) },
-      ],
-      [],
-      toasts,
-    )
+    let streakStart = NOW - 40 * 60_000
+    engine(on, [live(() => streakStart)], [], toasts)
     await start($)
     await clock.advance(15 * 60_000)
-    await turn($)
     expect(toasts).toHaveLength(1)
     expect(await typed($, 'go')).toEqual({ text: 'go' })
-    await clock.advance(76 * 60_000)
-    await turn($)
+    streakStart = clock.now() - 40 * 60_000
+    await clock.advance(60_000)
     expect(toasts).toHaveLength(2)
-    expect(await typed($, 'next')).toEqual(DROP(NOW + 91 * 60_000 + REST_MS, 10))
+    expect(await typed($, 'next')).toEqual(DROP(clock.now() + REST_MS, 10))
   })
 
   for (const [columns, surface] of [
@@ -349,14 +349,14 @@ describe('rest', () => {
     test(`the band says when the rest ends (${columns} columns)`, async ($, on) => {
       engine(on, [{ stdout: line({ streakMin: 40 }) }])
       await start($)
-      expect(await band($, { bodyColumns: columns }, surface)).toBe(`▓ Heating 68 · rest until ${hhmm(NOW + REST_MS)}`)
+      expect(await band($, { bodyColumns: columns }, surface)).toBe(`▓ Heating 68 · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
     })
   }
 
   test('a rest draws the band while Calm', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 45, level: 'Calm', index: 20 }) }])
     await start($)
-    expect(await band($)).toBe(`░ Calm 20 · rest until ${hhmm(NOW + REST_MS)}`)
+    expect(await band($)).toBe(`░ Calm 20 · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
   })
 })
 
@@ -427,5 +427,52 @@ describe('/overrides', () => {
     engine(on, [])
     await start($)
     expect(await $.command.run({ command: 'overrides' })).toEqual({ text: 'No overrides in 14 days.' })
+  })
+})
+
+describe('every minute', () => {
+  test('a streak that reaches 40 minutes between turns starts a rest', async ($, on) => {
+    const toasts: string[] = []
+    engine(on, [live(() => NOW - 39 * 60_000)], [], toasts)
+    await start($)
+    expect(await typed($, 'first')).toEqual({ text: 'first' })
+    await clock.advance(60_000)
+    expect(toasts).toHaveLength(1)
+    expect(await typed($, 'next')).toEqual(DROP(NOW + 60_000 + REST_MS, 10))
+  })
+
+  test('the band counts down the rest', async ($, on) => {
+    engine(on, [live(() => NOW - 40 * 60_000)])
+    await start($)
+    expect(await band($)).toBe(`▓ Heating 68 · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
+    await clock.advance(3 * 60_000)
+    expect(await band($)).toBe(`▓ Heating 68 · rest until ${hhmm(NOW + REST_MS)} (7 min)`)
+  })
+
+  test('the band drops the rest once it is over', async ($, on) => {
+    engine(on, [live(() => NOW - 40 * 60_000)])
+    await start($)
+    await clock.advance(REST_MS + 60_000)
+    expect(await band($)).not.toContain('rest until')
+  })
+
+  test('a tick takes a reading under a minute old instead of running zapara', async ($, on) => {
+    engine(on, [live(() => NOW - 20 * 60_000)])
+    await start($)
+    await clock.advance(30_000)
+    await turn($)
+    expect(runCount).toBe(2)
+    await clock.advance(30_000)
+    expect(runCount).toBe(2)
+    await clock.advance(60_000)
+    expect(runCount).toBe(3)
+  })
+
+  test('a tick runs zapara when no reading is stored', async ($, on) => {
+    engine(on, ['not found', live(() => NOW - 20 * 60_000)])
+    await start($)
+    expect(runCount).toBe(1)
+    await clock.advance(60_000)
+    expect(runCount).toBe(2)
   })
 })
