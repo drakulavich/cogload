@@ -35,7 +35,11 @@ person's week grid holds fewer Heating and Fried hours and fewer streaks over
    removed and the rest of the prompt is sent; when nothing is left, nothing
    is sent and a toast says `Rest lifted.` The band then shows
    `overrides this week: 2` for as long as the count is above 0.
-6. While the last sixty minutes are Calm and there is no hold, there is no
+6. `/overrides` prints the overrides of the last 14 days, newest first, one
+   per line, for the week's review:
+   `Thu 03 Oct 14:25  prod is down, fixing it`. With none it prints
+   `No overrides in 14 days.`
+7. While the last sixty minutes are Calm and there is no hold, there is no
    band. The band's appearance means something.
 
 Held: prompts the person typed at the terminal (`e.origin.kind` `composer`)
@@ -58,7 +62,7 @@ reloads and restarts:
 ```ts
 rest: { until: number; streakStart: number } | undefined
 spent: number | undefined          // start of the streak that last held or was overridden
-overrides: number[]                // when each override happened, ms; older than 7 days dropped
+overrides: { at: number; reason: string }[]   // older than 14 days dropped on each write
 ```
 
 On each reading that decodes, after the MVP stores it in `$.state`: when
@@ -70,7 +74,9 @@ through the rest and the streak survives it, it does not start another hold.
 
 On `prompt.submit` from `composer` or `bridge`: when `rest` is set and `now`
 is before `rest.until`, either it is an override (lift: delete `rest`, append
-`now` to `overrides`) or it is dropped with the reason above. A `rest` whose
+`now` and the reason, trimmed, to `overrides`) or it is dropped with the
+reason above. The band counts the last 7 days; `/overrides`, registered on
+`session.start` and answered by `command.run`, lists the last 14. A `rest` whose
 `until` has passed is deleted on the next look.
 
 The band reads `rest` and `overrides` from the store when it draws. It is not
@@ -89,9 +95,12 @@ perhaps two toasts. `$.store` has no compare-and-set; this spec accepts that.
 
 ## Privacy
 
-The store holds two timestamps for the current rest and streak, and one
-timestamp per override in the last seven days. The override's reason is
-required and not kept. The README's privacy paragraph says so.
+The store holds two timestamps for the current rest and streak, and each
+override of the last 14 days with its time and its reason, the words the
+person typed after `override:`. That is the one piece of text the plugin
+keeps; it stays in the plugin's JSON file under Claude Code's configuration
+directory, is never sent anywhere, and is dropped after 14 days. The README's
+privacy paragraph says so.
 
 ## Testing
 
@@ -108,13 +117,16 @@ without the behaviour it pins:
    `scheduled-trigger` and a plugin's own pass.
 5. At `until` plus one second, a `composer` prompt passes and `rest` is gone.
 6. `override: prod is down` plus a second line: the second line is sent,
-   `rest` is gone, `overrides` holds `now`. `override: ok` (one word): dropped.
+   `rest` is gone, `overrides` holds `now` and `prod is down`. `override: ok` (one word): dropped.
    `override: prod is down` alone: nothing sent, `Rest lifted.` toast.
 7. After a rest, a reading of the same streak at 55 minutes: no new rest. A
    reading of a new streak at 40: a new rest.
 8. The band: `rest until 14:32` during a rest, at 120 and at 40 columns; no
    band for Calm without a rest; `overrides this week: 2` with two overrides
    in seven days, none with one eight days old.
+9. `/overrides` with overrides 2, 9 and 15 days old: two lines, newest first,
+   each with its weekday, date, time and reason; the 15-day one is gone from
+   the store after the next write. With none: `No overrides in 14 days.`
 
 User scenarios, run as the plugin spec says (tmux, `--plugin-dir plugin`, a
 stub `zapara` first on `PATH`, captured screens in the implementation PR):
@@ -127,7 +139,8 @@ stub `zapara` first on `PATH`, captured screens in the implementation PR):
 | 4 | After 1 | `/help`, then answer an `AskUserQuestion` Claude raises in a running turn | Both work |
 | 5 | After 1 | `override: prod is down, fixing it` and a second line | The second line reaches Claude; the band shows `overrides this week: 1` |
 | 6 | After 1 | Wait ten minutes, send a prompt | It is sent; the band no longer says `rest until` after it redraws |
-| 7 | Stub prints Calm, `streakMin` 15 | Start, send a prompt | No band, nothing held |
+| 7 | After 5 | `/overrides` | One line with today's date, the time and `prod is down, fixing it` |
+| 8 | Stub prints Calm, `streakMin` 15 | Start, send a prompt | No band, nothing held |
 
 Scenario 4 checks what the types say but no test has run: that answers and
 slash commands do not pass through `prompt.submit`.
@@ -135,11 +148,12 @@ slash commands do not pass through `prompt.submit`.
 ## README, CHANGELOG
 
 - README, "Inside Claude Code": the hold, its trigger, ten minutes, the
-  override and its count, what is never held. "Privacy": what the store
+  override, its count and `/overrides`, what is never held. "Privacy": what the store
   keeps.
 - CHANGELOG `## [Unreleased]`, `### Changed`: "The `cognitive-load` plugin
   holds new prompts for ten minutes after a 40-minute streak or a Fried hour.
-  `override: <reason>` goes on and is counted. The band is hidden while the
+  `override: <reason>` goes on and is counted; `/overrides` lists the
+  reasons of the last 14 days. The band is hidden while the
   last hour is calm."
 - The plugin's version goes up one minor version.
 
@@ -152,8 +166,8 @@ slash commands do not pass through `prompt.submit`.
 ## Definition of done
 
 - `claude plugin validate plugin` passes; `claude plugin test plugin` passes
-  the MVP's cases and 1 to 8, each of which fails when the behaviour it pins
+  the MVP's cases and 1 to 9, each of which fails when the behaviour it pins
   is removed.
 - `bun run check` passes; zapara's code and the status line are unchanged.
-- User scenarios 1 to 7 pass, with captured screens in the implementation PR.
+- User scenarios 1 to 8 pass, with captured screens in the implementation PR.
 - README and CHANGELOG carry the changes above.
