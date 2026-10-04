@@ -1,0 +1,118 @@
+# Spec: cognitive-load refreshes every minute
+
+Extends `2026-10-04-zapara-forced-rest-design.md` and the plugin spec it
+extends; everything not mentioned here stays as they say. Tracks
+[#109](https://github.com/drakulavich/zapara/issues/109).
+
+## Objective
+
+The plugin reads `zapara status` only when a session starts and after a
+turn. The streak keeps growing while the author reads a long answer or
+thinks, so a rest due at the 40th minute starts at the next turn's end,
+which can be many minutes later. The band also says `rest until 10:27` with
+no sense of how long is left, and keeps saying it after 10:27 until the next
+turn.
+
+With a one-minute timer:
+
+1. The plugin runs `zapara status` every 60 seconds as well, in every session
+   running it. A reading that is due for a rest starts it then, with the
+   same toast as after a turn.
+2. During a rest the band reads `▓ Heating 68 · rest until 10:27 (7 min)`,
+   the minutes left rounded up, and the count goes down once a minute.
+3. Within a minute after the rest ends, the band drops `rest until` and goes
+   back to the normal line.
+
+Nothing else changes: the trigger, the hold, the override and `/overrides`
+behave as `2026-10-04-zapara-forced-rest-design.md` says.
+
+### How
+
+- `session.start` starts `$.clock.every(60_000, () => refresh($))` after its
+  first refresh. The timer lives until the module reloads; a reload fires
+  `session.start` again, which starts a new one.
+- Each run that decodes writes the reading to `$.state`, and its `asOf` is
+  new every time, so the band redraws once a minute. The band computes the
+  minutes left from `$.clock` when it draws. No `$.ui.invalidate`, no second
+  timer.
+- A run that fails keeps the last reading and logs as the MVP does; the band
+  then redraws at the next good run.
+- Runs from the timer and from a turn may overlap; the MVP already keeps the
+  run that finishes last.
+
+Cost: one `zapara status` per minute per session, 117 to 262 ms each (measured
+2026-10-03 with zapara 0.8.1). Ten sessions are ten runs a minute.
+
+## Tech Stack
+
+Claude Code 2.1.289 plugin of function hooks, plain TypeScript, as in the
+plugin today. New engine noun: `$.clock.every`.
+
+## Commands
+
+```
+claude plugin validate plugin
+claude plugin test plugin
+bun run check
+claude --plugin-dir plugin --debug-file /tmp/cl/debug.log   # user scenarios, in tmux
+```
+
+## Project Structure
+
+```
+plugin/hooks/register.ts        the timer in session.start; minutes left in the band
+plugin/tests/register.test.ts   cases below
+plugin/.claude-plugin/plugin.json   0.2.0 → 0.3.0
+README.md, CHANGELOG.md
+```
+
+No file under `src/` or `tests/` changes.
+
+## Code Style
+
+As `plugin/hooks/register.ts` today. No new comments: the timer's lifetime
+fails loudly in the user scenarios if it is wrong.
+
+## Testing Strategy
+
+Unit, `claude plugin test plugin` with `mock.clock`; each case red before its
+code:
+
+1. After `session.start`, advancing the clock 60 s runs `zapara status` a
+   second time; 120 s, a third.
+2. A first reading with `streakMin` 39 and a timer reading a minute later with
+   40 starts a rest without any turn: a typed prompt is dropped and one toast
+   was shown.
+3. During a rest the band reads `rest until HH:MM (10 min)` at its start and
+   `(7 min)` three minutes and a timer run later.
+4. A timer run after the rest ends draws the normal line, without
+   `rest until`.
+
+User scenarios, tmux, `--plugin-dir plugin`, the stub `zapara` from #107 that
+derives `streakMin` from a fixed start:
+
+| # | Setup | Action | Expected on screen |
+|---|---|---|---|
+| 1 | Stub: Heating, streak 39 minutes | Start, send nothing for two minutes | The toast and `rest until HH:MM (10 min)` appear without a prompt |
+| 2 | After 1 | Wait three minutes | The count is lower by three |
+| 3 | After 1 | Wait until the rest ends, plus a minute | The band shows the normal line |
+
+## Boundaries
+
+- Always: `claude plugin test plugin` and `bun run check` before each commit.
+- Ask first: a period other than 60 s, a timer anywhere but `session.start`,
+  skipping runs based on other sessions' readings.
+- Never: a timer that outlives a reload, more than one timer per session.
+
+## Success Criteria
+
+- `claude plugin validate plugin` passes; `claude plugin test plugin` passes
+  every existing case and 1 to 4, each failing when its behaviour is removed.
+- `bun run check` passes; `git diff origin/main -- src tests` is empty.
+- User scenarios 1 to 3 pass, with captured screens in the implementation PR.
+- README "Inside Claude Code" says the band refreshes every minute and counts
+  down a rest; CHANGELOG `## [Unreleased]` / `### Changed` has one entry.
+
+## Open Questions
+
+- None.
