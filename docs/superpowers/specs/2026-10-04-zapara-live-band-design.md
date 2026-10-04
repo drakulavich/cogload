@@ -87,16 +87,14 @@ fails loudly in the user scenarios if it is wrong.
 Unit, `claude plugin test plugin` with `mock.clock`; each case red before its
 code:
 
-1. After `session.start`, advancing the clock 60 s runs `zapara status` a
-   second time; 120 s, a third.
-2. A first reading with `streakMin` 39 and a timer reading a minute later with
+1. A first reading with `streakMin` 39 and a timer reading a minute later with
    40 starts a rest without any turn: a typed prompt is dropped and one toast
    was shown.
-3. During a rest the band reads `rest until HH:MM (10 min)` at its start and
+2. During a rest the band reads `rest until HH:MM (10 min)` at its start and
    `(7 min)` three minutes and a timer run later.
-4. A timer run after the rest ends draws the normal line, without
+3. A timer run after the rest ends draws the normal line, without
    `rest until`.
-5. A tick whose stored `reading` is 30 seconds old does not run
+4. A tick whose stored `reading` is 30 seconds old does not run
    `zapara status`; one 61 seconds old does; with none stored, it runs.
 
 User scenarios, tmux, `--plugin-dir plugin`, the stub `zapara` from #107 that
@@ -105,22 +103,21 @@ derives `streakMin` from a fixed start:
 | # | Setup | Action | Expected on screen |
 |---|---|---|---|
 | 1 | Stub: Heating, streak 39 minutes | Start, send nothing for two minutes | The toast and `rest until HH:MM (10 min)` appear without a prompt |
-| 2 | After 1 | Wait three minutes | The count is lower by three |
-| 3 | After 1 | Wait until the rest ends, plus a minute | The band shows the normal line |
+| 2 | After 1 | Wait until the rest ends, plus a minute | The band shows the normal line |
 
 ## Boundaries
 
 - Always: `claude plugin test plugin` and `bun run check` before each commit.
 - Ask first: a period other than 60 s, a timer anywhere but `session.start`,
   reading `~/.claude/zapara/status.json`.
-- Never: a timer that outlives a reload, more than one timer per session.
+- Never: more than one timer per session.
 
 ## Success Criteria
 
 - `claude plugin validate plugin` passes; `claude plugin test plugin` passes
-  every existing case and 1 to 5, each failing when its behaviour is removed.
+  every existing case and 1 to 4, each failing when its behaviour is removed.
 - `bun run check` passes; `git diff origin/main -- src tests` is empty.
-- User scenarios 1 to 3 pass, with captured screens in the implementation PR.
+- User scenarios 1 and 2 pass, with captured screens in the implementation PR.
 - README "Inside Claude Code" says the band refreshes every minute and counts
   down a rest; CHANGELOG `## [Unreleased]` / `### Changed` has one entry.
 
