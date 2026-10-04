@@ -11,6 +11,15 @@ All notable changes to this project are documented here. The format follows
   (`/plugin marketplace add drakulavich/zapara`, then
   `/plugin install cognitive-load@zapara`); the npm package is unchanged.
 
+### Changed
+- The `cognitive-load` plugin holds the prompts you type for ten minutes
+  after a 40-minute streak or a Fried hour. `override: <reason>` goes on and
+  is counted in the band; `/overrides` lists the reasons of the last 14 days.
+  The band is hidden while the last hour is calm.
+- The `cognitive-load` band reads the load every minute, one `zapara status`
+  run a minute across sessions, so a rest starts at the 40th minute even
+  between turns, and the band counts the rest down.
+
 ## [0.9.0] - 2026-09-27
 
 ### Changed

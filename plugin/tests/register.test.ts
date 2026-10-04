@@ -16,18 +16,33 @@ const line = (fields: Record<string, unknown> = {}): string =>
     level: 'Heating',
     peak: 81,
     activeMin: 375,
-    streakMin: 160,
+    streakMin: 20,
     ...fields,
   })}\n`
 
+const live =
+  (start: () => number, fields: Record<string, unknown> = {}) =>
+  (): Partial<Answer> => ({
+    stdout: line({ asOf: new Date(clock.now()).toISOString(), streakMin: Math.floor((clock.now() - start()) / 60_000), ...fields }),
+  })
+
 type Answer = { exitCode: number; stdout: string; stderr?: string }
-type Run = Partial<Answer> | 'not found' | 'timeout' | Promise<Answer>
+type Run = Partial<Answer> | 'not found' | 'timeout' | Promise<Answer> | (() => Partial<Answer>)
 
 let clock: ReturnType<typeof mock.clock>
+let runCount = 0
 
 // The engine beneath the plugin: each queued answer is one `zapara status` run.
-const engine = (on: On, runs: Run[], logs: string[] = []) => {
+const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [], store: Record<string, unknown> = {}) => {
   clock = mock.clock(on, { now: NOW })
+  runCount = 0
+  mock.store(on, store)
+  on('prompt.submit', (_$, e) => ({ text: e.text }))
+  on('command.register', (_$, e) => ({ value: { command: e.name } }))
+  on('ui.toast', (_$, e) => {
+    toasts.push(e.text)
+    return { value: undefined }
+  })
   on('session.start', () => ({ cwd: '/' }))
   on('turn.complete', () => ({ text: '' }))
   on('ui.log', (_$, e) => {
@@ -40,7 +55,8 @@ const engine = (on: On, runs: Run[], logs: string[] = []) => {
   })
   on('process.run', async (_$, e) => {
     expect(e.argv).toEqual(['zapara', 'status'])
-    const run = runs.shift()
+    runCount++
+    const run = typeof runs[0] === 'function' ? runs[0]() : runs.shift()
     if (run === undefined || run === 'not found') return { deny: 'zapara: command not found' }
     if (run === 'timeout') {
       await clock.advance(10_000)
@@ -90,7 +106,7 @@ describe('reading', () => {
     test(`draws the full line after session.start (${surface})`, async ($, on) => {
       engine(on, [{ stdout: line() }])
       await start($)
-      expect(await band($, {}, surface)).toBe('▓ Heating 68 · peak 81 · streak 2h40 · active 6h15')
+      expect(await band($, {}, surface)).toBe('▓ Heating 68 · peak 81 · streak 20m · active 6h15')
     })
   }
 
@@ -198,11 +214,11 @@ describe('band', () => {
   })
 
   test('formats minutes', async ($, on) => {
-    engine(on, [{ stdout: line({ streakMin: 45, activeMin: 1500 }) }, { stdout: line({ streakMin: 60, activeMin: 61 }) }])
+    engine(on, [{ stdout: line({ streakMin: 39, activeMin: 1500 }) }, { stdout: line({ streakMin: 5, activeMin: 61 }) }])
     await start($)
-    expect(await band($)).toBe('▓ Heating 68 · peak 81 · streak 45m · active 25h00')
+    expect(await band($)).toBe('▓ Heating 68 · peak 81 · streak 39m · active 25h00')
     await turn($)
-    expect(await band($)).toBe('▓ Heating 68 · peak 81 · streak 1h00 · active 1h01')
+    expect(await band($)).toBe('▓ Heating 68 · peak 81 · streak 5m · active 1h01')
   })
 
   for (const surface of SURFACES) {
@@ -230,8 +246,15 @@ describe('band', () => {
     expect(await band($, { hasSurvey: true })).toBe(ENGINE_BAND)
   })
 
+  for (const surface of SURFACES) {
+    test(`no band while Calm (${surface})`, async ($, on) => {
+      engine(on, [{ stdout: line({ level: 'Calm', index: 20 }) }])
+      await start($)
+      expect(await band($, {}, surface)).toBe(ENGINE_BAND)
+    })
+  }
+
   for (const [level, glyph, color] of [
-    ['Calm', '░', 'green'],
     ['Warming', '▒', 'yellow'],
     ['Heating', '▓', 'magenta'],
     ['Fried', '█', 'red'],
@@ -243,4 +266,213 @@ describe('band', () => {
       expect(await ui.find({ type: 'Text', text: `${glyph} ${level} 50` })).toMatchObject({ props: { color } })
     })
   }
+})
+
+const REST_MS = 10 * 60_000
+const hhmm = (ms: number) => new Date(ms).toTimeString().slice(0, 5)
+const DROP = (until: number, left: number) => ({
+  drop: `Rest until ${hhmm(until)} (${left} min). Start with "override: <reason>" to go on.`,
+})
+const typed = ($: Engine, text: string, kind: 'composer' | 'bridge' = 'composer') =>
+  $.prompt.submit({ text, wait: false, origin: { kind } })
+
+describe('rest', () => {
+  test('a 40-minute streak starts a rest of ten minutes, with one toast', async ($, on) => {
+    const toasts: string[] = []
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], toasts)
+    await start($)
+    expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS, 10))
+    expect(toasts).toEqual([`Rest until ${hhmm(NOW + REST_MS)}. Streak 40m, Heating 68.`])
+  })
+
+  test('a 39-minute Warming streak does not', async ($, on) => {
+    const toasts: string[] = []
+    engine(on, [{ stdout: line({ streakMin: 39, level: 'Warming', index: 50 }) }], [], toasts)
+    await start($)
+    expect(await typed($, 'next')).toEqual({ text: 'next' })
+    expect(toasts).toEqual([])
+  })
+
+  test('a Fried reading starts a rest whatever the streak', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 5, level: 'Fried', index: 90 }) }])
+    await start($)
+    expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS, 10))
+  })
+
+  for (const kind of ['composer', 'bridge'] as const) {
+    test(`a ${kind} prompt during a rest is dropped with the time`, async ($, on) => {
+      engine(on, [{ stdout: line({ streakMin: 40 }) }])
+      await start($)
+      await clock.advance(3 * 60_000)
+      expect(await typed($, 'next task', kind)).toEqual(DROP(NOW + REST_MS, 7))
+    })
+  }
+
+  for (const origin of [
+    { kind: 'peer' },
+    { kind: 'task-notification' },
+    { kind: 'scheduled-trigger' },
+    { kind: 'plugin', name: 'other' },
+  ] as const) {
+    test(`a ${origin.kind} prompt during a rest passes`, async ($, on) => {
+      engine(on, [{ stdout: line({ streakMin: 40 }) }])
+      await start($)
+      expect(await $.prompt.submit({ text: 'report', wait: false, origin })).toEqual({ text: 'report' })
+    })
+  }
+
+  test('after the rest a prompt passes', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    await start($)
+    await clock.advance(REST_MS + 1000)
+    expect(await typed($, 'next task')).toEqual({ text: 'next task' })
+  })
+
+  test('a streak rests once; a new streak rests again', async ($, on) => {
+    const toasts: string[] = []
+    let streakStart = NOW - 40 * 60_000
+    engine(on, [live(() => streakStart)], [], toasts)
+    await start($)
+    await clock.advance(15 * 60_000)
+    expect(toasts).toHaveLength(1)
+    expect(await typed($, 'go')).toEqual({ text: 'go' })
+    streakStart = clock.now() - 40 * 60_000
+    await clock.advance(60_000)
+    expect(toasts).toHaveLength(2)
+    expect(await typed($, 'next')).toEqual(DROP(clock.now() + REST_MS, 10))
+  })
+
+  for (const [columns, surface] of [
+    [120, 'terminal'],
+    [40, 'desktop'],
+  ] as const) {
+    test(`the band says when the rest ends (${columns} columns)`, async ($, on) => {
+      engine(on, [{ stdout: line({ streakMin: 40 }) }])
+      await start($)
+      expect(await band($, { bodyColumns: columns }, surface)).toBe(`▓ Heating 68 · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
+    })
+  }
+
+  test('a rest draws the band while Calm', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 45, level: 'Calm', index: 20 }) }])
+    await start($)
+    expect(await band($)).toBe(`░ Calm 20 · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
+  })
+})
+
+const DAY_MS = 24 * 60 * 60_000
+
+describe('override', () => {
+  test('a reason of three words lifts the rest and sends the rest of the prompt', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    await start($)
+    expect(await typed($, 'override: prod is down\nfix the hotfix')).toEqual({ text: 'fix the hotfix' })
+    expect(await typed($, 'next')).toEqual({ text: 'next' })
+    expect(await band($)).toBe('▓ Heating 68 · peak 81 · streak 40m · active 6h15 · overrides this week: 1')
+  })
+
+  test('a reason of one word does not', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    await start($)
+    expect(await typed($, 'override: ok\nfix it')).toEqual(DROP(NOW + REST_MS, 10))
+  })
+
+  test('an override alone lifts the rest and sends nothing', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    await start($)
+    expect(await typed($, 'override: prod is down')).toEqual({ drop: 'Rest lifted.' })
+    expect(await typed($, 'next')).toEqual({ text: 'next' })
+  })
+
+  test('the band counts the overrides of the last seven days', async ($, on) => {
+    engine(on, [{ stdout: line() }], [], [], {
+      overrides: [
+        { at: NOW - 8 * DAY_MS, reason: 'old one here' },
+        { at: NOW - 6 * DAY_MS, reason: 'deploy went wrong' },
+        { at: NOW - DAY_MS, reason: 'prod is down' },
+      ],
+    })
+    await start($)
+    expect(await band($, { bodyColumns: 40 })).toBe('▓ Heating 68 · overrides this week: 2')
+  })
+
+  test('no count with none in seven days', async ($, on) => {
+    engine(on, [{ stdout: line() }], [], [], { overrides: [{ at: NOW - 8 * DAY_MS, reason: 'old one here' }] })
+    await start($)
+    expect(await band($, { bodyColumns: 40 })).toBe('▓ Heating 68')
+  })
+})
+
+const when = (ms: number) => {
+  const [weekday, month, day] = new Date(ms).toDateString().split(' ')
+  return `${weekday} ${day} ${month} ${hhmm(ms)}`
+}
+
+describe('/overrides', () => {
+  test('lists the last 14 days, newest first, with reasons', async ($, on) => {
+    engine(on, [], [], [], {
+      overrides: [
+        { at: NOW - 15 * DAY_MS, reason: 'too old to list' },
+        { at: NOW - 9 * DAY_MS, reason: 'deploy went wrong' },
+        { at: NOW - 2 * DAY_MS, reason: 'prod is down, fixing it' },
+      ],
+    })
+    await start($)
+    expect(await $.command.run({ command: 'overrides' })).toEqual({
+      text: `${when(NOW - 2 * DAY_MS)}  prod is down, fixing it\n${when(NOW - 9 * DAY_MS)}  deploy went wrong`,
+    })
+  })
+
+  test('says so when there are none', async ($, on) => {
+    engine(on, [])
+    await start($)
+    expect(await $.command.run({ command: 'overrides' })).toEqual({ text: 'No overrides in 14 days.' })
+  })
+})
+
+describe('every minute', () => {
+  test('a streak that reaches 40 minutes between turns starts a rest', async ($, on) => {
+    const toasts: string[] = []
+    engine(on, [live(() => NOW - 39 * 60_000)], [], toasts)
+    await start($)
+    expect(await typed($, 'first')).toEqual({ text: 'first' })
+    await clock.advance(60_000)
+    expect(toasts).toHaveLength(1)
+    expect(await typed($, 'next')).toEqual(DROP(NOW + 60_000 + REST_MS, 10))
+  })
+
+  test('the band counts down the rest', async ($, on) => {
+    engine(on, [live(() => NOW - 40 * 60_000)])
+    await start($)
+    expect(await band($)).toBe(`▓ Heating 68 · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
+    await clock.advance(3 * 60_000)
+    expect(await band($)).toBe(`▓ Heating 68 · rest until ${hhmm(NOW + REST_MS)} (7 min)`)
+  })
+
+  test('the band drops the rest once it is over', async ($, on) => {
+    engine(on, [live(() => NOW - 40 * 60_000)])
+    await start($)
+    await clock.advance(REST_MS + 60_000)
+    expect(await band($)).not.toContain('rest until')
+  })
+
+  test('a tick takes a reading under a minute old instead of running zapara', async ($, on) => {
+    engine(on, [live(() => NOW - 20 * 60_000)])
+    await start($)
+    await clock.advance(30_000)
+    await turn($)
+    expect(runCount).toBe(2)
+    await clock.advance(30_000)
+    expect(runCount).toBe(2)
+    await clock.advance(60_000)
+    expect(runCount).toBe(3)
+  })
+
+  test('a tick runs zapara when no reading is stored', async ($, on) => {
+    engine(on, ['not found', live(() => NOW - 20 * 60_000)])
+    await start($)
+    expect(runCount).toBe(1)
+    await clock.advance(60_000)
+    expect(runCount).toBe(2)
+  })
 })
