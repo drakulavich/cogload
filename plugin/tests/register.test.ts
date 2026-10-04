@@ -230,8 +230,15 @@ describe('band', () => {
     expect(await band($, { hasSurvey: true })).toBe(ENGINE_BAND)
   })
 
+  for (const surface of SURFACES) {
+    test(`no band while Calm (${surface})`, async ($, on) => {
+      engine(on, [{ stdout: line({ level: 'Calm', index: 20 }) }])
+      await start($)
+      expect(await band($, {}, surface)).toBe(ENGINE_BAND)
+    })
+  }
+
   for (const [level, glyph, color] of [
-    ['Calm', '░', 'green'],
     ['Warming', '▒', 'yellow'],
     ['Heating', '▓', 'magenta'],
     ['Fried', '█', 'red'],

@@ -93,7 +93,7 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const s = await read($, status)
-    if (e.props.hasSurvey || s === null || s.index === null || s.level === null) return next(e)
+    if (e.props.hasSurvey || s === null || s.index === null || s.level === null || s.level === 'Calm') return next(e)
     const parts = [`${GLYPH[s.level]} ${s.level} ${s.index}`]
     if (e.props.bodyColumns >= NARROW) {
       if (s.peak !== null) parts.push(`peak ${s.peak}`)
