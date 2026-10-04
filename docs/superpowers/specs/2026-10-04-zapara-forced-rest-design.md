@@ -36,8 +36,8 @@ What the author sees:
 
 Held: prompts with `e.origin.kind` `composer` (Enter at the prompt, typed or
 queued, or a click on a transcript link) or `bridge` (Remote Control). Never
-held: answers to Claude's questions and
-permission prompts (dialogs, not prompts), slash commands (`command.run`),
+held: answers to Claude's questions and permission prompts (dialogs, not
+prompts), slash commands (`command.run`),
 and prompts from notifications, other sessions, scheduled triggers and
 plugins.
 

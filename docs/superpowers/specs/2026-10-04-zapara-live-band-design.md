@@ -19,8 +19,8 @@ With a one-minute timer:
    session of the plugin got, when its `asOf` is under 60 seconds old, else a
    new `zapara status` run. Usually that is one run a minute however many
    sessions are open, as with pult; sessions whose ticks fall within one run
-   may each run, never more than one a minute each. A reading that is due for a rest starts it
-   then, with the same toast as after a turn.
+   may each run, never more than one a minute each. A reading that is due
+   for a rest starts it then, with the same toast as after a turn.
 2. During a rest the band reads `▓ Heating 68 · rest until 10:27 (7 min)`,
    the minutes left rounded up, and the count goes down once a minute.
 3. Within a minute after the rest ends, the band drops `rest until` and goes
