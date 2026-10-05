@@ -611,11 +611,26 @@ describe('first meeting', () => {
     expect(toasts).toEqual([WELCOME])
   })
 
-  test('without cogload, the welcome comes first, then the missing toast', async ($, on) => {
+  test('without cogload, the missing toast shows 2.1 s after the welcome, not with it', async ($, on) => {
     const toasts: string[] = []
     engine(on, ['not found'], [], toasts)
     await start($)
+    expect(toasts).toEqual([WELCOME])
+    await clock.advance(2099)
+    expect(toasts).toEqual([WELCOME])
+    await clock.advance(1)
     expect(toasts).toEqual([WELCOME, MISSING])
+  })
+
+  test('a rest starting right after the welcome shows its toast 2.1 s later', async ($, on) => {
+    const toasts: string[] = []
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], toasts)
+    await start($)
+    expect(toasts).toEqual([WELCOME])
+    await clock.advance(2099)
+    expect(toasts).toEqual([WELCOME])
+    await clock.advance(1)
+    expect(toasts).toEqual([WELCOME, `Rest until ${hhmm(NOW + REST_MS)}. Streak 40m, Heating 68.`])
   })
 
   test('a run that cannot start shows the missing toast once, and a good run does not reset it', async ($, on) => {

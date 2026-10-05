@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Level, Status } from '../types'
 
 const status = atom({ plugin: 'cognitive-load', key: 'status' } as const, null)
+const lastToast = atom({ plugin: 'cognitive-load', key: 'lastToast' } as const, 0)
 
 const LEVELS = ['Calm', 'Warming', 'Heating', 'Fried'] as const
 const GLYPH: Record<Level, string> = { Calm: '░', Warming: '▒', Heating: '▓', Fried: '█' }
@@ -13,6 +14,7 @@ const CLOCK_SKEW_MS = 60_000
 const REST_AFTER_MIN = 40 // NORMS.streakMin in src/lib/metrics/score.ts
 const WARN_AFTER_MIN = 35
 const REST_MS = 10 * 60_000 // GAP_MS in src/lib/metrics
+const TOAST_GAP_MS = 2100
 const HELD: readonly string[] = ['composer', 'bridge']
 const WEEK_MS = 7 * 24 * 60 * 60_000
 const KEEP_OVERRIDES_MS = 2 * WEEK_MS
@@ -68,6 +70,18 @@ const decodeStatus = (stdout: string, nowMs: number): Status | null => {
     : null
 }
 
+// Claude Code drops a plugin's toast that comes within 2000 ms of its last one.
+const toast = async ($: EngineInterface, text: string) => {
+  const now = await $.clock.now()
+  let at = now
+  await update($, lastToast, last => {
+    at = Math.max(now, last + TOAST_GAP_MS)
+    return at
+  })
+  if (at === now) $.ui.toast(text)
+  else $.clock.after(at - now, () => $.ui.toast(text))
+}
+
 const formatMinutes = (min: number): string =>
   min < 60 ? `${min}m` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`
 
@@ -101,13 +115,13 @@ const startRestIfDue = async ($: EngineInterface, s: Status) => {
   const until = (await $.clock.now()) + REST_MS
   await $.store.set('restUntil', until)
   await $.store.set('spent', streakStart(s))
-  await $.ui.toast(`Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`)
+  await toast($, `Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`)
 }
 
 const toastOnce = async ($: EngineInterface, key: string, text: string) => {
   if ((await $.store.get(key)) === true) return
   await $.store.set(key, true)
-  $.ui.toast(text)
+  await toast($, text)
 }
 
 const RUN_TIMEOUT_MS = 10_000
