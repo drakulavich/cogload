@@ -223,7 +223,8 @@ export const register: Register = on => {
     const overrides = (await overridesSince($, now - WEEK_MS)).length
     if (overrides > 0) parts.push(`overrides this week: ${overrides}`)
     const { Box, Text } = $.ui.resolve(e)
-    const head = Text({ color: COLOR[s.level], children: `${GLYPH[s.level]} ${s.level}` })
+    const mark = e.surface === 'desktop' ? '●' : GLYPH[s.level]
+    const head = Text({ color: COLOR[s.level], children: `${mark} ${s.level}` })
     if (parts.length === 0) return head
     return Box({ children: [head, Text({ dimColor: true, children: parts.map(p => ` · ${p}`).join('') })] })
   })

@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- In the Desktop Code tab the `cognitive-load` band starts with a coloured
+  dot, `● Heating`, since the proportional font draws `▓` as a dotted block.
 - The `cognitive-load` band shows the level and the streak,
   `▓ Heating · streak 20m`; the index, peak and active time stay in
   `cogload`. The plugin greets a new install with one toast, says once when

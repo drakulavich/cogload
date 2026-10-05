@@ -4,6 +4,7 @@ import type { Engine } from 'claude-code/testing'
 
 const NOW = Date.parse('2026-10-03T10:00:00.000Z')
 const SURFACES = ['terminal', 'desktop'] as const
+const MARK = { terminal: '▓', desktop: '●' } as const
 const ENGINE_BAND = 'engine band'
 const DAY_MS = 24 * 60 * 60_000
 const ASOF = Date.parse('2026-10-03T09:59:30.000Z')
@@ -108,7 +109,7 @@ describe('reading', () => {
     test(`draws the full line after session.start (${surface})`, async ($, on) => {
       engine(on, [{ stdout: line() }])
       await start($)
-      expect(await band($, {}, surface)).toBe('▓ Heating · streak 20m')
+      expect(await band($, {}, surface)).toBe(`${MARK[surface]} Heating · streak 20m`)
     })
   }
 
@@ -250,7 +251,7 @@ describe('band', () => {
     test(`short form when narrow (${surface})`, async ($, on) => {
       engine(on, [{ stdout: line() }])
       await start($)
-      expect(await band($, { bodyColumns: 40 }, surface)).toBe('▓ Heating')
+      expect(await band($, { bodyColumns: 40 }, surface)).toBe(`${MARK[surface]} Heating`)
     })
 
     test(`no band for a null index (${surface})`, async ($, on) => {
@@ -429,7 +430,7 @@ describe('rest', () => {
     test(`the band says when the rest ends (${columns} columns)`, async ($, on) => {
       engine(on, [{ stdout: line({ streakMin: 40 }) }])
       await start($)
-      expect(await band($, { bodyColumns: columns }, surface)).toBe(`▓ Heating · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
+      expect(await band($, { bodyColumns: columns }, surface)).toBe(`${MARK[surface]} Heating · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
     })
   }
 
