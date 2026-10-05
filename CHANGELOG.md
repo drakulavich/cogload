@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-05
+
 ### Added
 - `/cogload` in the `cognitive-load` plugin says what drives the hour's load,
   in counts: `Heating 80 this hour, at the cap: 16 decisions and 13 context
