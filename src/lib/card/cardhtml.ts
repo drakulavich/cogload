@@ -59,7 +59,7 @@ export function cardHtml(card: CardData, assets: CardAssets): string {
   const label = card.days === 1 ? "Last 1 day" : `Last ${card.days} days`;
 
   return `<!doctype html>
-<html><head><meta charset="utf-8"><title>zapara card</title>
+<html><head><meta charset="utf-8"><title>cogload card</title>
 <style>
 ${fontFace("Inter", 400, assets.fonts.inter400)}
 ${fontFace("Inter", 700, assets.fonts.inter700)}
@@ -122,7 +122,7 @@ html,body{margin:0;background:#000}
     <div class="legend mono">${legend}</div>
     <div class="stats">${stats}</div>
   </div>
-  <div class="repo mono"><small>Get yours</small><span>github.com/drakulavich/zapara</span></div>
+  <div class="repo mono"><small>Get yours</small><span>github.com/drakulavich/cogload</span></div>
   <div class="source mono">computed locally from your Claude Code transcripts · nothing leaves your machine</div>
 </div>
 </body></html>

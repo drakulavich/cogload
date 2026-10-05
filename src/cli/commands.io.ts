@@ -36,7 +36,7 @@ function cardTarget(out: string | null): { path: string; label: string; unwritab
   let isDir = false;
   try { isDir = statSync(dir).isDirectory(); } catch {}
   if (!isDir) throw new Error("no Downloads folder: pass --out <path>");
-  return { path: join(dir, "zapara-card.png"), label: "zapara-card.png to Downloads", unwritable: "cannot write zapara-card.png to Downloads: pass --out <path>" };
+  return { path: join(dir, "cogload-card.png"), label: "cogload-card.png to Downloads", unwritable: "cannot write cogload-card.png to Downloads: pass --out <path>" };
 }
 
 // Keys pressed while the card was drawn answer no question yet asked, so the
@@ -87,7 +87,7 @@ export async function card(a: Args, now: Date, cache: TranscriptCache | null, ti
   }
   if (timing) timing.render = { format: target.path.slice(target.path.lastIndexOf(".") + 1).toLowerCase(), ms: performance.now() - t };
   console.log(`${data.name}: ${sentenceText(data.sentence)}\nwrote ${target.label}`);
-  if (timing) timing.totalMs = performance.now(); // the wait for an answer is not zapara's time
+  if (timing) timing.totalMs = performance.now(); // the wait for an answer is not cogload's time
   if (process.stdin.isTTY && process.stdout.isTTY && process.platform !== "win32") {
     await discardTypedInput();
     process.stdout.write("open it? [Y/n] ");

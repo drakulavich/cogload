@@ -99,7 +99,7 @@ describe("the longest values fit the layout", () => {
 
 describe("renderCard", () => {
   test("writes the page as is for .html without an engine", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "zapara-render-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
     try {
       const html = cardHtml(longest("conductor"), assets);
       await renderCard(html, join(dir, "c.html"));
@@ -108,7 +108,7 @@ describe("renderCard", () => {
   });
 
   test.skipIf(webviewMissing !== null)("writes a 2400x1260 PNG and a 2400x1260 WebP", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "zapara-render-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
     try {
       const html = cardHtml(longest("supervisor"), assets);
       await renderCard(html, join(dir, "c.png"), WEBVIEW_STEP_TIMEOUT);
@@ -125,7 +125,7 @@ describe("renderCard", () => {
   // A page laid out at 1200x630 with zoom 2, as cardHtml is, fills the whole picture
   // at any screen density: each quadrant's colour lands in its own quarter.
   test.skipIf(webviewMissing !== null)("the whole 1200x630 page fills the 2400x1260 picture", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "zapara-render-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
     const quad = (left: number, top: number, color: string) => `<div style="position:absolute;left:${left}px;top:${top}px;width:600px;height:315px;background:${color}"></div>`;
     const html = `<!doctype html><html><head><style>html{zoom:2}html,body{margin:0}</style></head><body>${quad(0, 0, "#f00")}${quad(600, 0, "#0f0")}${quad(0, 315, "#00f")}${quad(600, 315, "#ff0")}</body></html>`;
     try {
@@ -147,7 +147,7 @@ describe("renderCard", () => {
   // No page reliably hangs (a broken <img> or @font-face settles on WebKit), so a
   // 1 ms budget, which no render meets, is what reaches the deadline.
   test.skipIf(webviewMissing !== null)("a render past its budget fails with its own line and writes nothing", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "zapara-render-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
     try {
       await expect(renderCard(cardHtml(longest("conductor"), assets), join(dir, "c.png"), 1)).rejects.toThrow(/^render timed out$/);
       expect(await readdir(dir)).toEqual([]);
@@ -156,7 +156,7 @@ describe("renderCard", () => {
 
   // A view left open keeps its process alive, so the exit is what shows the close.
   test.skipIf(webviewMissing !== null)("a render past its budget closes its view, so the process can exit", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "zapara-render-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
     try {
       const child = Bun.spawn(["bun", join(import.meta.dir, "../helpers/render-timeout.ts"), join(dir, "c.png")], { stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC" } });
       const code = await Promise.race([child.exited, Bun.sleep(5_000).then(() => null)]);

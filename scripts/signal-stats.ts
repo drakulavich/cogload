@@ -2,7 +2,7 @@
 // Calibration tool: per-hour signal distributions, top hours, and a transcript-format
 // drift check, for comparing the same window across two machines before touching
 // src/lib/metrics/score.ts. Shell-side, not a test: gets the distributions and top hours by
-// shelling out to `zapara --json` (the same seam a human would use), and never
+// shelling out to `cogload --json` (the same seam a human would use), and never
 // imports analyze/derive/score for those numbers. The drift diagnostic separately
 // re-scans and re-parses the transcripts to show what the parser currently recognises,
 // so it may import `scan` and `parseTranscript` directly (and `windowBounds`, to compute

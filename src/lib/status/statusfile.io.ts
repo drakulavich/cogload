@@ -15,7 +15,7 @@ export async function writeStatus(line: string, env: NodeJS.ProcessEnv): Promise
   // out 0700 and 0600 on the first try, with no window where a second run finds
   // a parent it cannot enter. Nothing else is written from here on.
   process.umask(0o077);
-  const dir = join(home, ".claude", "zapara");
+  const dir = join(home, ".claude", "cogload");
   // Unique per run: concurrent runs each rename their own complete file. Opened
   // with `wx` so a file or symlink already at the name is an error, and never
   // reused or deleted if not ours: a crashed run's leftover and a slow run's
@@ -23,7 +23,7 @@ export async function writeStatus(line: string, env: NodeJS.ProcessEnv): Promise
   const tmp = join(dir, `status.json.${process.pid}.${Math.random().toString(36).slice(2, 10)}.tmp`);
   let created = false;
   try {
-    // A directory zapara creates is 0700; one that exists keeps the mode the
+    // A directory cogload creates is 0700; one that exists keeps the mode the
     // person gave it.
     if ((await mkdir(dir, { recursive: true, mode: 0o700 })) !== undefined) await chmod(dir, 0o700);
     const handle = await open(tmp, "wx", 0o600);

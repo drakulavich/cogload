@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "zapara",
+      "name": "cogload",
       "devDependencies": {
         "@biomejs/biome": "2.5.14",
         "@types/bun": "^1.4.0",

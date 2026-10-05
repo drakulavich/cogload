@@ -4,7 +4,7 @@ import { READERS, type Timing } from "../lib/report/index.ts";
 export function timingLines(t: Timing, env: { version: string; bun: string; platform: string; arch: string; cpus: number; nowMs: number }): string {
   const row = (label: string, what: string, ms: number) => `${label.padEnd(8)}${what.padEnd(44)}${String(Math.round(ms)).padStart(7)} ms\n`;
   const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-  return `zapara ${env.version} · bun ${env.bun} · ${env.platform} ${env.arch} · ${env.cpus} cpus\n`
+  return `cogload ${env.version} · bun ${env.bun} · ${env.platform} ${env.arch} · ${env.cpus} cpus\n`
     + row("start", "bun, modules, arguments", t.startMs ?? 0)
     + (t.openMs !== undefined ? row("open", "cache", t.openMs) : "")
     + row("scan", `${plural(t.files, "file")}, ${t.inWindow} in window, ${plural(t.tailChecks, "tail check")}`, t.scanMs)

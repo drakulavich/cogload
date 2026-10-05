@@ -30,8 +30,11 @@ test("the source, the card's fonts and sheet, and the licences ship in the tarba
   );
 });
 
-test("the bin ships", async () => {
-  expect(paths).toContain(JSON.parse(await Bun.file(join(import.meta.dir, "../../package.json")).text()).bin.zapara);
+test("both bins ship: cogload and the zapara alias", async () => {
+  const { name, bin } = JSON.parse(await Bun.file(join(import.meta.dir, "../../package.json")).text());
+  expect(name).toBe("@drakulavich/cogload");
+  expect(bin).toEqual({ cogload: "src/cli/index.ts", zapara: "src/cli/zapara.ts" });
+  expect(paths).toEqual(expect.arrayContaining(Object.values(bin)));
 });
 
 test("tests, docs, scripts, CI and media do not", () => {

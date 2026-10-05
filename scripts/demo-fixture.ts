@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // Builds the sandbox the README screencast is recorded in: a directory holding a
-// `bin/zapara` that runs this checkout against `tests/fixtures/busy-week` and nothing
+// `bin/cogload` that runs this checkout against `tests/fixtures/busy-week` and nothing
 // else. Every number on screen therefore comes from the synthetic fixture, never from
 // a real transcript, which is what makes the recording publishable. The full recipe,
 // including the WebP step and the budgets, is in the header of assets/demo.tape. Usage:
@@ -26,7 +26,7 @@ const root = resolve(import.meta.dir, "..");
 
 let dir: string;
 if (process.argv[2] === undefined) {
-  dir = mkdtempSync(join(tmpdir(), "zapara-demo-"));
+  dir = mkdtempSync(join(tmpdir(), "cogload-demo-"));
 } else {
   dir = resolve(process.argv[2]);
   if (existsSync(dir)) {
@@ -38,7 +38,7 @@ if (process.argv[2] === undefined) {
 mkdirSync(join(dir, "bin"), { recursive: true });
 
 // The projects root is a copy, not the fixture itself, because one session is added to
-// it: `zapara status` always reads today, and the fixture's week is fixed in September
+// it: `cogload status` always reads today, and the fixture's week is fixed in September
 // 2026, so on the fixture alone the status step would record a row of nulls. The copy
 // keeps every other step's numbers identical, since the recording's window ends at
 // 2026-09-20 and never reaches today.
@@ -71,12 +71,12 @@ await writeTree(projects, [
 ]);
 
 // The trailing --projects wins whatever the tape types, and the CLI accepts flags in any
-// position, so `zapara 2026-09-14 --explain` in the recording reads the fixture. HOME is
-// the sandbox too, because `zapara status` writes `$HOME/.claude/zapara/status.json`:
+// position, so `cogload 2026-09-14 --explain` in the recording reads the fixture. HOME is
+// the sandbox too, because `cogload status` writes `$HOME/.claude/cogload/status.json`:
 // without this, recording the status step would overwrite the status line of whoever is
 // recording, with a snapshot of a day the fixture knows nothing about.
 const wrapper = `#!/bin/bash\nexec env HOME=${shellQuote(dir)} bun ${shellQuote(join(root, "src", "index.ts"))} "$@" --projects ${shellQuote(projects)}\n`;
-writeFileSync(join(dir, "bin", "zapara"), wrapper);
-chmodSync(join(dir, "bin", "zapara"), 0o755);
+writeFileSync(join(dir, "bin", "cogload"), wrapper);
+chmodSync(join(dir, "bin", "cogload"), 0o755);
 
 console.log(dir);

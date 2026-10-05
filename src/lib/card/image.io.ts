@@ -16,10 +16,10 @@ export async function loadAssets(): Promise<CardAssets> {
   try {
     parts = await Promise.all(FILES.map(async (name) => (await readFile(new URL(name, ASSETS))).toString("base64")));
   } catch {
-    throw new Error("assets missing: reinstall zapara");
+    throw new Error("assets missing: reinstall cogload");
   }
   const [inter400, inter700, inter800, mono500, characters] = parts;
-  if (parts.some((p) => p.length === 0)) throw new Error("assets missing: reinstall zapara");
+  if (parts.some((p) => p.length === 0)) throw new Error("assets missing: reinstall cogload");
   return { fonts: { inter400: inter400!, inter700: inter700!, inter800: inter800!, mono500: mono500! }, characters: characters! };
 }
 
@@ -46,7 +46,7 @@ export async function renderCard(html: string, out: string, timeoutMs = 15_000):
     await write(out, html);
     return;
   }
-  const dir = await mkdtemp(join(tmpdir(), "zapara-card-")).catch(() => { throw new Error(TEMP_LINE); });
+  const dir = await mkdtemp(join(tmpdir(), "cogload-card-")).catch(() => { throw new Error(TEMP_LINE); });
   // Ctrl-C (or a hangup, or kill) mid-render would skip the finally below and
   // leave the page behind: remove it, then end as the signal would have.
   const onSignal = (signal: NodeJS.Signals): void => {
@@ -126,7 +126,7 @@ export function openCard(path: string): void {
 
 // The only place src/ starts another program; lint/no-bun-spawn.grit bans Bun.spawn
 // elsewhere. `sh … &` with SIGHUP ignored: a detached Bun.spawn child, or one in a
-// terminal zapara leads, dies with zapara. A program that fails to start is ignored.
+// terminal cogload leads, dies with cogload. A program that fails to start is ignored.
 function startInBackground(command: string[]): void {
   try {
     Bun.spawnSync(["sh", "-c", 'trap "" HUP; "$0" "$@" </dev/null >/dev/null 2>&1 &', ...command], { stdin: "ignore", stdout: "ignore", stderr: "ignore" });

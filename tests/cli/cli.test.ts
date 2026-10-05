@@ -11,8 +11,8 @@ let root: string;
 let home: string;
 
 beforeAll(async () => {
-  root = await mkdtemp(join(tmpdir(), "zapara-cli-"));
-  home = await mkdtemp(join(tmpdir(), "zapara-cli-home-"));
+  root = await mkdtemp(join(tmpdir(), "cogload-cli-"));
+  home = await mkdtemp(join(tmpdir(), "cogload-cli-home-"));
   await writeTree(root, [
     { path: "-Users-me-proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A), assistant("2026-09-14T13:02:00.000Z", A), interrupt("2026-09-14T13:03:00.000Z", A)], mtime: "2026-09-14T13:03:00.000Z" },
     { path: "-Users-me-proj/b.jsonl", lines: [prompt("2026-09-14T13:05:00.000Z", B)], mtime: "2026-09-14T13:05:00.000Z" },
@@ -94,25 +94,25 @@ describe("cli", () => {
       expect([args.join(" "), r.code, r.out]).toEqual([args.join(" "), 2, ""]);
       const lines = r.err.trimEnd().split("\n");
       expect(lines).toHaveLength(2);
-      expect(lines[0]!.startsWith("zapara: ")).toBe(true);
-      expect(lines[1]).toBe("run 'zapara --help' for usage");
+      expect(lines[0]!.startsWith("cogload: ")).toBe(true);
+      expect(lines[1]).toBe("run 'cogload --help' for usage");
     }
     // The window rules each have their own line.
     const line = async (...args: string[]) => (await first(...args))[1];
-    expect(await line("--from", "2026-09-10", "--days", "3")).toBe("zapara: --from sets the length; drop --days");
-    expect(await line("--from", "2026-09-20", "--to", "2026-09-14")).toBe("zapara: --from 2026-09-20 is after --to 2026-09-14");
-    expect(await line("--from", "2026-06-01", "--to", "2026-09-14")).toBe("zapara: --from 2026-06-01 to 2026-09-14 is 106 days; the most is 90");
-    expect(await line("today", "--days", "3")).toBe("zapara: --days, --from and --to do not apply to a named day");
-    expect(await line("week")).toBe("zapara: unknown command week (try today, yesterday, a date, card or status)");
+    expect(await line("--from", "2026-09-10", "--days", "3")).toBe("cogload: --from sets the length; drop --days");
+    expect(await line("--from", "2026-09-20", "--to", "2026-09-14")).toBe("cogload: --from 2026-09-20 is after --to 2026-09-14");
+    expect(await line("--from", "2026-06-01", "--to", "2026-09-14")).toBe("cogload: --from 2026-06-01 to 2026-09-14 is 106 days; the most is 90");
+    expect(await line("today", "--days", "3")).toBe("cogload: --days, --from and --to do not apply to a named day");
+    expect(await line("week")).toBe("cogload: unknown command week (try today, yesterday, a date, card or status)");
   });
 
   test("a usage error never echoes a path or an escape, only a short plain value", async () => {
     const line = async (...args: string[]) => (await first(...args))[1];
-    expect(await line(join(root, "secret"))).toBe("zapara: unknown command (try today, yesterday, a date, card or status)");
-    expect(await line("--to", "/Users/someone/2026-09-14")).toBe("zapara: --to must be YYYY-MM-DD, today or yesterday");
-    expect(await line("--days", "\x1b[31m7")).toBe("zapara: --days must be 1..90");
-    expect(await line("--bogus\n")).toBe("zapara: unknown flag");
-    expect(await line("--days", "seven")).toBe("zapara: --days must be 1..90, got seven");
+    expect(await line(join(root, "secret"))).toBe("cogload: unknown command (try today, yesterday, a date, card or status)");
+    expect(await line("--to", "/Users/someone/2026-09-14")).toBe("cogload: --to must be YYYY-MM-DD, today or yesterday");
+    expect(await line("--days", "\x1b[31m7")).toBe("cogload: --days must be 1..90");
+    expect(await line("--bogus\n")).toBe("cogload: unknown flag");
+    expect(await line("--days", "seven")).toBe("cogload: --days must be 1..90, got seven");
   });
 
   test("the window: --days ends today, --to ends there, --from sets the length", async () => {
@@ -147,7 +147,7 @@ describe("cli", () => {
     expect(err.trim().split("\n")).toHaveLength(1);
     expect(err).not.toContain("    at ");
     expect(err).not.toContain(missing); // the CLI never prints a filesystem path, even one the user passed
-    expect(err.trim()).toBe("zapara: projects directory not found (pass --projects <dir>)");
+    expect(err.trim()).toBe("cogload: projects directory not found (pass --projects <dir>)");
   });
 
   test("--help exits 0 and --version prints the version", async () => {
@@ -156,8 +156,8 @@ describe("cli", () => {
     // Mutation this pins: dropping the levels line from USAGE (the ranges
     // moved out of the week footer and into --help).
     expect(help.out).toContain("levels: calm 0-29");
-    expect(help.out).toContain("bugs, ideas and a star: github.com/drakulavich/zapara");
-    for (const line of ["zapara today|yesterday|<date>", "zapara card [window]", "zapara status", "--from <date>", "--days <N>"]) expect(help.out).toContain(line);
+    expect(help.out).toContain("bugs, ideas and a star: github.com/drakulavich/cogload");
+    for (const line of ["cogload today|yesterday|<date>", "cogload card [window]", "cogload status", "--from <date>", "--days <N>"]) expect(help.out).toContain(line);
     expect(help.out.split("\n").every((l) => l.length <= 80)).toBe(true);
     expect((await run("--version")).out.trim()).toMatch(/^\d+\.\d+\.\d+$/);
     expect((await run("-V")).out).toBe((await run("--version")).out);
@@ -174,7 +174,7 @@ describe("cli", () => {
   });
 
   test("a symlink loop under the projects root is skipped, and every other transcript still counts", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "zapara-cli-loop-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-cli-loop-"));
     try {
       await writeTree(dir, [
         { path: "-Users-me-proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" },
@@ -192,12 +192,12 @@ describe("cli", () => {
   });
 
   test("--days -1 is a bad range, not a missing value", async () => {
-    expect(await first("--days", "-1")).toEqual([2, "zapara: --days must be 1..90, got -1"]);
+    expect(await first("--days", "-1")).toEqual([2, "cogload: --days must be 1..90, got -1"]);
     // A real flag in the value position is still a missing value, and no other
     // flag takes a negative number: -1 is not a directory, a date or a file name.
-    expect(await first("--days", "--json")).toEqual([2, "zapara: --days needs a value"]);
+    expect(await first("--days", "--json")).toEqual([2, "cogload: --days needs a value"]);
     for (const [flag, cmd] of [["--projects", ""], ["--to", ""], ["--from", ""], ["--out", "card"]] as const) {
-      expect(await first(...(cmd ? [cmd] : []), flag, "-1")).toEqual([2, `zapara: ${flag} needs a value`]);
+      expect(await first(...(cmd ? [cmd] : []), flag, "-1")).toEqual([2, `cogload: ${flag} needs a value`]);
     }
   });
 
@@ -206,15 +206,15 @@ describe("cli", () => {
     const q = Bun.spawn(["bun", CLI, "--projects=", "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
     for (const s of [p, q]) {
       const [err, code] = await Promise.all([new Response(s.stderr).text(), s.exited]);
-      expect([code, err]).toEqual([2, "zapara: --projects needs a value\nrun 'zapara --help' for usage\n"]);
+      expect([code, err]).toEqual([2, "cogload: --projects needs a value\nrun 'cogload --help' for usage\n"]);
     }
   });
 
   test("a value flag given twice is a usage error, not the last value winning", async () => {
     for (const [flag, v] of [["--days", "3"], ["--from", "2026-09-10"], ["--to", "2026-09-14"], ["--projects", root]] as const) {
-      expect(await first(flag, v, flag, v)).toEqual([2, `zapara: ${flag} given twice`]);
+      expect(await first(flag, v, flag, v)).toEqual([2, `cogload: ${flag} given twice`]);
     }
-    expect(await first("card", "--out", "a.png", "--out", "b.png")).toEqual([2, "zapara: --out given twice"]);
+    expect(await first("card", "--out", "a.png", "--out", "b.png")).toEqual([2, "cogload: --out given twice"]);
     // A bare flag repeated is harmless.
     const r = await run("--to", "2026-09-14", "--json", "--json");
     expect(r.code).toBe(0);
@@ -222,14 +222,14 @@ describe("cli", () => {
 
   test("a projects directory that cannot be read says so, without a path", async () => {
     if (process.getuid?.() === 0) return; // root bypasses file permissions
-    const dir = await mkdtemp(join(tmpdir(), "zapara-cli-noread-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-cli-noread-"));
     try {
       await chmod(dir, 0o000);
       const p = Bun.spawn(["bun", CLI, "--projects", dir, "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
       const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
       expect(code).toBe(1);
       expect(out).toBe("");
-      expect(err.trim()).toBe("zapara: projects directory cannot be read (check its permissions)");
+      expect(err.trim()).toBe("cogload: projects directory cannot be read (check its permissions)");
       expect(err).not.toContain(dir);
     } finally {
       await chmod(dir, 0o755).catch(() => {});
@@ -239,13 +239,13 @@ describe("cli", () => {
 
   test("a projects directory that can be listed but not entered says it cannot be read", async () => {
     if (process.getuid?.() === 0) return; // root bypasses file permissions
-    const dir = await mkdtemp(join(tmpdir(), "zapara-cli-listonly-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-cli-listonly-"));
     try {
       await writeTree(dir, [{ path: "-Users-me-proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" }]);
       await chmod(dir, 0o444);
       const p = Bun.spawn(["bun", CLI, "--projects", dir, "2026-09-14", "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
       const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
-      expect([code, out, err]).toEqual([1, "", "zapara: projects directory cannot be read (check its permissions)\n"]);
+      expect([code, out, err]).toEqual([1, "", "cogload: projects directory cannot be read (check its permissions)\n"]);
     } finally {
       await chmod(dir, 0o755).catch(() => {});
       await rm(dir, { recursive: true, force: true });
@@ -256,12 +256,12 @@ describe("cli", () => {
     const file = join(root, "-Users-me-proj/a.jsonl");
     const p = Bun.spawn(["bun", CLI, "--projects", file, "--json"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } });
     const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
-    expect([code, out, err]).toEqual([1, "", "zapara: projects path is not a directory (pass --projects <dir>)\n"]);
+    expect([code, out, err]).toEqual([1, "", "cogload: projects path is not a directory (pass --projects <dir>)\n"]);
   });
 
   test("a calendar day the zone skipped is its own empty day, and the next day is listed once", async () => {
     // Samoa jumped from 29 to 31 December 2011; 10:00-10:30 on the 31st is 20:00-20:30Z on the 30th.
-    const dir = await mkdtemp(join(tmpdir(), "zapara-cli-apia-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-cli-apia-"));
     try {
       const ts = [0, 5, 10, 15, 20, 25, 30].map((m) => `2011-12-30T20:${String(m).padStart(2, "0")}:00.000Z`);
       await writeTree(dir, [{ path: "-Users-me-proj/a.jsonl", lines: ts.map((t) => prompt(t, A)), mtime: ts.at(-1)! }]);
@@ -286,7 +286,7 @@ describe("cli", () => {
     // A per-test tree via direct Bun.spawn, not the run() helper: run() already
     // fixes --projects to the suite root, and a second --projects here would be
     // a duplicate flag (a usage error), not a way to point at a different tree.
-    const dir = await mkdtemp(join(tmpdir(), "zapara-restored-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-restored-"));
     try {
       await writeTree(dir, [
         // Restored from a backup: content from 14 Sept, mtime rewritten to 1 Aug.
@@ -306,7 +306,7 @@ describe("cli", () => {
   });
 
   test("today's JSON carries asOf; a past day's does not", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "zapara-today-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-today-"));
     try {
       await writeTree(dir, [{ path: "-Users-me-proj/t.jsonl", lines: [prompt(`${utcDay(0)}T00:00:00.000Z`, A)], mtime: `${utcDay(0)}T00:00:00.000Z` }]);
       const spawn = (...args: string[]) => Bun.spawn(["bun", CLI, "--projects", dir, ...args], { stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
@@ -327,7 +327,7 @@ describe("cli", () => {
 
   test("an unreadable transcript file is skipped, not fatal", async () => {
     if (process.getuid?.() === 0) return; // root bypasses file permissions; chmod 0o000 would have no effect
-    const dir = await mkdtemp(join(tmpdir(), "zapara-cli-unreadable-"));
+    const dir = await mkdtemp(join(tmpdir(), "cogload-cli-unreadable-"));
     const secret = join(dir, "-Users-me-proj/secret.jsonl");
     try {
       await writeTree(dir, [

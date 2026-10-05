@@ -46,7 +46,7 @@ async function writeFixture(root: string): Promise<void> {
 
 describe("signal-stats", () => {
   test("prints distributions, top hours and a drift line for a tiny fixture, with no path in the output", async () => {
-    const root = await mkdtemp(join(tmpdir(), "zapara-stats-"));
+    const root = await mkdtemp(join(tmpdir(), "cogload-stats-"));
     try {
       await writeFixture(root);
       const r = await run("--projects", root, "--to", "2026-09-15", "--days", "2");
@@ -88,7 +88,7 @@ describe("signal-stats", () => {
   });
 
   test("--json prints the same figures as JSON, still with no path", async () => {
-    const root = await mkdtemp(join(tmpdir(), "zapara-stats-json-"));
+    const root = await mkdtemp(join(tmpdir(), "cogload-stats-json-"));
     try {
       await writeFixture(root);
       const r = await run("--projects", root, "--to", "2026-09-15", "--days", "2", "--json");
@@ -121,7 +121,7 @@ describe("signal-stats", () => {
   });
 
   test("a missing projects directory forwards the CLI's one-line error and exit code, no path", async () => {
-    const missing = join(tmpdir(), "zapara-stats-does-not-exist");
+    const missing = join(tmpdir(), "cogload-stats-does-not-exist");
     const r = await run("--projects", missing, "--days", "2");
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
@@ -134,7 +134,7 @@ describe("signal-stats", () => {
   // earlier. The drift line must describe the same window the distributions do, so a record or
   // event from outside [cutoffMs, endMs) must not be counted even though its file was scanned.
   test("drift metrics count only records and events inside the analysis window, not every line of a scanned file", async () => {
-    const root = await mkdtemp(join(tmpdir(), "zapara-stats-window-"));
+    const root = await mkdtemp(join(tmpdir(), "cogload-stats-window-"));
     try {
       await writeTree(root, [
         {
@@ -173,7 +173,7 @@ describe("signal-stats", () => {
   // A `type` value is untrusted input straight from someone else's JSONL; it must never be
   // able to write a raw control byte to the terminal or split the "top types" line in two.
   test("an unusual record type with control characters is escaped and length-capped in the drift line", async () => {
-    const root = await mkdtemp(join(tmpdir(), "zapara-stats-weird-type-"));
+    const root = await mkdtemp(join(tmpdir(), "cogload-stats-weird-type-"));
     try {
       const weirdType = "x\n[31my";
       const longType = "z".repeat(50);

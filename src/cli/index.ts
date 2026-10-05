@@ -41,16 +41,18 @@ async function main(): Promise<number> {
   }
 }
 
-if (import.meta.main) {
+export function start(): void {
   main().then((code) => process.exit(code), (e: unknown) => {
     if (e instanceof HelpRequested) { console.log(USAGE); process.exit(0); }
     if (e instanceof VersionRequested) {
       try { console.log(version()); process.exit(0); }
-      catch (err) { console.error(`zapara: ${err instanceof Error ? err.message : String(err)}`); process.exit(1); }
+      catch (err) { console.error(`cogload: ${err instanceof Error ? err.message : String(err)}`); process.exit(1); }
     }
     const msg = e instanceof Error ? e.message : String(e);
-    if (e instanceof UsageError) { console.error(`zapara: ${msg}\n${HINT}`); process.exit(2); }
-    console.error(`zapara: ${msg}`);
+    if (e instanceof UsageError) { console.error(`cogload: ${msg}\n${HINT}`); process.exit(2); }
+    console.error(`cogload: ${msg}`);
     process.exit(1);
   });
 }
+
+if (import.meta.main) start();

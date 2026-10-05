@@ -96,7 +96,7 @@ describe("week grid", () => {
   });
 
   test("color mode paints the peak with the level its index falls in", () => {
-    // The same thresholds `zapara status` uses for its level: Monday's peak 87
+    // The same thresholds `cogload status` uses for its level: Monday's peak 87
     // is Fried although its last active hour is Calm, Tuesday's 33 is Warming
     // although its last hour is Calm too, and Thursday's 15 is Calm. The
     // mutation this pins: painting the peak with the day's last level, or with
