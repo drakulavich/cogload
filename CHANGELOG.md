@@ -5,11 +5,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-05
+
 ### Added
 - The `cognitive-load` Claude Code plugin shows the current load above the
   prompt. Install it from this repository's marketplace
   (`/plugin marketplace add drakulavich/cogload`, then
-  `/plugin install cognitive-load@cogload`); the npm package is unchanged.
+  `/plugin install cognitive-load@cogload`); it is not part of the npm package.
 
 ### Changed
 - zapara is now cogload: the package is `@drakulavich/cogload`, the command
