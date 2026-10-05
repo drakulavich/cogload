@@ -189,15 +189,11 @@ export const register: Register = on => {
     const parts: string[] = []
     if (until !== null) parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`)
     else if (isWarning) parts.push(`rest in ${REST_AFTER_MIN - s.streakMin} min`)
-    else if (e.props.bodyColumns >= NARROW) {
-      if (s.peak !== null) parts.push(`peak ${s.peak}`)
-      if (s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
-      parts.push(`active ${formatMinutes(s.activeMin)}`)
-    }
+    else if (e.props.bodyColumns >= NARROW && s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
     const overrides = (await overridesSince($, now - WEEK_MS)).length
     if (overrides > 0) parts.push(`overrides this week: ${overrides}`)
     const { Box, Text } = $.ui.resolve(e)
-    const head = Text({ color: COLOR[s.level], children: `${GLYPH[s.level]} ${s.level} ${s.index}` })
+    const head = Text({ color: COLOR[s.level], children: `${GLYPH[s.level]} ${s.level}` })
     if (parts.length === 0) return head
     return Box({ children: [head, Text({ dimColor: true, children: parts.map(p => ` · ${p}`).join('') })] })
   })
