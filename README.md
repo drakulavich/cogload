@@ -127,7 +127,7 @@ If your card told you something about your week, star [the repository](https://g
 | `cogload 2026-09-14 --explain` | One day, with the six weighted components behind each index. |
 | `cogload card` | The last 14 days as one shareable picture, `cogload-card.png` in `~/Downloads`. |
 | `cogload card --days 30 --out me.webp` | Any window from 1 to 90 days; `.png`, `.webp` or `.html` by extension. `--json` prints the card's data instead. |
-| `cogload status` | Writes today's load to `~/.claude/cogload/status.json` for a status line to read, and prints the same line. See [Status line](#status-line). |
+| `cogload status` | Writes today's load to `~/.claude/cogload/status.json` for a status line to read, and prints the same line. The file's fields are in [the status file spec](docs/superpowers/specs/2026-09-19-zapara-status-file-design.md). |
 
 | Flag | What it does |
 |---|---|
@@ -147,28 +147,6 @@ Levels: calm 0–29, warming 30–59, heating 60–84, fried 85–100.
 The grid and the day print a text table when stdout is a terminal and JSON otherwise, so `cogload | cat` prints JSON; no flag forces text in a pipe yet. `card` and `status` write their file and print their lines whether piped or not. `card` asks to open the picture only when stdin and stdout are both a terminal, and never on Windows. While the browser engine draws a picture, a terminal's stderr shows `drawing the card…`, cleared before the result. `card --json` is the exception: it prints the card's data and writes no file, so `--out` with it is a usage error. `--json` changes nothing for `status`, whose line is already JSON and whose file is written either way.
 
 A run that works exits 0, and so does a window with no data, which prints an empty grid. Exit 1 is a failure cogload can name, printed as one line to stderr that never contains a path: the projects directory missing or unreadable, `status` unable to write its file, `card` unable to write its picture or to find a browser engine, `card` without `--out` on a machine with no `~/Downloads` folder, `card` over a window with no activity (`card --json` prints `null` and exits 0 instead), and whatever else goes wrong below the command line. Exit 2 is a usage error, such as a bad date, an unknown flag or a value flag given twice; it prints one line and a hint to `--help`.
-
-## Status line
-
-A status line wants one number every thirty seconds and cannot wait half a second for a transcript scan, so cogload writes the number down and the status line reads it back. `cogload status` computes today exactly as `cogload today` does, writes it as one line of JSON to `~/.claude/cogload/status.json`, and prints the same line. Only `--projects`, `--no-cache` and `--verbose` apply, `--json` and `--no-color` change nothing, and the window flags, `--explain` and `--out` are usage errors. There is one file per user, whatever `--projects` said, created with mode `0600` in a directory with mode `0700`; the write goes to a temporary file and is renamed into place, so a reader sees the old line or the new one and never half of one. The file holds the nine values below and nothing else: no path, no project, no session count, no text.
-
-```json
-{"schema":1,"asOf":"2026-09-19T12:30:38.300Z","date":"2026-09-19","hour":15,"index":36,"level":"Warming","peak":41,"activeMin":555,"streakMin":166}
-```
-
-| Field | Meaning |
-|---|---|
-| `schema` | The shape of this file: `1`. A reader that sees a number it does not know shows nothing. It changes only when a field changes meaning or goes away; adding a field does not bump it. A field that keeps its name, unit and range but is measured differently (the presence rule of 2026-09-19 for `activeMin` and `streakMin`) does not bump it either: a reader shows the corrected number, and the change is a CHANGELOG entry. |
-| `asOf` | When the snapshot was taken, ISO 8601 UTC: the `Day.asOf` of the base spec, the `now` of this run. A reader decides staleness from this field, never from the file's mtime. |
-| `date` | The local calendar day the numbers describe, `YYYY-MM-DD`. |
-| `hour` | The local hour that contains `asOf`, `0`..`23`. |
-| `index` | The load index of the sixty minutes ending at `asOf`, `0`..`100`, or `null` when they hold no session. It does not reset at an hour boundary: the hour buckets of `cogload today` are calendar hours, this one is the clock's last hour. |
-| `level` | That index's level, `Calm`, `Warming`, `Heating` or `Fried`, or `null` with `index`. A reader colors by this field so it never needs the thresholds. |
-| `peak` | The day's peak index so far, including the last sixty minutes, so it is never below `index`; `null` on a day with no activity. |
-| `activeMin` | Minutes of your presence in the day so far: the 5-minute slots covered by your actions and the gaps of at most 10 minutes between them; `0` on a day with no action of yours. |
-| `streakMin` | Minutes of your live presence streak as of `asOf`: from the streak's first action to `asOf`, when your last action is no more than 10 minutes before `asOf`; `0` once you have been away longer. It keeps growing while you sit there, and it does not reset at an hour boundary. |
-
-Refreshing is the reader's job, and cogload adds no hook, no timer and no daemon. A reader that finds the file stale or missing starts `cogload status` detached and draws what it has, which is also how the file first comes to exist on a machine that never ran cogload. The rest of the contract, from strict decoding to concurrent runs, is in [the status file spec](docs/superpowers/specs/2026-09-19-zapara-status-file-design.md). The `cognitive-load` plugin below reads it another way: it runs `cogload status` itself, after every turn and once a minute, and reads the line it prints.
 
 ## Inside Claude Code
 
