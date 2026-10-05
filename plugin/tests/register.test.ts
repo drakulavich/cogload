@@ -309,6 +309,7 @@ const HINT = ' To go on now, start the prompt with "override: <reason>".'
 const DROP = (until: number, { kind = 'composer', hint = true }: { kind?: 'composer' | 'bridge'; hint?: boolean } = {}) => ({
   drop: `Rest until ${hhmm(until)}.${kind === 'composer' ? ' Your prompt is saved.' : ''}${hint ? HINT : ''}`,
 })
+const SHORT = 'An override needs a reason of three words or more.'
 const typed = ($: Engine, text: string, kind: 'composer' | 'bridge' = 'composer') =>
   $.prompt.submit({ text, wait: false, origin: { kind } })
 
@@ -507,10 +508,41 @@ describe('override', () => {
     expect(await band($)).toBe('▓ Heating · streak 40m · overrides this week: 1')
   })
 
-  test('a reason of one word does not', async ($, on) => {
+  for (const prompt of ['override: ok\nfix it', 'override:', 'override: prod down']) {
+    test(`${JSON.stringify(prompt)} asks for a longer reason, goes back into the box and keeps the rest`, async ($, on) => {
+      const fills: string[] = []
+      engine(on, [{ stdout: line({ streakMin: 40 }) }])
+      on('prompt.fill', (_$, e) => {
+        fills.push(e.text)
+        return { isFilled: true }
+      })
+      await start($)
+      expect(await typed($, prompt)).toEqual({ drop: `${SHORT} Your prompt is saved.` })
+      await clock.advance(0)
+      expect(fills).toEqual([prompt])
+      expect(await typed($, 'next', 'bridge')).toEqual(DROP(NOW + REST_MS, { kind: 'bridge' }))
+    })
+  }
+
+  test('a short override from a bridge asks for a longer reason without saving', async ($, on) => {
+    const fills: string[] = []
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    on('prompt.fill', (_$, e) => {
+      fills.push(e.text)
+      return { isFilled: true }
+    })
+    await start($)
+    expect(await typed($, 'override: ok\nfix it', 'bridge')).toEqual({ drop: SHORT })
+    await clock.advance(0)
+    expect(fills).toEqual([])
+  })
+
+  test('a short override does not take the hint', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
-    expect(await typed($, 'override: ok\nfix it')).toEqual(DROP(NOW + REST_MS))
+    expect(await typed($, 'override: ok')).toEqual({ drop: `${SHORT} Your prompt is saved.` })
+    expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
+    expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS, { hint: false }))
   })
 
   test('an override alone lifts the rest and sends nothing', async ($, on) => {

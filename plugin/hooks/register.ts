@@ -18,6 +18,7 @@ const WEEK_MS = 7 * 24 * 60 * 60_000
 const KEEP_OVERRIDES_MS = 2 * WEEK_MS
 const OVERRIDE = /^override:(.*)$/
 const HINT = ' To go on now, start the prompt with "override: <reason>".'
+const SHORT = 'An override needs a reason of three words or more.'
 const WELCOME = 'cognitive-load shows your load above the prompt when it rises above Calm.'
 const MISSING = "cognitive-load needs cogload on Claude Code's PATH: bun add -g @drakulavich/cogload"
 
@@ -176,7 +177,8 @@ export const register: Register = on => {
     const until = await restUntil($, now)
     if (until === null) return next(e)
     const [first, ...body] = e.text.split('\n')
-    const reason = OVERRIDE.exec(first)?.[1].trim() ?? ''
+    const override = OVERRIDE.exec(first)
+    const reason = override?.[1].trim() ?? ''
     if (reason.split(/\s+/).length >= 3) {
       await $.store.delete('restUntil')
       await $.store.set('overrides', [...(await overridesSince($, now - KEEP_OVERRIDES_MS)), { at: now, reason }])
@@ -185,9 +187,11 @@ export const register: Register = on => {
     }
     const isComposer = e.origin.kind === 'composer'
     if (isComposer) await $.prompt.fill({ text: e.text, mode: 'replace' }).catch(() => {})
+    const saved = isComposer ? ' Your prompt is saved.' : ''
+    if (override !== null) return { drop: `${SHORT}${saved}` }
     const isTaught = (await $.store.get('taught')) === true
     if (!isTaught) await $.store.set('taught', true)
-    return { drop: `Rest until ${clockTime(until)}.${isComposer ? ' Your prompt is saved.' : ''}${isTaught ? '' : HINT}` }
+    return { drop: `Rest until ${clockTime(until)}.${saved}${isTaught ? '' : HINT}` }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
