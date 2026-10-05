@@ -65,7 +65,7 @@ ${fontFace("Inter", 400, assets.fonts.inter400)}
 ${fontFace("Inter", 700, assets.fonts.inter700)}
 ${fontFace("Inter", 800, assets.fonts.inter800)}
 ${fontFace("JetBrains Mono", 500, assets.fonts.mono500)}
-:root{--ink:#f5f5f7;--muted:#a1a1aa;--dim:#6b6b76;--line:rgba(255,255,255,.10);--accent:${accent.main};--accent2:${accent.light};--accent-rgb:${accent.rgb};--calm:#7ee2a3;--warm:#fbd77a;--heat:#c4a0ff;--fried:#ff6b8f}
+:root{--ink:#f5f5f7;--muted:#a1a1aa;--dim:#6b6b76;--line:rgba(255,255,255,.10);--accent:${accent.main};--accent2:${accent.light};--accent-rgb:${accent.rgb};--calm:#7ee2a3;--warm:#fbd77a;--heat:#ff8700;--fried:#ff4d4d}
 html{zoom:2}
 html,body{margin:0;background:#000}
 .card{position:relative;width:1200px;height:630px;overflow:hidden;font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;background:#07070a}
