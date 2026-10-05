@@ -1,11 +1,12 @@
 {
   "name": "cogload",
+  "description": "Keep your head cold. See when you're running hot in Claude Code, and get pulled away before you fry.",
   "owner": { "name": "Anton Yakutovich" },
   "plugins": [
     {
       "name": "cognitive-load",
       "source": "./plugin",
-      "description": "Shows cogload's cognitive load above the Claude Code prompt"
+      "description": "A fuse for your head: it shows the heat, warns you, then trips before you burn out."
     }
   ]
 }
