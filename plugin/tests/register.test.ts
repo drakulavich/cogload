@@ -589,6 +589,15 @@ describe('override', () => {
     expect(await typed($, 'next')).toEqual({ text: 'next' })
   })
 
+  for (const prompt of ['Override: prod is down', 'OVERRIDE: prod is down']) {
+    test(`${JSON.stringify(prompt)}, as a phone keyboard types it, lifts the rest`, async ($, on) => {
+      engine(on, [{ stdout: line({ streakMin: 40 }) }])
+      await start($)
+      expect(await typed($, prompt)).toEqual({ drop: 'Rest lifted.' })
+      expect(await typed($, 'next')).toEqual({ text: 'next' })
+    })
+  }
+
 })
 
 describe('store', () => {
