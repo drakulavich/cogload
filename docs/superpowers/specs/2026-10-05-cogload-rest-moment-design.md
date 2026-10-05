@@ -19,7 +19,9 @@ After this change:
    would start a break at 40 draws the band as `▓ Heating 68 · break in 5 min`,
    the minutes left being `40 - streakMin`. It replaces the usual tail
    (peak, streak, active) at any width, and it draws while Calm too, as a
-   break does. The one-minute tick counts it down.
+   break does. The one-minute tick counts it down. The overrides count,
+   when above 0, is appended after it as it is today, during a break too:
+   `▓ Heating 68 · break in 3 min · overrides this week: 1`.
 2. At 40 the break starts as today, with the toast
    `Break until 14:32. Streak 40m, Heating 68.`
 3. A held `composer` prompt is dropped with
@@ -39,9 +41,10 @@ change.
 
 ### How
 
-- "Would start a break at 40": the streak's start (`asOf - streakMin`) is
-  more than ten minutes from `spent`, or there is no `spent`; the same test
-  that starts a break. A streak that already held never warns.
+- "Would start a break at 40": there is no `spent`, or the absolute
+  difference between the streak's start (`asOf - streakMin`) and `spent`
+  exceeds ten minutes; the test `startRestIfDue` already uses, on either
+  side of `spent`. A streak that already held never warns.
 - `$.store` gains `taught: true`, written with the first drop that carries
   the hint. Like the rest of the store it starts over with a new marketplace.
 - Two sessions dropping a first prompt at the same moment may both show the
@@ -80,13 +83,19 @@ removed:
 1. Streak 35 → `break in 5 min`; 39 → `break in 1 min`; 34 → the usual tail.
 2. Streak 37 at 40 columns → `break in 3 min`; Calm with streak 37 → the band
    draws.
-3. A streak that already held, read again at 37 → no warning.
+3. A streak that already held, read again at 37 → no warning; with
+   `spent` at 10:00 and a streak starting at 09:55 → no warning either.
 4. Streak 36, one tick later at 37 → `break in 3 min`.
 5. Held `composer` prompt → `Break until HH:MM. Your prompt is saved.` plus
    the hint the first time; a second held prompt → without the hint.
 6. Held `bridge` prompt → `Break until HH:MM.` (plus the hint if first).
 7. Toast, band during a break, `Break lifted.` and the `/overrides`
    description use the new wording.
+8. Streak 37 with one override in seven days →
+   `break in 3 min · overrides this week: 1`.
+9. Fried at streak 5 → a break starts with no warning drawn before it.
+10. After the hinted drop, `override: prod is down` plus a second line →
+    the break is lifted and the second line is sent.
 
 User scenarios, tmux, stub `cogload` first on `PATH`:
 
@@ -109,7 +118,7 @@ User scenarios, tmux, stub `cogload` first on `PATH`:
 ## Definition of Done
 
 - `claude plugin validate plugin` passes; `claude plugin test plugin` passes
-  the existing cases and 1 to 7.
+  the existing cases and 1 to 10.
 - `bun run check` passes; `git diff main -- src tests` is empty.
 - User scenarios 1 to 4 pass, with captured screens in the PR.
 - `git grep -n -i "rest until\|Rest lifted\|Rest overrides" plugin README.md`
