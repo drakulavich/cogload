@@ -1,7 +1,7 @@
 {
   "name": "@drakulavich/cogload",
   "version": "0.10.0",
-  "description": "Cognitive load index for people driving Claude Code, computed locally from transcripts",
+  "description": "Keep your head cold. A thermometer for your Claude Code days: every hour scored 0 to 100 from the transcripts already on your disk. Nothing leaves your machine.",
   "license": "MIT",
   "author": "Anton Yakutovich",
   "repository": { "type": "git", "url": "git+https://github.com/drakulavich/cogload.git" },
