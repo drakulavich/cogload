@@ -729,7 +729,7 @@ describe('/cogload', () => {
 })
 
 const WELCOME = 'Keep your head cold. The dot above the prompt shows how hot this hour runs.'
-const MISSING = "cognitive-load needs cogload on Claude Code's PATH: bun add -g @drakulavich/cogload"
+const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload"
 
 describe('first meeting', () => {
   test('the first session.start shows the welcome toast; a second one does not', async ($, on) => {

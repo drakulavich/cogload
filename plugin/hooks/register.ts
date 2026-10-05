@@ -21,7 +21,7 @@ const OVERRIDE = /^override:(.*)$/
 const HINT = ' To go on now, start the prompt with "override: <reason>".'
 const SHORT = 'An override needs a reason of three words or more.'
 const WELCOME = 'Keep your head cold. The dot above the prompt shows how hot this hour runs.'
-const MISSING = "cognitive-load needs cogload on Claude Code's PATH: bun add -g @drakulavich/cogload"
+const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload"
 const NO_READING = 'cogload gave no reading.'
 
 type Override = { at: number; reason: string }

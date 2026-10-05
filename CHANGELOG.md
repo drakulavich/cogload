@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- When `cogload` is missing, the `cognitive-load` toast and `/cogload` say
+  `cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload`;
+  Claude Code already prefixes the plugin's name, so the old text read
+  `cognitive-load: cognitive-load needs cogload…`.
 - The card draws heating orange and fried red, as the CLI and the band do,
   instead of violet and pink.
 - The `cognitive-load` band draws while Calm too, `● Calm · streak 7m`, so
