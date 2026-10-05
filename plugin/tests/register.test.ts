@@ -888,6 +888,13 @@ describe('cogload in ~/.bun/bin', () => {
     expect(paths).toEqual([undefined, `${HOME}/.bun/bin`])
   })
 
+  test('with PATH empty, the fallback PATH is ~/.bun/bin alone, not the working directory too', async ($, on) => {
+    engine(on, ['not found'], [], [], { welcomed: true }, { HOME, PATH: '' })
+    binRuns = [{ stdout: line() }]
+    await start($)
+    expect(paths).toEqual([undefined, `${HOME}/.bun/bin`])
+  })
+
   test('without cogload on the PATH, /cogload reads from ~/.bun/bin', async ($, on) => {
     const logs: string[] = []
     const toasts: string[] = []

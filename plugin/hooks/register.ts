@@ -187,7 +187,7 @@ const run = async ($: EngineInterface, args: string[]) => {
   const bin = `${home}/.bun/bin`
   const path = await $.env.get('PATH')
   // cogload is a `#!/usr/bin/env bun` script, and a script-installed bun sits beside it.
-  return spawn($, [`${bin}/cogload`, ...args], { PATH: path === undefined ? bin : `${bin}:${path}` })
+  return spawn($, [`${bin}/cogload`, ...args], { PATH: path ? `${bin}:${path}` : bin })
 }
 
 const take = async ($: EngineInterface, s: Status) => {
