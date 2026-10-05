@@ -134,7 +134,8 @@ User scenarios, tmux, stub `cogload` first on `PATH`:
 - `plugin/.claude-plugin/plugin.json` says 0.7.0.
 - README "Inside Claude Code" documents `/cogload` and no longer mentions
   `/overrides`; the marketplace note about the store says the rest ends and
-  the week's counts start over. CHANGELOG `## [Unreleased]` carries one entry.
+  the week's counts start over; "Privacy" says the plugin keeps the start of
+  each rest and keeps override reasons 7 days, not 14. CHANGELOG `## [Unreleased]` carries one entry.
 
 ## Open Questions
 
