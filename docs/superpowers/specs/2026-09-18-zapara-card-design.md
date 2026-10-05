@@ -261,12 +261,12 @@ the repo link: Conductor `#8b5cf6` / `#c4b5fd`, Supervisor `#22d3ee` /
 
 The table is the complete description of the look; the template is written
 from it. `docs/superpowers/specs/assets/2026-09-18-zapara-card-reference.webp`
-is the owner-approved render of the design mock built from this table
+was the owner-approved render of the design mock built from this table
 (2400×1260, tracked by LFS), kept for comparing the implementation's output
-by eye. It shows the Conductor with the `busy-week` peak and spectrum and
+by eye; it was removed on 2026-10-05 and stays in git history (`fbd7cbe`). It showed the Conductor with the `busy-week` peak and spectrum and
 the Conductor's own highlights, not the `busy-week` card itself, which is
-the Marathoner's. It is a reference, not an input: nothing
-reads it.
+the Marathoner's. It was a reference, not an input: nothing
+read it.
 
 ### Characters
 

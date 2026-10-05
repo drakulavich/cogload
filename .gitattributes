@@ -1,5 +1,0 @@
-# Only the spec's reference picture is in LFS. Everything the README or the package
-# shows is a plain file: raw.githubusercontent.com serves an LFS object as its pointer
-# text, which breaks the image on npmjs.com, and every clone would spend the LFS
-# bandwidth quota on it.
-docs/superpowers/specs/assets/*.webp filter=lfs diff=lfs merge=lfs -text
