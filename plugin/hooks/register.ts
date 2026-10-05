@@ -160,6 +160,7 @@ const toastOnce = async ($: EngineInterface, key: string, text: string) => {
 
 const RUN_TIMEOUT_MS = 10_000
 const REFRESH_MS = 60_000
+const STALE_MS = 5 * 60_000
 
 const weekLine = async ($: EngineInterface, now: number): Promise<string | null> => {
   const rests = (await restsSince($, now - WEEK_MS)).length
@@ -202,16 +203,20 @@ const refresh = async ($: EngineInterface) => {
     const failure = typeof r === 'string' ? r : r.exitCode === 0 ? 'bad line' : `exit ${r.exitCode}`
     $.ui.log(failure, { to: 'debug' })
     if (failure === 'not found') await toastOnce($, 'missingShown', MISSING)
-    return
+    return false
   }
   await $.store.set('reading', decoded)
   await take($, decoded)
+  return true
 }
 
 const tick = async ($: EngineInterface) => {
   const reading = (await $.store.get('reading')) as Status | undefined
-  if (reading !== undefined && (await $.clock.now()) - Date.parse(reading.asOf) < REFRESH_MS) await take($, reading)
-  else await refresh($)
+  const age = reading === undefined ? Number.POSITIVE_INFINITY : (await $.clock.now()) - Date.parse(reading.asOf)
+  if (reading !== undefined && age < REFRESH_MS) return take($, reading)
+  if ((await refresh($)) || age < STALE_MS) return
+  await $.store.delete('reading')
+  await update($, status, () => null)
 }
 
 export const register: Register = on => {

@@ -59,14 +59,16 @@ status spec already makes equal to the file's content.
    the nine fields, nothing else. A ui.render read of that state redraws the
    band when it changes.
 4. Anything else (`zapara` not found, a non-zero exit, the timeout, a line
-   that does not decode) keeps the last good reading, or no band when there is
-   none, and writes one line with `$.ui.log(..., { to: "debug" })` naming the
+   that does not decode) keeps the last good reading until it is five minutes
+   old (`2026-10-06-cognitive-load-stale-band-design.md`), or no band when
+   there is none, and writes one line with `$.ui.log(..., { to: "debug" })` naming the
    kind of failure: `not found`, `exit <code>`, `timeout`, `bad line`. Never
    stderr, never stdout, never a path. A rejected run is `timeout` when ten
    seconds or more passed on `$.clock` since it started, else `not found`;
    the rejection's message says neither.
 
-No timer and no staleness check. The number changes when the person acts, and
+No staleness check beyond the five-minute limit in rule 4; the one-minute
+tick comes from the rest spec. The number changes when the person acts, and
 every turn ends with a run. Between turns `streakMin` stands still; the streak
 itself ends after ten minutes away, so the band is at most one turn behind.
 
