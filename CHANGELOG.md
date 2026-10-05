@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- The `cognitive-load` band draws while Calm too, `● Calm · streak 7m`, so
+  the plugin no longer looks switched off in a quiet hour; it still stays away
+  when the last hour holds no session. The welcome toast reads
+  `cognitive-load shows your load above the prompt.`
+
 ## [0.11.0] - 2026-10-05
 
 ### Added
