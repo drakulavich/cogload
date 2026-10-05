@@ -41,7 +41,7 @@ async function main(): Promise<number> {
   }
 }
 
-if (import.meta.main) {
+export function start(): void {
   main().then((code) => process.exit(code), (e: unknown) => {
     if (e instanceof HelpRequested) { console.log(USAGE); process.exit(0); }
     if (e instanceof VersionRequested) {
@@ -54,3 +54,5 @@ if (import.meta.main) {
     process.exit(1);
   });
 }
+
+if (import.meta.main) start();

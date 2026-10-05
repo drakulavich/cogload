@@ -44,18 +44,19 @@ marketplace, so `cognitive-load` from the `cogload` marketplace finds no
 ## The `zapara` alias
 
 For a while `zapara` keeps answering. `@drakulavich/cogload` declares two
-`bin` entries, `cogload` and `zapara`, pointing at the same
-`src/cli/index.ts`. Run as `zapara`, it does exactly what `cogload` does,
-with the same data directory, and first writes one line to stderr:
+`bin` entries: `cogload` points at `src/cli/index.ts`, `zapara` at
+`src/cli/zapara.ts`, which writes the notice and starts the same CLI. Run
+as `zapara`, it does exactly what `cogload` does, with the same data
+directory, and first writes one line to stderr:
 
 ```
 zapara is now cogload; the zapara command goes away in 1.0.0
 ```
 
 stdout is unchanged, so readers of `zapara status` keep working: the plugin
-0.3.0 reads stdout only. The command
-name is taken from `process.argv[1]`'s base name. The alias goes in 1.0.0, a
-tracked issue.
+0.3.0 reads stdout only. A second entry file, not the command's name, tells
+the two apart: Bun resolves a bin's symlink, so `process.argv[1]` is the
+real path for both. The alias goes in 1.0.0, a tracked issue.
 
 Both packages installed globally would claim the `zapara` bin. The README's
 install section says to run `bun remove -g @drakulavich/zapara` first, and
@@ -101,9 +102,9 @@ the new name if npmjs.com allows it before the first version, or publish
   stays the same. A test that asserted `.claude/zapara` asserts
   `.claude/cogload`.
 - `tests/cli/package.test.ts` pins the package name and both `bin` entries.
-- The CLI run through a `zapara` symlink to `src/cli/index.ts`: `status`
-  prints the same stdout as `cogload status` and the notice line on stderr;
-  run as `cogload`, stderr is empty.
+- `src/cli/zapara.ts`, also through a symlink named `zapara`, prints the
+  same stdout as `src/cli/index.ts` and the notice line on stderr; run as
+  `cogload`, stderr is empty.
 - `git grep -i zapara` outside `docs/superpowers/specs/`, `CHANGELOG.md`,
   the README's "Where it comes from" and install note, and the alias (its
   `bin` entry, the notice and their tests) finds nothing.
