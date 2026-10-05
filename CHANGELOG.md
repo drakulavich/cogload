@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- The card draws heating orange and fried red, as the CLI and the band do,
+  instead of violet and pink.
 - The `cognitive-load` band draws while Calm too, `● Calm · streak 7m`, so
   the plugin no longer looks switched off in a quiet hour; it still stays away
   when the last hour holds no session. The welcome toast reads

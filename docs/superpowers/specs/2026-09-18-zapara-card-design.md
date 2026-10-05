@@ -254,8 +254,8 @@ the sentence and the numbers; every small label is JetBrains Mono.
 | Repo link | at (60, 566), two lines: JetBrains Mono 11 px uppercase `#6b6b76`, letter-spacing 1.5 px, `GET YOURS`; 8 px below, JetBrains Mono 500 17 px in the character's light accent, letter-spacing −0.2 px: `github.com/drakulavich/zapara` |
 | Source line | right-aligned to x = 1140 at y = 588, JetBrains Mono 12 px `#a1a1aa`: `computed locally from your Claude Code transcripts · nothing leaves your machine` |
 
-Level colours: calm `#7ee2a3`, warming `#fbd77a`, heating `#c4a0ff`, fried
-`#ff6b8f`. Each character has an accent for the streaks and a light accent for
+Level colours: calm `#7ee2a3`, warming `#fbd77a`, heating `#ff8700`, fried
+`#ff4d4d` (heating and fried follow the CLI and the band since #134). Each character has an accent for the streaks and a light accent for
 the repo link: Conductor `#8b5cf6` / `#c4b5fd`, Supervisor `#22d3ee` /
 `#a5f3fc`, Marathoner `#f59e0b` / `#fde68a`, Night Owl `#60a5fa` / `#bfdbfe`.
 
