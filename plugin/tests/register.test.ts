@@ -289,10 +289,10 @@ describe('band', () => {
   })
 
   for (const surface of SURFACES) {
-    test(`no band while Calm (${surface})`, async ($, on) => {
-      engine(on, [{ stdout: line({ level: 'Calm', index: 20 }) }])
+    test(`a band while Calm (${surface})`, async ($, on) => {
+      engine(on, [{ stdout: line({ level: 'Calm', index: 20, streakMin: 0 }) }])
       await start($)
-      expect(await band($, {}, surface)).toBe(ENGINE_BAND)
+      expect(await band($, {}, surface)).toBe('● Calm')
     })
   }
 
@@ -728,7 +728,7 @@ describe('/cogload', () => {
   })
 })
 
-const WELCOME = 'cognitive-load shows your load above the prompt when it rises above Calm.'
+const WELCOME = 'cognitive-load shows your load above the prompt.'
 const MISSING = "cognitive-load needs cogload on Claude Code's PATH: bun add -g @drakulavich/cogload"
 
 describe('first meeting', () => {
