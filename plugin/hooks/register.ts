@@ -16,7 +16,6 @@ const REST_MS = 10 * 60_000 // GAP_MS in src/lib/metrics
 const TOAST_GAP_MS = 2100
 const HELD: readonly string[] = ['composer', 'bridge']
 const WEEK_MS = 7 * 24 * 60 * 60_000
-const KEEP_OVERRIDES_MS = 2 * WEEK_MS
 const OVERRIDE = /^override:(.*)$/
 const HINT = ' To go on now, start the prompt with "override: <reason>".'
 const SHORT = 'An override needs a reason of three words or more.'
@@ -96,9 +95,9 @@ const overridesSince = async ($: EngineInterface, since: number): Promise<Overri
   return Array.isArray(list) ? (list as Override[]).filter(o => o.at > since) : []
 }
 
-const when = (ms: number): string => {
-  const [weekday, month, day] = new Date(ms).toDateString().split(' ')
-  return `${weekday} ${day} ${month} ${clockTime(ms)}`
+const restsSince = async ($: EngineInterface, since: number): Promise<number[]> => {
+  const list = await $.store.get('rests')
+  return Array.isArray(list) ? (list as number[]).filter(at => at > since) : []
 }
 
 const streakStart = (s: Status): number => Date.parse(s.asOf) - s.streakMin * 60_000
@@ -111,8 +110,10 @@ const streakWouldRest = async ($: EngineInterface, s: Status): Promise<boolean> 
 const startRestIfDue = async ($: EngineInterface, s: Status) => {
   if (s.streakMin < REST_AFTER_MIN && s.level !== 'Fried') return
   if (!(await streakWouldRest($, s))) return
-  const until = (await $.clock.now()) + REST_MS
+  const now = await $.clock.now()
+  const until = now + REST_MS
   await $.store.set('restUntil', until)
+  await $.store.set('rests', [...(await restsSince($, now - WEEK_MS)), now])
   await $.store.set('spent', streakStart(s))
   await toast($, `Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`)
 }
@@ -161,7 +162,6 @@ export const register: Register = on => {
   // Not awaited: the engine holds the turn until these hooks return.
   on('session.start', async ($, e, next) => {
     const result = await next(e)
-    await $.command.register({ name: 'overrides', description: 'Rest overrides of the last 14 days, with their reasons' })
     toastOnce($, 'welcomed', WELCOME)
       .catch(() => {})
       .then(() => refresh($))
@@ -178,12 +178,6 @@ export const register: Register = on => {
     return result
   })
 
-  on('command.run', { command: 'overrides' }, async $ => {
-    const list = await overridesSince($, (await $.clock.now()) - KEEP_OVERRIDES_MS)
-    if (list.length === 0) return { text: 'No overrides in 14 days.' }
-    return { text: list.reverse().map(o => `${when(o.at)}  ${o.reason}`).join('\n') }
-  })
-
   on('prompt.submit', async ($, e, next) => {
     if (!HELD.includes(e.origin.kind)) return next(e)
     const now = await $.clock.now()
@@ -194,7 +188,7 @@ export const register: Register = on => {
     const reason = override?.[1].trim() ?? ''
     if (reason.split(/\s+/).length >= 3) {
       await $.store.delete('restUntil')
-      await $.store.set('overrides', [...(await overridesSince($, now - KEEP_OVERRIDES_MS)), { at: now, reason }])
+      await $.store.set('overrides', [...(await overridesSince($, now - WEEK_MS)), { at: now, reason }])
       const text = body.join('\n').trim()
       return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
     }

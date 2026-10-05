@@ -33,14 +33,27 @@ type Run = Partial<Answer> | 'not found' | 'timeout' | Promise<Answer> | (() => 
 
 let clock: ReturnType<typeof mock.clock>
 let runCount = 0
+let commands: string[] = []
 
 // The engine beneath the plugin: each queued answer is one `cogload status` run.
 const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [], store: Record<string, unknown> = {}) => {
   clock = mock.clock(on, { now: NOW })
   runCount = 0
-  mock.store(on, store)
+  commands = []
+  on('store.get', (_$, e) => ({ value: store[e.key] }))
+  on('store.set', (_$, e) => {
+    store[e.key] = e.value
+    return { value: undefined }
+  })
+  on('store.delete', (_$, e) => {
+    delete store[e.key]
+    return { value: undefined }
+  })
   on('prompt.submit', (_$, e) => ({ text: e.text }))
-  on('command.register', (_$, e) => ({ value: { command: e.name } }))
+  on('command.register', (_$, e) => {
+    commands.push(e.name)
+    return { value: { command: e.name } }
+  })
   on('ui.toast', (_$, e) => {
     toasts.push(e.text)
     return { value: undefined }
@@ -571,30 +584,34 @@ describe('override', () => {
   })
 })
 
-const when = (ms: number) => {
-  const [weekday, month, day] = new Date(ms).toDateString().split(' ')
-  return `${weekday} ${day} ${month} ${hhmm(ms)}`
-}
-
-describe('/overrides', () => {
-  test('lists the last 14 days, newest first, with reasons', async ($, on) => {
-    engine(on, [], [], [], {
-      overrides: [
-        { at: NOW - 15 * DAY_MS, reason: 'too old to list' },
-        { at: NOW - 9 * DAY_MS, reason: 'deploy went wrong' },
-        { at: NOW - 2 * DAY_MS, reason: 'prod is down, fixing it' },
-      ],
-    })
+describe('store', () => {
+  test('a started rest adds its start to rests and drops one eight days old', async ($, on) => {
+    const store: Record<string, unknown> = { rests: [NOW - 8 * DAY_MS, NOW - 6 * DAY_MS] }
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store)
     await start($)
-    expect(await $.command.run({ command: 'overrides' })).toEqual({
-      text: `${when(NOW - 2 * DAY_MS)}  prod is down, fixing it\n${when(NOW - 9 * DAY_MS)}  deploy went wrong`,
-    })
+    expect(store.rests).toEqual([NOW - 6 * DAY_MS, NOW])
   })
 
-  test('says so when there are none', async ($, on) => {
-    engine(on, [])
+  test('an override drops the ones older than seven days', async ($, on) => {
+    const store: Record<string, unknown> = {
+      overrides: [
+        { at: NOW - 8 * DAY_MS, reason: 'old one here' },
+        { at: NOW - 6 * DAY_MS, reason: 'deploy went wrong' },
+      ],
+    }
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store)
     await start($)
-    expect(await $.command.run({ command: 'overrides' })).toEqual({ text: 'No overrides in 14 days.' })
+    await typed($, 'override: prod is down')
+    expect(store.overrides).toEqual([
+      { at: NOW - 6 * DAY_MS, reason: 'deploy went wrong' },
+      { at: NOW, reason: 'prod is down' },
+    ])
+  })
+
+  test('/overrides is not registered', async ($, on) => {
+    engine(on, [{ stdout: line() }])
+    await start($)
+    expect(commands).not.toContain('overrides')
   })
 })
 
