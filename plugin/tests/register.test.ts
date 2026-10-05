@@ -308,6 +308,37 @@ describe('rest', () => {
     })
   }
 
+  test('a composer prompt dropped by the rest goes back into the box', async ($, on) => {
+    const fills: unknown[] = []
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    on('prompt.fill', (_$, e) => {
+      fills.push({ text: e.text, mode: e.mode })
+      return { isFilled: true }
+    })
+    await start($)
+    await typed($, 'next task\nand more')
+    await clock.advance(0)
+    expect(fills).toEqual([{ text: 'next task\nand more', mode: 'replace' }])
+  })
+
+  for (const [what, prompt] of [
+    ['a bridge prompt', ($: Engine) => typed($, 'next task', 'bridge')],
+    ['an override', ($: Engine) => typed($, 'override: prod is down')],
+  ] as const) {
+    test(`${what} does not fill the box`, async ($, on) => {
+      const fills: string[] = []
+      engine(on, [{ stdout: line({ streakMin: 40 }) }])
+      on('prompt.fill', (_$, e) => {
+        fills.push(e.text)
+        return { isFilled: true }
+      })
+      await start($)
+      await prompt($)
+      await clock.advance(0)
+      expect(fills).toEqual([])
+    })
+  }
+
   for (const origin of [
     { kind: 'peer' },
     { kind: 'task-notification' },
