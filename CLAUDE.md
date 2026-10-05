@@ -22,3 +22,6 @@ confuses you, add one line under Surprises. The design is in
 
 - A PTY merges stdout and stderr. To test one stream in a terminal, send the
   other elsewhere with `runHalfTerminal` (`tests/cli/card-cli.test.ts`).
+- Every `claude --plugin-dir` run shares one plugin store (`<name>@inline`),
+  so a scenario inherits the last run's rest and `taught`. Start each with
+  `CLAUDE_CODE_PLUGIN_CACHE_DIR=$(mktemp -d)`.
