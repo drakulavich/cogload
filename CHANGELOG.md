@@ -5,6 +5,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- `/cogload` in the `cognitive-load` plugin says what drives the hour's load,
+  in counts: `Heating 80 this hour, at the cap: 16 decisions and 13 context
+  switches, 32 prompts, a 57m streak.`, then the week's rests and overrides
+  with the newest reason. It replaces `/overrides`, and the plugin now keeps
+  overrides 7 days instead of 14.
+
 ### Changed
 - The `cognitive-load` band starts with a dot in the level's colour,
   `● Heating`, in the terminal and the Desktop Code tab, whose proportional
