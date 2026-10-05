@@ -11,11 +11,13 @@ const COLOR: Record<Level, string> = { Calm: 'green', Warming: 'yellow', Heating
 const NARROW = 50
 const CLOCK_SKEW_MS = 60_000
 const REST_AFTER_MIN = 40 // NORMS.streakMin in src/lib/metrics/score.ts
+const WARN_AFTER_MIN = 35
 const REST_MS = 10 * 60_000 // GAP_MS in src/lib/metrics
 const HELD: readonly string[] = ['composer', 'bridge']
 const WEEK_MS = 7 * 24 * 60 * 60_000
 const KEEP_OVERRIDES_MS = 2 * WEEK_MS
 const OVERRIDE = /^override:(.*)$/
+const HINT = ' To go on now, start the prompt with "override: <reason>".'
 
 type Override = { at: number; reason: string }
 
@@ -83,14 +85,19 @@ const when = (ms: number): string => {
   return `${weekday} ${day} ${month} ${clockTime(ms)}`
 }
 
+const streakStart = (s: Status): number => Date.parse(s.asOf) - s.streakMin * 60_000
+
+const streakWouldRest = async ($: EngineInterface, s: Status): Promise<boolean> => {
+  const spent = await $.store.get('spent')
+  return typeof spent !== 'number' || Math.abs(streakStart(s) - spent) > REST_MS
+}
+
 const startRestIfDue = async ($: EngineInterface, s: Status) => {
   if (s.streakMin < REST_AFTER_MIN && s.level !== 'Fried') return
-  const streakStart = Date.parse(s.asOf) - s.streakMin * 60_000
-  const spent = await $.store.get('spent')
-  if (typeof spent === 'number' && Math.abs(streakStart - spent) <= REST_MS) return
+  if (!(await streakWouldRest($, s))) return
   const until = (await $.clock.now()) + REST_MS
   await $.store.set('restUntil', until)
-  await $.store.set('spent', streakStart)
+  await $.store.set('spent', streakStart(s))
   await $.ui.toast(`Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`)
 }
 
@@ -164,10 +171,11 @@ export const register: Register = on => {
       const text = body.join('\n').trim()
       return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
     }
-    if (e.origin.kind === 'composer') await $.prompt.fill({ text: e.text, mode: 'replace' }).catch(() => {})
-    return {
-      drop: `Rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min). Start with "override: <reason>" to go on.`,
-    }
+    const isComposer = e.origin.kind === 'composer'
+    if (isComposer) await $.prompt.fill({ text: e.text, mode: 'replace' }).catch(() => {})
+    const isTaught = (await $.store.get('taught')) === true
+    if (!isTaught) await $.store.set('taught', true)
+    return { drop: `Rest until ${clockTime(until)}.${isComposer ? ' Your prompt is saved.' : ''}${isTaught ? '' : HINT}` }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -175,9 +183,12 @@ export const register: Register = on => {
     if (e.props.hasSurvey || s === null || s.index === null || s.level === null) return next(e)
     const now = await $.clock.now()
     const until = await restUntil($, now)
-    if (until === null && s.level === 'Calm') return next(e)
+    const isWarning =
+      until === null && s.streakMin >= WARN_AFTER_MIN && s.streakMin < REST_AFTER_MIN && (await streakWouldRest($, s))
+    if (until === null && !isWarning && s.level === 'Calm') return next(e)
     const parts: string[] = []
     if (until !== null) parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`)
+    else if (isWarning) parts.push(`rest in ${REST_AFTER_MIN - s.streakMin} min`)
     else if (e.props.bodyColumns >= NARROW) {
       if (s.peak !== null) parts.push(`peak ${s.peak}`)
       if (s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
