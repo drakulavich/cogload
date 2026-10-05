@@ -8,8 +8,8 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 - The `cognitive-load` band warns before a rest: from a 35-minute streak it
   says `rest in 5 min` and counts down. A held prompt says
-  `Rest until 14:32. Your prompt is saved.` (from a link,
-  `Rest until 14:32.`), and only the first one after install says how to
+  `Rest until 14:32. Your prompt is saved.` (from Remote
+  Control, `Rest until 14:32.`), and only the first one after install says how to
   override.
 - The `cognitive-load` band colours only the level, `▓ Heating 68`, and
   dims the rest of the line. Heating is orange in the band and in the CLI's
