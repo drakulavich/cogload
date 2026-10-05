@@ -3,7 +3,7 @@ import { levelOf } from "../metrics/index.ts";
 import type { Day, HourBucket, Level } from "../types.ts";
 
 const GLYPH: Record<Level, string> = { Calm: "░", Warming: "▒", Heating: "▓", Fried: "█" };
-const ANSI: Record<Level, string> = { Calm: "32", Warming: "33", Heating: "35", Fried: "31" };
+const ANSI: Record<Level, string> = { Calm: "32", Warming: "33", Heating: "38;5;208", Fried: "31" };
 const LEVEL_NAME: Record<Level, string> = { Calm: "calm", Warming: "warming", Heating: "heating", Fried: "fried" };
 const LEVELS: Level[] = ["Calm", "Warming", "Heating", "Fried"];
 const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
