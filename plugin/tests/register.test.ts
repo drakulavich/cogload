@@ -296,8 +296,15 @@ describe('band', () => {
     })
   }
 
+  test('Calm is success', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 37, level: 'Calm', index: 20 }) }])
+    await start($)
+    const ui = await mount($)
+    expect(await ui.find({ type: 'Text', text: '● Calm' })).toMatchObject({ props: { color: 'success' } })
+  })
+
   for (const [level, color] of [
-    ['Warming', 'yellow'],
+    ['Warming', 'warning'],
     ['Heating', '#ff8700'],
     ['Fried', 'red'],
   ] as const) {

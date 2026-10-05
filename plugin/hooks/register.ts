@@ -7,7 +7,7 @@ const status = atom({ plugin: 'cognitive-load', key: 'status' } as const, null)
 const lastToast = atom({ plugin: 'cognitive-load', key: 'lastToast' } as const, 0)
 
 const LEVELS = ['Calm', 'Warming', 'Heating', 'Fried'] as const
-const COLOR: Record<Level, string> = { Calm: 'green', Warming: 'yellow', Heating: '#ff8700', Fried: 'red' }
+const COLOR: Record<Level, string> = { Calm: 'success', Warming: 'warning', Heating: '#ff8700', Fried: 'red' }
 const NARROW = 50
 const CLOCK_SKEW_MS = 60_000
 const REST_AFTER_MIN = 40 // NORMS.streakMin in src/lib/metrics/score.ts
