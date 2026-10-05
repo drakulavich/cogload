@@ -5,6 +5,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- JSON and tables written to a pipe arrive whole. They stopped at 64 KiB, so
+  `cogload | jq` failed on an ordinary week; a 90-day grid now comes through
+  in full.
+
 ### Added
 - When `cogload` is not on Claude Code's `PATH`, the `cognitive-load` plugin
   starts `~/.bun/bin/cogload`, so a Homebrew Bun or the Desktop app opened

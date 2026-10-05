@@ -42,7 +42,8 @@ async function main(): Promise<number> {
 }
 
 export function start(): void {
-  main().then((code) => process.exit(code), (e: unknown) => {
+  // exitCode, not exit(): exit() drops output still queued for a pipe.
+  main().then((code) => { process.exitCode = code; }, (e: unknown) => {
     if (e instanceof HelpRequested) { console.log(USAGE); process.exit(0); }
     if (e instanceof VersionRequested) {
       try { console.log(version()); process.exit(0); }
