@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- The `cognitive-load` band shows the level and the streak,
+  `▓ Heating · streak 20m`; the index, peak and active time stay in
+  `cogload`. The plugin greets a new install with one toast, says once when
+  `cogload` is not on Claude Code's `PATH`, and answers an override with
+  a reason under three words with
+  `An override needs a reason of three words or more.`
 - The `cognitive-load` band warns before a rest: from a 35-minute streak it
   says `rest in 5 min` and counts down. A held prompt says
   `Rest until 14:32. Your prompt is saved.` (from Remote
