@@ -7,7 +7,7 @@ const status = atom({ plugin: 'cognitive-load', key: 'status' } as const, null)
 
 const LEVELS = ['Calm', 'Warming', 'Heating', 'Fried'] as const
 const GLYPH: Record<Level, string> = { Calm: '░', Warming: '▒', Heating: '▓', Fried: '█' }
-const COLOR: Record<Level, string> = { Calm: 'green', Warming: 'yellow', Heating: 'magenta', Fried: 'red' }
+const COLOR: Record<Level, string> = { Calm: 'green', Warming: 'yellow', Heating: '#ff8700', Fried: 'red' }
 const NARROW = 50
 const CLOCK_SKEW_MS = 60_000
 const REST_AFTER_MIN = 40 // NORMS.streakMin in src/lib/metrics/score.ts
@@ -176,7 +176,7 @@ export const register: Register = on => {
     const now = await $.clock.now()
     const until = await restUntil($, now)
     if (until === null && s.level === 'Calm') return next(e)
-    const parts = [`${GLYPH[s.level]} ${s.level} ${s.index}`]
+    const parts: string[] = []
     if (until !== null) parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`)
     else if (e.props.bodyColumns >= NARROW) {
       if (s.peak !== null) parts.push(`peak ${s.peak}`)
@@ -185,7 +185,9 @@ export const register: Register = on => {
     }
     const overrides = (await overridesSince($, now - WEEK_MS)).length
     if (overrides > 0) parts.push(`overrides this week: ${overrides}`)
-    const { Text } = $.ui.resolve(e)
-    return Text({ color: COLOR[s.level], children: parts.join(' · ') })
+    const { Box, Text } = $.ui.resolve(e)
+    const head = Text({ color: COLOR[s.level], children: `${GLYPH[s.level]} ${s.level} ${s.index}` })
+    if (parts.length === 0) return head
+    return Box({ children: [head, Text({ dimColor: true, children: parts.map(p => ` · ${p}`).join('') })] })
   })
 }

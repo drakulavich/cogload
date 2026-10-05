@@ -92,7 +92,7 @@ describe("week grid", () => {
   test("color mode wraps glyphs in ANSI codes and nothing else changes", () => {
     const colored = renderWeek(days, true);
     expect(colored).toContain("\x1b[31m█\x1b[0m");
-    expect(colored.replace(/\x1b\[\d+m/g, "")).toBe(text);
+    expect(colored.replace(/\x1b\[[\d;]+m/g, "")).toBe(text);
   });
 
   test("color mode paints the peak with the level its index falls in", () => {
@@ -117,6 +117,7 @@ describe("week grid", () => {
     expect(coloredLines[9]).toMatch(/^\x1b\[2m/);
     expect(coloredLines[9]).toMatch(/\x1b\[0m$/);
     expect(coloredLines[9]).toContain("\x1b[32m░\x1b[0m\x1b[2m");
+    expect(coloredLines[9]).toContain("\x1b[38;5;208m▓\x1b[0m\x1b[2m");
     expect(coloredLines[10]).toBe("\x1b[2m  21h10 active   323 prompts   0 reports   86 decisions   5 sessions at once\x1b[0m");
   });
 

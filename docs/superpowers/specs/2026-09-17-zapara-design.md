@@ -225,7 +225,7 @@ Mon 14/09    ·  ·  ·  ·  ·  ·  ·  ·  ░  ▒  ▒  ▓  ▓  █  █  
 ```
 
 Cell glyphs by level: `·` no activity, `░` Calm, `▒` Warming, `▓` Heating, `█`
-Fried. In a TTY the glyphs are colored green / yellow / magenta / red; in a pipe or
+Fried. In a TTY the glyphs are colored green / yellow / orange / red; in a pipe or
 with `--no-color` / `NO_COLOR` they are plain. Below the grid, dimmed in a TTY: a
 legend line (the four level glyphs and names, no ranges; the ranges are in
 `--help`) and one totals line (active time, prompts, reports, decisions, sessions

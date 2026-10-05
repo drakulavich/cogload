@@ -256,7 +256,7 @@ describe('band', () => {
 
   for (const [level, glyph, color] of [
     ['Warming', '▒', 'yellow'],
-    ['Heating', '▓', 'magenta'],
+    ['Heating', '▓', '#ff8700'],
     ['Fried', '█', 'red'],
   ] as const) {
     test(`${level} is ${glyph} in ${color}`, async ($, on) => {
@@ -266,6 +266,16 @@ describe('band', () => {
       expect(await ui.find({ type: 'Text', text: `${glyph} ${level} 50` })).toMatchObject({ props: { color } })
     })
   }
+
+  test('only the level is coloured; the rest of the line is dim', async ($, on) => {
+    engine(on, [{ stdout: line() }])
+    await start($)
+    const ui = await mount($)
+    expect(await ui.find({ type: 'Text', text: '▓ Heating 68' })).toMatchObject({ props: { color: '#ff8700' } })
+    const tail = await ui.find({ type: 'Text', text: ' · peak 81 · streak 20m · active 6h15' })
+    expect(tail).toMatchObject({ props: { dimColor: true } })
+    expect(tail?.props).not.toHaveProperty('color')
+  })
 })
 
 const REST_MS = 10 * 60_000
