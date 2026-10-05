@@ -88,7 +88,8 @@ the output look the same with or without the fallback.
 6. In 1 to 5, no toast, command output or debug log line contains `HOME`'s
    value.
 7. The fallback call carries `PATH` = `<HOME>/.bun/bin:<PATH>`, or
-   `<HOME>/.bun/bin` alone when `PATH` is unset.
+   `<HOME>/.bun/bin` alone when `PATH` is unset or empty (an empty entry would
+   add the working directory).
 
 User scenarios, tmux, `PATH` without `cogload`, `HOME` a temporary
 directory holding a stub at `.bun/bin/cogload`:
