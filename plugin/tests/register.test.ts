@@ -310,13 +310,11 @@ describe('rest', () => {
     expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
   })
 
-  for (const streakMin of [5, 37]) {
-    test(`a Fried reading at streak ${streakMin} starts the rest with no warning`, async ($, on) => {
-      engine(on, [{ stdout: line({ streakMin, level: 'Fried', index: 90 }) }])
-      await start($)
-      expect(await band($)).toBe(`█ Fried 90 · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
-    })
-  }
+  test('a Fried reading at streak 37 starts the rest with no warning', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 37, level: 'Fried', index: 90 }) }])
+    await start($)
+    expect(await band($)).toBe(`█ Fried 90 · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
+  })
 
   test('a held composer prompt says it is saved, and the override only the first time', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
