@@ -20,7 +20,7 @@ const WEEK_MS = 7 * 24 * 60 * 60_000
 const OVERRIDE = /^override:(.*)$/
 const HINT = ' To go on now, start the prompt with "override: <reason>".'
 const SHORT = 'An override needs a reason of three words or more.'
-const WELCOME = 'cognitive-load shows your load above the prompt when it rises above Calm.'
+const WELCOME = 'Keep your head cold. The dot above the prompt shows how hot this hour runs.'
 const MISSING = "cognitive-load needs cogload on Claude Code's PATH: bun add -g @drakulavich/cogload"
 const NO_READING = 'cogload gave no reading.'
 
@@ -266,7 +266,6 @@ export const register: Register = on => {
     const until = await restUntil($, now)
     const isWarning =
       until === null && s.streakMin >= WARN_AFTER_MIN && s.streakMin < REST_AFTER_MIN && (await streakWouldRest($, s))
-    if (until === null && !isWarning && s.level === 'Calm') return next(e)
     const parts: string[] = []
     if (until !== null) parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`)
     else if (isWarning) parts.push(`rest in ${REST_AFTER_MIN - s.streakMin} min`)
