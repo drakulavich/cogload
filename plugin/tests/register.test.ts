@@ -33,14 +33,29 @@ type Run = Partial<Answer> | 'not found' | 'timeout' | Promise<Answer> | (() => 
 
 let clock: ReturnType<typeof mock.clock>
 let runCount = 0
+let commands: string[] = []
+let todayRuns: Run[] = []
 
-// The engine beneath the plugin: each queued answer is one `cogload status` run.
+// The engine beneath the plugin: each queued answer is one `cogload status` run, or one `cogload today --json` from todayRuns.
 const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [], store: Record<string, unknown> = {}) => {
   clock = mock.clock(on, { now: NOW })
   runCount = 0
-  mock.store(on, store)
+  commands = []
+  todayRuns = []
+  on('store.get', (_$, e) => ({ value: store[e.key] }))
+  on('store.set', (_$, e) => {
+    store[e.key] = e.value
+    return { value: undefined }
+  })
+  on('store.delete', (_$, e) => {
+    delete store[e.key]
+    return { value: undefined }
+  })
   on('prompt.submit', (_$, e) => ({ text: e.text }))
-  on('command.register', (_$, e) => ({ value: { command: e.name } }))
+  on('command.register', (_$, e) => {
+    commands.push(e.name)
+    return { value: { command: e.name } }
+  })
   on('ui.toast', (_$, e) => {
     toasts.push(e.text)
     return { value: undefined }
@@ -56,9 +71,11 @@ const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [],
     return Text({ children: ENGINE_BAND })
   })
   on('process.run', async (_$, e) => {
-    expect(e.argv).toEqual(['cogload', 'status'])
-    runCount++
-    const run = typeof runs[0] === 'function' ? runs[0]() : runs.shift()
+    const isToday = e.argv[1] === 'today'
+    expect(e.argv).toEqual(isToday ? ['cogload', 'today', '--json'] : ['cogload', 'status'])
+    if (!isToday) runCount++
+    const queue = isToday ? todayRuns : runs
+    const run = typeof queue[0] === 'function' ? queue[0]() : queue.shift()
     if (run === undefined || run === 'not found') return { deny: 'cogload: command not found' }
     if (run === 'timeout') {
       await clock.advance(10_000)
@@ -571,30 +588,159 @@ describe('override', () => {
   })
 })
 
-const when = (ms: number) => {
-  const [weekday, month, day] = new Date(ms).toDateString().split(' ')
-  return `${weekday} ${day} ${month} ${hhmm(ms)}`
-}
-
-describe('/overrides', () => {
-  test('lists the last 14 days, newest first, with reasons', async ($, on) => {
-    engine(on, [], [], [], {
-      overrides: [
-        { at: NOW - 15 * DAY_MS, reason: 'too old to list' },
-        { at: NOW - 9 * DAY_MS, reason: 'deploy went wrong' },
-        { at: NOW - 2 * DAY_MS, reason: 'prod is down, fixing it' },
-      ],
-    })
+describe('store', () => {
+  test('a started rest adds its start to rests and drops one eight days old', async ($, on) => {
+    const store: Record<string, unknown> = { rests: [NOW - 8 * DAY_MS, NOW - 6 * DAY_MS] }
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store)
     await start($)
-    expect(await $.command.run({ command: 'overrides' })).toEqual({
-      text: `${when(NOW - 2 * DAY_MS)}  prod is down, fixing it\n${when(NOW - 9 * DAY_MS)}  deploy went wrong`,
-    })
+    expect(store.rests).toEqual([NOW - 6 * DAY_MS, NOW])
   })
 
-  test('says so when there are none', async ($, on) => {
-    engine(on, [])
+  test('an override drops the ones older than seven days', async ($, on) => {
+    const store: Record<string, unknown> = {
+      overrides: [
+        { at: NOW - 8 * DAY_MS, reason: 'old one here' },
+        { at: NOW - 6 * DAY_MS, reason: 'deploy went wrong' },
+      ],
+    }
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store)
     await start($)
-    expect(await $.command.run({ command: 'overrides' })).toEqual({ text: 'No overrides in 14 days.' })
+    await typed($, 'override: prod is down')
+    expect(store.overrides).toEqual([
+      { at: NOW - 6 * DAY_MS, reason: 'deploy went wrong' },
+      { at: NOW, reason: 'prod is down' },
+    ])
+  })
+
+  test('/overrides is not registered', async ($, on) => {
+    engine(on, [{ stdout: line() }])
+    await start($)
+    expect(commands).not.toContain('overrides')
+  })
+})
+
+const METRICS = {
+  sessions: 1,
+  prompts: 0,
+  reports: 0,
+  outputTokens: 0,
+  interrupts: 0,
+  rejects: 0,
+  questions: 0,
+  plans: 0,
+  modeSwitches: 0,
+  decisions: 0,
+  contextSwitches: 0,
+  activeMin: 60,
+  streakMin: 0,
+  lateNight: false,
+}
+const NO_PARTS = { parallel: 0, pace: 0, supervision: 0, reading: 0, streak: 0, late: 0 }
+
+// `cogload today --json`: the day, with `live` the last sixty minutes.
+const today = (live: Record<string, unknown> | null, parts: Record<string, number> = {}, score = { index: 80, level: 'Heating' }) =>
+  `${JSON.stringify({
+    date: '2026-10-03',
+    peak: 81,
+    mean: 40,
+    activeMin: 375,
+    presence: null,
+    buckets: [],
+    asOf: '2026-10-03T09:59:30.000Z',
+    live: live && { ...METRICS, ...live, score: { ...score, parts: { ...NO_PARTS, ...parts } } },
+  })}\n`
+
+const explain = async ($: Engine, on: On, answer: Run, store: Record<string, unknown> = {}) => {
+  engine(on, [{ stdout: line() }], [], [], { welcomed: true, ...store })
+  todayRuns = [answer]
+  await start($)
+  return (await $.command.run({ command: 'cogload' })).text
+}
+
+describe('/cogload', () => {
+  for (const [part, points, metrics, phrase] of [
+    ['parallel', 25, { sessions: 5 }, '5 sessions at once'],
+    ['pace', 15, { prompts: 32 }, '32 prompts'],
+    ['supervision', 30, { decisions: 16, contextSwitches: 13 }, '16 decisions and 13 context switches'],
+    ['reading', 10, { outputTokens: 81_400 }, '81k output tokens'],
+    ['streak', 10, { streakMin: 57 }, 'a 57m streak'],
+    ['late', 10, { lateNight: true }, 'late at night'],
+  ] as const) {
+    test(`${part} alone at its cap`, async ($, on) => {
+      expect(await explain($, on, { stdout: today(metrics, { [part]: points }) })).toBe(`Heating 80 this hour, at the cap: ${phrase}.`)
+    })
+  }
+
+  test('parts at their cap come heaviest weight first', async ($, on) => {
+    const stdout = today({ prompts: 32, decisions: 16, contextSwitches: 13, streakMin: 57 }, { streak: 10, pace: 15, supervision: 30 })
+    expect(await explain($, on, { stdout })).toBe(
+      'Heating 80 this hour, at the cap: 16 decisions and 13 context switches, 32 prompts, a 57m streak.',
+    )
+  })
+
+  test('with none at its cap, the largest share of its weight', async ($, on) => {
+    const stdout = today({ sessions: 4, decisions: 6, contextSwitches: 12 }, { parallel: 18.8, supervision: 20 }, { index: 45, level: 'Warming' })
+    expect(await explain($, on, { stdout })).toBe('Warming 45 this hour, mostly 4 sessions at once.')
+  })
+
+  test('a tie on share goes to the heavier weight', async ($, on) => {
+    const stdout = today({ prompts: 10, outputTokens: 40_000 }, { pace: 7.5, reading: 5 }, { index: 13, level: 'Calm' })
+    expect(await explain($, on, { stdout })).toBe('Calm 13 this hour, mostly 10 prompts.')
+  })
+
+  test('no live hour', async ($, on) => {
+    expect(await explain($, on, { stdout: today(null) })).toBe('Nothing scored this hour.')
+  })
+
+  test('a live hour with no score', async ($, on) => {
+    expect(await explain($, on, { stdout: today(null).replace('"live":null', `"live":${JSON.stringify({ ...METRICS, score: null })}`) })).toBe(
+      'Nothing scored this hour.',
+    )
+  })
+
+  test("the week's rests and overrides, with the reason", async ($, on) => {
+    const text = await explain($, on, { stdout: today(null) }, {
+      rests: [NOW - 8 * DAY_MS, NOW - 2 * DAY_MS, NOW - DAY_MS],
+      overrides: [
+        { at: NOW - 8 * DAY_MS, reason: 'old one here' },
+        { at: NOW - DAY_MS, reason: 'prod is down, fixing it' },
+      ],
+    })
+    expect(text).toBe('Nothing scored this hour.\nThis week: 2 rests, 1 override ("prod is down, fixing it").')
+  })
+
+  test('two overrides quote the newest reason', async ($, on) => {
+    const text = await explain($, on, { stdout: today(null) }, {
+      overrides: [
+        { at: NOW - 3 * DAY_MS, reason: 'deploy went wrong' },
+        { at: NOW - DAY_MS, reason: 'prod is down' },
+      ],
+    })
+    expect(text).toBe('Nothing scored this hour.\nThis week: 0 rests, 2 overrides ("prod is down").')
+  })
+
+  test('no rests or overrides, one line', async ($, on) => {
+    expect(await explain($, on, { stdout: today(null) }, { rests: [NOW - 8 * DAY_MS] })).toBe('Nothing scored this hour.')
+  })
+
+  test('without cogload, the missing text', async ($, on) => {
+    expect(await explain($, on, 'not found')).toBe(MISSING)
+  })
+
+  for (const [what, run] of [
+    ['exits 1', { exitCode: 1, stdout: today(null), stderr: '/Users/secret/path' }],
+    ['prints what does not parse', { stdout: '{' }],
+    ['times out', 'timeout'],
+  ] as const) {
+    test(`a run that ${what} gives no reading`, async ($, on) => {
+      expect(await explain($, on, run)).toBe('cogload gave no reading.')
+    })
+  }
+
+  test('/cogload is registered', async ($, on) => {
+    engine(on, [{ stdout: line() }])
+    await start($)
+    expect(commands).toContain('cogload')
   })
 })
 

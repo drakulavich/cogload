@@ -11,19 +11,30 @@ const COLOR: Record<Level, string> = { Calm: 'green', Warming: 'yellow', Heating
 const NARROW = 50
 const CLOCK_SKEW_MS = 60_000
 const REST_AFTER_MIN = 40 // NORMS.streakMin in src/lib/metrics/score.ts
+const WEIGHTS = { parallel: 25, pace: 15, supervision: 30, reading: 10, streak: 10, late: 10 } as const // WEIGHTS in src/lib/metrics/score.ts
 const WARN_AFTER_MIN = 35
 const REST_MS = 10 * 60_000 // GAP_MS in src/lib/metrics
 const TOAST_GAP_MS = 2100
 const HELD: readonly string[] = ['composer', 'bridge']
 const WEEK_MS = 7 * 24 * 60 * 60_000
-const KEEP_OVERRIDES_MS = 2 * WEEK_MS
 const OVERRIDE = /^override:(.*)$/
 const HINT = ' To go on now, start the prompt with "override: <reason>".'
 const SHORT = 'An override needs a reason of three words or more.'
 const WELCOME = 'cognitive-load shows your load above the prompt when it rises above Calm.'
 const MISSING = "cognitive-load needs cogload on Claude Code's PATH: bun add -g @drakulavich/cogload"
+const NO_READING = 'cogload gave no reading.'
 
 type Override = { at: number; reason: string }
+type Part = keyof typeof WEIGHTS
+type Live = {
+  sessions: number
+  prompts: number
+  decisions: number
+  contextSwitches: number
+  outputTokens: number
+  streakMin: number
+  score: { index: number; level: Level; parts: Record<Part, number> } | null
+}
 
 const isInt = (v: unknown, min: number, max: number): v is number =>
   Number.isInteger(v) && (v as number) >= min && (v as number) <= max
@@ -86,6 +97,28 @@ const formatMinutes = (min: number): string =>
 
 const clockTime = (ms: number): string => new Date(ms).toTimeString().slice(0, 5)
 
+const PHRASE: Record<Part, (l: Live) => string> = {
+  parallel: l => `${l.sessions} sessions at once`,
+  pace: l => `${l.prompts} prompts`,
+  supervision: l => `${l.decisions} decisions and ${l.contextSwitches} context switches`,
+  reading: l => `${Math.round(l.outputTokens / 1000)}k output tokens`,
+  streak: l => `a ${formatMinutes(l.streakMin)} streak`,
+  late: () => 'late at night',
+}
+const BY_WEIGHT = (Object.keys(WEIGHTS) as Part[]).sort((a, b) => WEIGHTS[b] - WEIGHTS[a])
+
+const hourLine = (live: Live | null | undefined): string => {
+  const score = live?.score
+  if (!live || !score) return 'Nothing scored this hour.'
+  const head = `${score.level} ${score.index} this hour`
+  const capped = BY_WEIGHT.filter(p => score.parts[p] >= WEIGHTS[p])
+  if (capped.length > 0) return `${head}, at the cap: ${capped.map(p => PHRASE[p](live)).join(', ')}.`
+  const top = BY_WEIGHT.reduce((a, b) => (score.parts[b] / WEIGHTS[b] > score.parts[a] / WEIGHTS[a] ? b : a))
+  return `${head}, mostly ${PHRASE[top](live)}.`
+}
+
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
+
 const restUntil = async ($: EngineInterface, now: number): Promise<number | null> => {
   const until = await $.store.get('restUntil')
   return typeof until === 'number' && now < until ? until : null
@@ -96,9 +129,9 @@ const overridesSince = async ($: EngineInterface, since: number): Promise<Overri
   return Array.isArray(list) ? (list as Override[]).filter(o => o.at > since) : []
 }
 
-const when = (ms: number): string => {
-  const [weekday, month, day] = new Date(ms).toDateString().split(' ')
-  return `${weekday} ${day} ${month} ${clockTime(ms)}`
+const restsSince = async ($: EngineInterface, since: number): Promise<number[]> => {
+  const list = await $.store.get('rests')
+  return Array.isArray(list) ? (list as number[]).filter(at => at > since) : []
 }
 
 const streakStart = (s: Status): number => Date.parse(s.asOf) - s.streakMin * 60_000
@@ -111,8 +144,10 @@ const streakWouldRest = async ($: EngineInterface, s: Status): Promise<boolean> 
 const startRestIfDue = async ($: EngineInterface, s: Status) => {
   if (s.streakMin < REST_AFTER_MIN && s.level !== 'Fried') return
   if (!(await streakWouldRest($, s))) return
-  const until = (await $.clock.now()) + REST_MS
+  const now = await $.clock.now()
+  const until = now + REST_MS
   await $.store.set('restUntil', until)
+  await $.store.set('rests', [...(await restsSince($, now - WEEK_MS)), now])
   await $.store.set('spent', streakStart(s))
   await toast($, `Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`)
 }
@@ -126,23 +161,34 @@ const toastOnce = async ($: EngineInterface, key: string, text: string) => {
 const RUN_TIMEOUT_MS = 10_000
 const REFRESH_MS = 60_000
 
+const weekLine = async ($: EngineInterface, now: number): Promise<string | null> => {
+  const rests = (await restsSince($, now - WEEK_MS)).length
+  const overrides = await overridesSince($, now - WEEK_MS)
+  if (rests === 0 && overrides.length === 0) return null
+  const newest = overrides.at(-1)
+  const reason = newest === undefined ? '' : ` ("${newest.reason}")`
+  return `This week: ${plural(rests, 'rest')}, ${plural(overrides.length, 'override')}${reason}.`
+}
+
+const run = async ($: EngineInterface, args: string[]) => {
+  const startedAt = await $.clock.now()
+  try {
+    return await $.process.run(['cogload', ...args], { timeoutMs: RUN_TIMEOUT_MS })
+  } catch {
+    return (await $.clock.now()) - startedAt >= RUN_TIMEOUT_MS ? 'timeout' : 'not found'
+  }
+}
+
 const take = async ($: EngineInterface, s: Status) => {
   await startRestIfDue($, s)
   await update($, status, () => s)
 }
 
 const refresh = async ($: EngineInterface) => {
-  let failure = ''
-  let decoded: Status | null = null
-  const startedAt = await $.clock.now()
-  try {
-    const r = await $.process.run(['cogload', 'status'], { timeoutMs: RUN_TIMEOUT_MS })
-    decoded = r.exitCode === 0 ? decodeStatus(r.stdout, await $.clock.now()) : null
-    failure = r.exitCode === 0 ? 'bad line' : `exit ${r.exitCode}`
-  } catch {
-    failure = (await $.clock.now()) - startedAt >= RUN_TIMEOUT_MS ? 'timeout' : 'not found'
-  }
+  const r = await run($, ['status'])
+  const decoded = typeof r === 'string' || r.exitCode !== 0 ? null : decodeStatus(r.stdout, await $.clock.now())
   if (decoded === null) {
+    const failure = typeof r === 'string' ? r : r.exitCode === 0 ? 'bad line' : `exit ${r.exitCode}`
     $.ui.log(failure, { to: 'debug' })
     if (failure === 'not found') await toastOnce($, 'missingShown', MISSING)
     return
@@ -161,7 +207,7 @@ export const register: Register = on => {
   // Not awaited: the engine holds the turn until these hooks return.
   on('session.start', async ($, e, next) => {
     const result = await next(e)
-    await $.command.register({ name: 'overrides', description: 'Rest overrides of the last 14 days, with their reasons' })
+    await $.command.register({ name: 'cogload', description: "What drives this hour's load, and the week's rests and overrides" })
     toastOnce($, 'welcomed', WELCOME)
       .catch(() => {})
       .then(() => refresh($))
@@ -178,10 +224,16 @@ export const register: Register = on => {
     return result
   })
 
-  on('command.run', { command: 'overrides' }, async $ => {
-    const list = await overridesSince($, (await $.clock.now()) - KEEP_OVERRIDES_MS)
-    if (list.length === 0) return { text: 'No overrides in 14 days.' }
-    return { text: list.reverse().map(o => `${when(o.at)}  ${o.reason}`).join('\n') }
+  on('command.run', { command: 'cogload' }, async $ => {
+    const r = await run($, ['today', '--json'])
+    if (r === 'not found') return { text: MISSING }
+    let day: unknown = null
+    try {
+      if (r !== 'timeout' && r.exitCode === 0) day = JSON.parse(r.stdout)
+    } catch {}
+    if (typeof day !== 'object' || day === null) return { text: NO_READING }
+    const week = await weekLine($, await $.clock.now())
+    return { text: [hourLine((day as { live?: Live | null }).live), ...(week === null ? [] : [week])].join('\n') }
   })
 
   on('prompt.submit', async ($, e, next) => {
@@ -194,7 +246,7 @@ export const register: Register = on => {
     const reason = override?.[1].trim() ?? ''
     if (reason.split(/\s+/).length >= 3) {
       await $.store.delete('restUntil')
-      await $.store.set('overrides', [...(await overridesSince($, now - KEEP_OVERRIDES_MS)), { at: now, reason }])
+      await $.store.set('overrides', [...(await overridesSince($, now - WEEK_MS)), { at: now, reason }])
       const text = body.join('\n').trim()
       return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
     }
