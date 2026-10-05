@@ -1,5 +1,6 @@
 {
   "name": "cogload",
+  "description": "cogload's plugin for Claude Code: your cognitive load above the prompt, and a rest after a long streak",
   "owner": { "name": "Anton Yakutovich" },
   "plugins": [
     {
