@@ -75,7 +75,7 @@ await writeTree(projects, [
 // the sandbox too, because `cogload status` writes `$HOME/.claude/cogload/status.json`:
 // without this, recording the status step would overwrite the status line of whoever is
 // recording, with a snapshot of a day the fixture knows nothing about.
-const wrapper = `#!/bin/bash\nexec env HOME=${shellQuote(dir)} bun ${shellQuote(join(root, "src", "index.ts"))} "$@" --projects ${shellQuote(projects)}\n`;
+const wrapper = `#!/bin/bash\nexec env HOME=${shellQuote(dir)} bun ${shellQuote(join(root, "src", "cli", "index.ts"))} "$@" --projects ${shellQuote(projects)}\n`;
 writeFileSync(join(dir, "bin", "cogload"), wrapper);
 chmodSync(join(dir, "bin", "cogload"), 0o755);
 
