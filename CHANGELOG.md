@@ -13,6 +13,8 @@ All notable changes to this project are documented here. The format follows
   overrides 7 days instead of 14.
 
 ### Changed
+- The `cognitive-load` band no longer counts the week's overrides; `/cogload`
+  does.
 - The `cognitive-load` band starts with a dot in the level's colour,
   `● Heating`, in the terminal and the Desktop Code tab, whose proportional
   font drew `▓` as a dotted block.

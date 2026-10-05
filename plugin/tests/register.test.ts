@@ -257,10 +257,10 @@ describe('band', () => {
     })
   }
 
-  test('the overrides count follows the streak', async ($, on) => {
+  test('an override this week adds nothing to the band', async ($, on) => {
     engine(on, [{ stdout: line() }], [], [], { overrides: [{ at: NOW - DAY_MS, reason: 'prod is down' }] })
     await start($)
-    expect(await band($, { bodyColumns: 120 })).toBe('● Heating · streak 20m · overrides this week: 1')
+    expect(await band($, { bodyColumns: 120 })).toBe('● Heating · streak 20m')
   })
 
   for (const surface of SURFACES) {
@@ -500,12 +500,6 @@ describe('warning', () => {
     await clock.advance(60_000)
     expect(await band($)).toBe('● Heating · rest in 3 min')
   })
-
-  test('the overrides count follows it', async ($, on) => {
-    engine(on, [{ stdout: line({ streakMin: 37 }) }], [], [], { overrides: [{ at: NOW - DAY_MS, reason: 'prod is down' }] })
-    await start($)
-    expect(await band($)).toBe('● Heating · rest in 3 min · overrides this week: 1')
-  })
 })
 
 describe('override', () => {
@@ -522,7 +516,7 @@ describe('override', () => {
     await start($)
     expect(await typed($, 'override: prod is down\nfix the hotfix')).toEqual({ text: 'fix the hotfix' })
     expect(await typed($, 'next')).toEqual({ text: 'next' })
-    expect(await band($)).toBe('● Heating · streak 40m · overrides this week: 1')
+    expect(await band($)).toBe('● Heating · streak 40m')
   })
 
   for (const prompt of ['override: ok\nfix it', 'override:', 'override: prod down']) {
@@ -569,23 +563,6 @@ describe('override', () => {
     expect(await typed($, 'next')).toEqual({ text: 'next' })
   })
 
-  test('the band counts the overrides of the last seven days', async ($, on) => {
-    engine(on, [{ stdout: line() }], [], [], {
-      overrides: [
-        { at: NOW - 8 * DAY_MS, reason: 'old one here' },
-        { at: NOW - 6 * DAY_MS, reason: 'deploy went wrong' },
-        { at: NOW - DAY_MS, reason: 'prod is down' },
-      ],
-    })
-    await start($)
-    expect(await band($, { bodyColumns: 40 })).toBe('● Heating · overrides this week: 2')
-  })
-
-  test('no count with none in seven days', async ($, on) => {
-    engine(on, [{ stdout: line() }], [], [], { overrides: [{ at: NOW - 8 * DAY_MS, reason: 'old one here' }] })
-    await start($)
-    expect(await band($, { bodyColumns: 40 })).toBe('● Heating')
-  })
 })
 
 describe('store', () => {
