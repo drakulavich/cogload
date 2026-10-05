@@ -164,6 +164,7 @@ export const register: Register = on => {
       const text = body.join('\n').trim()
       return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
     }
+    if (e.origin.kind === 'composer') await $.prompt.fill({ text: e.text, mode: 'replace' }).catch(() => {})
     return {
       drop: `Rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min). Start with "override: <reason>" to go on.`,
     }

@@ -21,6 +21,7 @@ What the author sees:
 2. Until 14:32 a prompt typed in any session running the plugin is not sent.
    It is dropped with
    `Rest until 14:32 (7 min). Start with "override: <reason>" to go on.`
+   A prompt typed in the box goes back into it, so nothing has to be retyped.
 3. The band reads `▓ Heating 68 · rest until 14:32`, under 50 columns too.
 4. At 14:32 prompts go through again. Ten minutes without a prompt is
    zapara's gap (`GAP_MS`), so the streak is over and the next starts at 0.
@@ -134,6 +135,7 @@ case asserts what differs with and without the behaviour it pins (CLAUDE.md):
    Warming → none.
 2. Fried with `streakMin` 5 → a rest.
 3. During a rest, `composer` and `bridge` prompts are dropped with the time.
+   A `composer` prompt goes back into the box; a `bridge` prompt does not.
 4. During a rest, `peer`, `task-notification`, `scheduled-trigger` and a
    plugin's own prompt pass.
 5. At `until` + 1 s a `composer` prompt passes.
