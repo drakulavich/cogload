@@ -74,8 +74,9 @@ GitHub redirects the old repository name, so existing clones, the
 1. This repository: every name in the table, in code, tests, README,
    `docs/how-the-numbers-are-made.md`, scripts, the demo tape, CI. The
    README's "Where it comes from" keeps the story of the old name in one
-   sentence. CHANGELOG `## [0.10.0]` says the package, command and directory
-   were renamed and that the cache starts over.
+   sentence. CHANGELOG `## [Unreleased]` says the package, command and
+   directory were renamed and that the cache starts over; the release PR
+   moves it under `## [0.10.0]`, as for every release.
 2. The person renames the repository on GitHub and sets up npm trusted
    publishing for `@drakulavich/cogload` (see Open question).
 3. Release 0.10.0 by tag, as `npm-publish.yml` does today.
