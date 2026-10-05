@@ -49,6 +49,12 @@ The rest's toast keeps its text, index included.
 - "Once per install" is read-then-write on the shared store: two sessions
   starting or failing at the same moment may both show a toast. Accepted,
   as two rest toasts are.
+- Claude Code 2.1.289 drops a plugin's toast that comes within 2000 ms of
+  that plugin's last one (`within 2000ms of the last; dropped` in the debug
+  log; the types do not say so). The plugin spaces its own toasts: one due
+  within 2.1 s of the previous waits for the rest of that time with
+  `$.clock.after`. Without it the missing toast and a first rest's toast are
+  lost right after the welcome.
 
 ## Tech Stack
 
@@ -96,6 +102,9 @@ removed:
    saved sentence; `override:` with nothing after it → the same reply.
 6. A short override as the first held prompt → no hint, and `taught` stays
    unset, so the next ordinary held prompt still carries it.
+7. Welcome, then a failing run at once → the missing toast shows 2.1 s
+   after the welcome, not with it; a rest starting right after the welcome
+   → its toast also waits.
 
 User scenarios, tmux, `CLAUDE_CODE_PLUGIN_CACHE_DIR=$(mktemp -d)`:
 
@@ -116,7 +125,7 @@ User scenarios, tmux, `CLAUDE_CODE_PLUGIN_CACHE_DIR=$(mktemp -d)`:
 ## Definition of Done
 
 - `claude plugin validate plugin` passes; `claude plugin test plugin` passes
-  the updated existing cases and 1 to 6.
+  the updated existing cases and 1 to 7.
 - `bun run check` passes; `git diff main -- src tests` is empty.
 - User scenarios 1 to 3 pass, with captured screens in the PR; scenario 4
   is checked by the person before the announcement.
