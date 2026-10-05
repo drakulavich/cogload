@@ -17,7 +17,7 @@ All notable changes to this project are documented here. The format follows
   `Rest until 14:32. Your prompt is saved.` (from Remote
   Control, `Rest until 14:32.`), and only the first one after install says how to
   override.
-- The `cognitive-load` band colours only the level, `▓ Heating 68`, and
+- The `cognitive-load` band colours only the level, `▓ Heating`, and
   dims the rest of the line. Heating is orange in the band and in the CLI's
   week grid and legend.
 
