@@ -728,7 +728,7 @@ describe('/cogload', () => {
   })
 })
 
-const WELCOME = 'cognitive-load shows your load above the prompt.'
+const WELCOME = 'Keep your head cold. The dot above the prompt shows how hot this hour runs.'
 const MISSING = "cognitive-load needs cogload on Claude Code's PATH: bun add -g @drakulavich/cogload"
 
 describe('first meeting', () => {
