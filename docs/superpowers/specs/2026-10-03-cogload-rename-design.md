@@ -23,6 +23,7 @@ code with at most 3 stars, none about Claude Code.
 | Message prefix | `zapara: …` | `cogload: …` |
 | Plugin marketplace | `zapara` | `cogload` |
 | Plugin | `cognitive-load` 0.3.0 runs `zapara status` | `cognitive-load` 0.4.0 runs `cogload status` |
+| Plugin description and homepage | "Shows zapara's cognitive load index …", `github.com/drakulavich/zapara` | "Shows cogload's …", `github.com/drakulavich/cogload`, in `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` |
 
 The plugin keeps its name: `/plugin install cognitive-load@cogload` reads
 well. The status file's format and `schema` 1 do not change; only its
@@ -114,8 +115,9 @@ the new name if npmjs.com allows it before the first version, or publish
 - `git grep -i zapara` finds only the places named above.
 - `bun pm pack --dry-run` shows `@drakulavich/cogload` with bins `cogload`
   and `zapara`.
-- After `bun add -g @drakulavich/cogload`, both `cogload status` and
-  `zapara status` work, and only the second prints the notice.
+- After `bun add -g @drakulavich/cogload`, the installed `cogload status` and
+  `zapara status` print the same stdout, and their stderr differs only by the
+  notice line, which the second prints.
 - After release: `bunx @drakulavich/cogload@latest status` writes
   `~/.claude/cogload/status.json`; the plugin installed from
   `drakulavich/cogload` draws the band.
