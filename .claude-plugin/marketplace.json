@@ -1,6 +1,6 @@
 {
   "name": "cogload",
-  "description": "Keep your head cold. cogload's plugin for Claude Code: your cognitive load above the prompt, and a rest after a long streak",
+  "description": "Keep your head cold. See when you're running hot in Claude Code, and get pulled away before you fry.",
   "owner": { "name": "Anton Yakutovich" },
   "plugins": [
     {
