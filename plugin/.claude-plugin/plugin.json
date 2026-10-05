@@ -1,7 +1,7 @@
 {
   "name": "cognitive-load",
   "version": "0.6.0",
-  "description": "Shows cogload's cognitive load above the Claude Code prompt",
+  "description": "Your load above the prompt, a heads-up five minutes before you overheat, and a ten-minute break when you do.",
   "author": { "name": "Anton Yakutovich" },
   "homepage": "https://github.com/drakulavich/cogload",
   "license": "MIT",
