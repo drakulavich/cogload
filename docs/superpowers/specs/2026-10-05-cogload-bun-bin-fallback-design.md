@@ -72,10 +72,15 @@ its behaviour is removed:
 1. `cogload` missing, `$HOME/.bun/bin/cogload` answers a reading → the band
    draws; the second call's argv is `[<HOME>/.bun/bin/cogload, 'status']`.
 2. The same for `/cogload`: its two lines come from the fallback.
-3. Both missing → the toast once, `/cogload` prints the toast's text.
-4. `HOME` unset → one call only, then as 3.
-5. The first `cogload` times out, exits 1, or prints a bad line → no second
-   call.
+3. Both missing → exactly two calls, `cogload` then the fallback; the toast
+   once, `/cogload` prints the toast's text.
+4. `HOME` unset → exactly one call, `cogload`; then as 3.
+5. The first `cogload` times out, exits 1, or prints a bad line → exactly
+   one call; the band keeps no reading and the debug log says `timeout`,
+   `exit 1` or `bad line` as today.
+
+Cases 3 to 5 assert the calls made, not only what is shown: the toast and
+the output look the same with or without the fallback.
 6. In 1 to 5, no toast, command output or debug log line contains `HOME`'s
    value.
 
