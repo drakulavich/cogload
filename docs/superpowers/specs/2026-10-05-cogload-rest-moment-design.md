@@ -99,8 +99,9 @@ User scenarios, tmux, stub `cogload` first on `PATH`:
 
 ## Boundaries
 
-- Always: keep every hold path behind `origin.kind`; keep the drop under one
-  line at 80 columns.
+- Always: keep every hold path behind `origin.kind`; keep the drop without
+  the hint, after Claude Code's `Prompt dropped by a hook: `, within 80
+  columns.
 - Ask first: changing 35, 40 or the ten minutes; showing the hint more than
   once.
 - Never: store prompt text; hold anything new.
