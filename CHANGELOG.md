@@ -6,8 +6,11 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- The `cognitive-load` band starts with a dot in the level's colour,
+  `● Heating`, in the terminal and the Desktop Code tab, whose proportional
+  font drew `▓` as a dotted block.
 - The `cognitive-load` band shows the level and the streak,
-  `▓ Heating · streak 20m`; the index, peak and active time stay in
+  `● Heating · streak 20m`; the index, peak and active time stay in
   `cogload`. The plugin greets a new install with one toast, says once when
   `cogload` is not on Claude Code's `PATH`, and answers an override with
   a reason under three words with
@@ -17,7 +20,7 @@ All notable changes to this project are documented here. The format follows
   `Rest until 14:32. Your prompt is saved.` (from Remote
   Control, `Rest until 14:32.`), and only the first one after install says how to
   override.
-- The `cognitive-load` band colours only the level, `▓ Heating`, and
+- The `cognitive-load` band colours only the level, `● Heating`, and
   dims the rest of the line. Heating is orange in the band and in the CLI's
   week grid and legend.
 
