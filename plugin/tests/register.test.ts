@@ -867,33 +867,25 @@ describe('cogload in ~/.bun/bin', () => {
     binRuns = [{ stdout: line() }]
     await start($)
     const text = await band($)
-    expectNoHome([text, ...logs, ...toasts])
+    expectNoHome([text])
     expect(text).toBe('● Heating · streak 20m')
     expect(calls).toEqual([STATUS, [BIN, 'status']])
     expect(toasts).toEqual([])
     expect(logs).toEqual([])
   })
 
-  test('~/.bun/bin goes first on the fallback PATH, so its bun runs the script', async ($, on) => {
-    engine(on, ['not found'], [], [], { welcomed: true }, { HOME, PATH: '/usr/bin:/bin' })
-    binRuns = [{ stdout: line() }]
-    await start($)
-    expect(paths).toEqual([undefined, `${HOME}/.bun/bin:/usr/bin:/bin`])
-  })
-
-  test('with PATH unset, the fallback PATH is ~/.bun/bin alone', async ($, on) => {
-    engine(on, ['not found'], [], [], { welcomed: true })
-    binRuns = [{ stdout: line() }]
-    await start($)
-    expect(paths).toEqual([undefined, `${HOME}/.bun/bin`])
-  })
-
-  test('with PATH empty, the fallback PATH is ~/.bun/bin alone, not the working directory too', async ($, on) => {
-    engine(on, ['not found'], [], [], { welcomed: true }, { HOME, PATH: '' })
-    binRuns = [{ stdout: line() }]
-    await start($)
-    expect(paths).toEqual([undefined, `${HOME}/.bun/bin`])
-  })
+  for (const [what, env, path] of [
+    ['set', { HOME, PATH: '/usr/bin:/bin' }, `${HOME}/.bun/bin:/usr/bin:/bin`],
+    ['unset', { HOME }, `${HOME}/.bun/bin`],
+    ['empty', { HOME, PATH: '' }, `${HOME}/.bun/bin`],
+  ] as const) {
+    test(`with PATH ${what}, the fallback runs with PATH ${path}`, async ($, on) => {
+      engine(on, ['not found'], [], [], { welcomed: true }, env)
+      binRuns = [{ stdout: line() }]
+      await start($)
+      expect(paths).toEqual([undefined, path])
+    })
+  }
 
   test('without cogload on the PATH, /cogload reads from ~/.bun/bin', async ($, on) => {
     const logs: string[] = []
