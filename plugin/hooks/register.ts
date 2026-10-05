@@ -7,7 +7,6 @@ const status = atom({ plugin: 'cognitive-load', key: 'status' } as const, null)
 const lastToast = atom({ plugin: 'cognitive-load', key: 'lastToast' } as const, 0)
 
 const LEVELS = ['Calm', 'Warming', 'Heating', 'Fried'] as const
-const GLYPH: Record<Level, string> = { Calm: '░', Warming: '▒', Heating: '▓', Fried: '█' }
 const COLOR: Record<Level, string> = { Calm: 'green', Warming: 'yellow', Heating: '#ff8700', Fried: 'red' }
 const NARROW = 50
 const CLOCK_SKEW_MS = 60_000
@@ -223,8 +222,7 @@ export const register: Register = on => {
     const overrides = (await overridesSince($, now - WEEK_MS)).length
     if (overrides > 0) parts.push(`overrides this week: ${overrides}`)
     const { Box, Text } = $.ui.resolve(e)
-    const mark = e.surface === 'desktop' ? '●' : GLYPH[s.level]
-    const head = Text({ color: COLOR[s.level], children: `${mark} ${s.level}` })
+    const head = Text({ color: COLOR[s.level], children: `● ${s.level}` })
     if (parts.length === 0) return head
     return Box({ children: [head, Text({ dimColor: true, children: parts.map(p => ` · ${p}`).join('') })] })
   })

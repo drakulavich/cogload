@@ -18,7 +18,7 @@ flowchart LR
   D --> G["grid, day table, JSON"]
   D --> C["card<br/>character, highlights, picture"]
   D --> ST["status.json<br/>the last hour, for a status line"]
-  ST --> CL["cognitive-load band<br/>▓ Heating · streak 20m"]
+  ST --> CL["cognitive-load band<br/>● Heating · streak 20m"]
 ```
 
 The shell is the scan, the CLI, the card's picture step and the status-file
