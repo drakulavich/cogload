@@ -1,7 +1,7 @@
 {
   "name": "cognitive-load",
   "version": "0.6.0",
-  "description": "Your load above the prompt, a heads-up five minutes before you overheat, and a ten-minute break when you do.",
+  "description": "A fuse for your head: it shows the heat, warns you, then trips before you burn out.",
   "author": { "name": "Anton Yakutovich" },
   "homepage": "https://github.com/drakulavich/cogload",
   "license": "MIT",
