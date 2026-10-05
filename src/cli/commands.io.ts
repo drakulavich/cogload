@@ -12,9 +12,9 @@ import type { Args } from "./args.ts";
 export async function table(a: Args, now: Date, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
   const days: Day[] = await report({ projects: a.projects, to: a.to, days: a.days, now }, timing, cache);
   const data = a.command === "day" ? days[0] : days;
-  if (a.json) console.log(renderJson(data!));
-  else if (a.command === "day") console.log(renderDay(days[0]!, { explain: a.explain, color: a.color }));
-  else console.log(renderWeek(days, a.color));
+  const text = a.json ? renderJson(data!) : a.command === "day" ? renderDay(days[0]!, { explain: a.explain, color: a.color }) : renderWeek(days, a.color);
+  // Not console.log: in Bun 1.4.2, once process.stdout is touched (isTTY in parseArgs), console.log into a pipe stops at 64 KiB.
+  process.stdout.write(`${text}\n`);
   return 0;
 }
 
