@@ -18,6 +18,8 @@ const WEEK_MS = 7 * 24 * 60 * 60_000
 const KEEP_OVERRIDES_MS = 2 * WEEK_MS
 const OVERRIDE = /^override:(.*)$/
 const HINT = ' To go on now, start the prompt with "override: <reason>".'
+const WELCOME = 'cognitive-load shows your load above the prompt when it rises above Calm.'
+const MISSING = "cognitive-load needs cogload on Claude Code's PATH: bun add -g @drakulavich/cogload"
 
 type Override = { at: number; reason: string }
 
@@ -101,6 +103,12 @@ const startRestIfDue = async ($: EngineInterface, s: Status) => {
   await $.ui.toast(`Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`)
 }
 
+const toastOnce = async ($: EngineInterface, key: string, text: string) => {
+  if ((await $.store.get(key)) === true) return
+  await $.store.set(key, true)
+  $.ui.toast(text)
+}
+
 const RUN_TIMEOUT_MS = 10_000
 const REFRESH_MS = 60_000
 
@@ -122,6 +130,7 @@ const refresh = async ($: EngineInterface) => {
   }
   if (decoded === null) {
     $.ui.log(failure, { to: 'debug' })
+    if (failure === 'not found') await toastOnce($, 'missingShown', MISSING)
     return
   }
   await $.store.set('reading', decoded)
@@ -139,7 +148,10 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const result = await next(e)
     await $.command.register({ name: 'overrides', description: 'Rest overrides of the last 14 days, with their reasons' })
-    refresh($).catch(() => {})
+    toastOnce($, 'welcomed', WELCOME)
+      .catch(() => {})
+      .then(() => refresh($))
+      .catch(() => {})
     $.clock.every(REFRESH_MS, () => {
       tick($).catch(() => {})
     })

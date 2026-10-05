@@ -315,7 +315,7 @@ const typed = ($: Engine, text: string, kind: 'composer' | 'bridge' = 'composer'
 describe('rest', () => {
   test('a 40-minute streak starts a rest of ten minutes, with one toast', async ($, on) => {
     const toasts: string[] = []
-    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], toasts)
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], toasts, { welcomed: true })
     await start($)
     expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
     expect(toasts).toEqual([`Rest until ${hhmm(NOW + REST_MS)}. Streak 40m, Heating 68.`])
@@ -323,7 +323,7 @@ describe('rest', () => {
 
   test('a 39-minute Warming streak does not', async ($, on) => {
     const toasts: string[] = []
-    engine(on, [{ stdout: line({ streakMin: 39, level: 'Warming', index: 50 }) }], [], toasts)
+    engine(on, [{ stdout: line({ streakMin: 39, level: 'Warming', index: 50 }) }], [], toasts, { welcomed: true })
     await start($)
     expect(await typed($, 'next')).toEqual({ text: 'next' })
     expect(toasts).toEqual([])
@@ -410,7 +410,7 @@ describe('rest', () => {
   test('a streak rests once; a new streak rests again', async ($, on) => {
     const toasts: string[] = []
     let streakStart = NOW - 40 * 60_000
-    engine(on, [live(() => streakStart)], [], toasts)
+    engine(on, [live(() => streakStart)], [], toasts, { welcomed: true })
     await start($)
     await clock.advance(15 * 60_000)
     expect(toasts).toHaveLength(1)
@@ -566,10 +566,54 @@ describe('/overrides', () => {
   })
 })
 
+const WELCOME = 'cognitive-load shows your load above the prompt when it rises above Calm.'
+const MISSING = "cognitive-load needs cogload on Claude Code's PATH: bun add -g @drakulavich/cogload"
+
+describe('first meeting', () => {
+  test('the first session.start shows the welcome toast; a second one does not', async ($, on) => {
+    const toasts: string[] = []
+    engine(on, [{ stdout: line() }, { stdout: line() }], [], toasts)
+    await start($)
+    expect(toasts).toEqual([WELCOME])
+    await start($)
+    expect(toasts).toEqual([WELCOME])
+  })
+
+  test('without cogload, the welcome comes first, then the missing toast', async ($, on) => {
+    const toasts: string[] = []
+    engine(on, ['not found'], [], toasts)
+    await start($)
+    expect(toasts).toEqual([WELCOME, MISSING])
+  })
+
+  test('a run that cannot start shows the missing toast once, and a good run does not reset it', async ($, on) => {
+    const toasts: string[] = []
+    engine(on, ['not found', { stdout: line() }, 'not found'], [], toasts, { welcomed: true })
+    await start($)
+    expect(toasts).toEqual([MISSING])
+    await turn($)
+    await turn($)
+    expect(toasts).toEqual([MISSING])
+  })
+
+  for (const [what, run] of [
+    ['exits 1', { exitCode: 1 }],
+    ['times out', 'timeout'],
+  ] as const) {
+    test(`a run that ${what} shows no missing toast`, async ($, on) => {
+      const toasts: string[] = []
+      engine(on, [run], [], toasts, { welcomed: true })
+      await start($)
+      await clock.advance(0)
+      expect(toasts).toEqual([])
+    })
+  }
+})
+
 describe('every minute', () => {
   test('a streak that reaches 40 minutes between turns starts a rest', async ($, on) => {
     const toasts: string[] = []
-    engine(on, [live(() => NOW - 39 * 60_000)], [], toasts)
+    engine(on, [live(() => NOW - 39 * 60_000)], [], toasts, { welcomed: true })
     await start($)
     expect(await typed($, 'first')).toEqual({ text: 'first' })
     await clock.advance(60_000)
