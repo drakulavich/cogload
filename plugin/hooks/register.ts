@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Level, Status } from '../types'
 
 const status = atom({ plugin: 'cognitive-load', key: 'status' } as const, null)
+const lastToast = atom({ plugin: 'cognitive-load', key: 'lastToast' } as const, 0)
 
 const LEVELS = ['Calm', 'Warming', 'Heating', 'Fried'] as const
 const GLYPH: Record<Level, string> = { Calm: '░', Warming: '▒', Heating: '▓', Fried: '█' }
@@ -13,11 +14,15 @@ const CLOCK_SKEW_MS = 60_000
 const REST_AFTER_MIN = 40 // NORMS.streakMin in src/lib/metrics/score.ts
 const WARN_AFTER_MIN = 35
 const REST_MS = 10 * 60_000 // GAP_MS in src/lib/metrics
+const TOAST_GAP_MS = 2100
 const HELD: readonly string[] = ['composer', 'bridge']
 const WEEK_MS = 7 * 24 * 60 * 60_000
 const KEEP_OVERRIDES_MS = 2 * WEEK_MS
 const OVERRIDE = /^override:(.*)$/
 const HINT = ' To go on now, start the prompt with "override: <reason>".'
+const SHORT = 'An override needs a reason of three words or more.'
+const WELCOME = 'cognitive-load shows your load above the prompt when it rises above Calm.'
+const MISSING = "cognitive-load needs cogload on Claude Code's PATH: bun add -g @drakulavich/cogload"
 
 type Override = { at: number; reason: string }
 
@@ -65,6 +70,18 @@ const decodeStatus = (stdout: string, nowMs: number): Status | null => {
     : null
 }
 
+// Claude Code drops a plugin's toast that comes within 2000 ms of its last one.
+const toast = async ($: EngineInterface, text: string) => {
+  const now = await $.clock.now()
+  let at = now
+  await update($, lastToast, last => {
+    at = Math.max(now, last + TOAST_GAP_MS)
+    return at
+  })
+  if (at === now) $.ui.toast(text)
+  else $.clock.after(at - now, () => $.ui.toast(text))
+}
+
 const formatMinutes = (min: number): string =>
   min < 60 ? `${min}m` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`
 
@@ -98,7 +115,13 @@ const startRestIfDue = async ($: EngineInterface, s: Status) => {
   const until = (await $.clock.now()) + REST_MS
   await $.store.set('restUntil', until)
   await $.store.set('spent', streakStart(s))
-  await $.ui.toast(`Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`)
+  await toast($, `Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`)
+}
+
+const toastOnce = async ($: EngineInterface, key: string, text: string) => {
+  if ((await $.store.get(key)) === true) return
+  await $.store.set(key, true)
+  await toast($, text)
 }
 
 const RUN_TIMEOUT_MS = 10_000
@@ -122,6 +145,7 @@ const refresh = async ($: EngineInterface) => {
   }
   if (decoded === null) {
     $.ui.log(failure, { to: 'debug' })
+    if (failure === 'not found') await toastOnce($, 'missingShown', MISSING)
     return
   }
   await $.store.set('reading', decoded)
@@ -139,7 +163,10 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const result = await next(e)
     await $.command.register({ name: 'overrides', description: 'Rest overrides of the last 14 days, with their reasons' })
-    refresh($).catch(() => {})
+    toastOnce($, 'welcomed', WELCOME)
+      .catch(() => {})
+      .then(() => refresh($))
+      .catch(() => {})
     $.clock.every(REFRESH_MS, () => {
       tick($).catch(() => {})
     })
@@ -164,7 +191,8 @@ export const register: Register = on => {
     const until = await restUntil($, now)
     if (until === null) return next(e)
     const [first, ...body] = e.text.split('\n')
-    const reason = OVERRIDE.exec(first)?.[1].trim() ?? ''
+    const override = OVERRIDE.exec(first)
+    const reason = override?.[1].trim() ?? ''
     if (reason.split(/\s+/).length >= 3) {
       await $.store.delete('restUntil')
       await $.store.set('overrides', [...(await overridesSince($, now - KEEP_OVERRIDES_MS)), { at: now, reason }])
@@ -173,9 +201,11 @@ export const register: Register = on => {
     }
     const isComposer = e.origin.kind === 'composer'
     if (isComposer) await $.prompt.fill({ text: e.text, mode: 'replace' }).catch(() => {})
+    const saved = isComposer ? ' Your prompt is saved.' : ''
+    if (override !== null) return { drop: `${SHORT}${saved}` }
     const isTaught = (await $.store.get('taught')) === true
     if (!isTaught) await $.store.set('taught', true)
-    return { drop: `Rest until ${clockTime(until)}.${isComposer ? ' Your prompt is saved.' : ''}${isTaught ? '' : HINT}` }
+    return { drop: `Rest until ${clockTime(until)}.${saved}${isTaught ? '' : HINT}` }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -189,15 +219,11 @@ export const register: Register = on => {
     const parts: string[] = []
     if (until !== null) parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`)
     else if (isWarning) parts.push(`rest in ${REST_AFTER_MIN - s.streakMin} min`)
-    else if (e.props.bodyColumns >= NARROW) {
-      if (s.peak !== null) parts.push(`peak ${s.peak}`)
-      if (s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
-      parts.push(`active ${formatMinutes(s.activeMin)}`)
-    }
+    else if (e.props.bodyColumns >= NARROW && s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
     const overrides = (await overridesSince($, now - WEEK_MS)).length
     if (overrides > 0) parts.push(`overrides this week: ${overrides}`)
     const { Box, Text } = $.ui.resolve(e)
-    const head = Text({ color: COLOR[s.level], children: `${GLYPH[s.level]} ${s.level} ${s.index}` })
+    const head = Text({ color: COLOR[s.level], children: `${GLYPH[s.level]} ${s.level}` })
     if (parts.length === 0) return head
     return Box({ children: [head, Text({ dimColor: true, children: parts.map(p => ` · ${p}`).join('') })] })
   })

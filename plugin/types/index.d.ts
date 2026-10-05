@@ -14,6 +14,6 @@ export type Status = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'cognitive-load': { status: Status | null }
+    'cognitive-load': { status: Status | null; lastToast: number }
   }
 }
