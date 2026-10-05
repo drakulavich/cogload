@@ -106,7 +106,8 @@ the new name if npmjs.com allows it before the first version, or publish
   same stdout as `src/cli/index.ts` and the notice line on stderr; run as
   `cogload`, stderr is empty.
 - `git grep -i zapara` outside `docs/superpowers/specs/`, `CHANGELOG.md`,
-  the README's "Where it comes from" and install note, and the alias (its
+  the README's "Where it comes from" and its install and marketplace notes,
+  links to the dated spec files (their names keep zapara), and the alias (its
   `bin` entry, the notice and their tests) finds nothing.
 - The plugin's tests expect `["cogload", "status"]`.
 
