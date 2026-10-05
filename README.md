@@ -30,6 +30,8 @@ To keep it, install it with Bun. The same command upgrades it later.
 bun add -g @drakulavich/cogload
 ```
 
+Coming from zapara, run `bun remove -g @drakulavich/zapara` first: both packages claim the `zapara` command. cogload keeps that command until 1.0.0, and it prints one line on stderr saying it is now cogload. cogload starts over in `~/.claude/cogload/`, rebuilding its cache with one full scan; `~/.claude/zapara/` can be deleted once nothing runs zapara.
+
 `cogload` lands in Bun's global bin directory, `~/.bun/bin` unless `BUN_INSTALL_BIN` says otherwise; `bun pm bin -g` prints the one in force. Bun's own installer puts that directory on your PATH; a Homebrew Bun does not, so add it yourself. Then:
 
 ```bash
@@ -183,6 +185,8 @@ Install it from this repository's marketplace, in Claude Code:
 /plugin install cognitive-load@cogload
 ```
 
+Coming from the `zapara` marketplace, remove it first (`/plugin marketplace remove zapara`). The plugin's own store starts over with the new marketplace, so a rest in progress ends and `/overrides` lists nothing until the next override.
+
 The plugin runs `cogload status` when a session starts and after every turn, and reads the load again every minute: from the reading another session of the plugin took less than a minute ago, or from a new run. So `cogload` has to be on the `PATH` Claude Code was started with; a Homebrew Bun leaves `~/.bun/bin` off it. The band is coloured by level, keeps only `▓ Heating 68` when it is under 50 columns wide, and is not drawn when the last sixty minutes are calm or hold no session. When a run fails, the band keeps the last good reading, or stays away if there is none, and the reason goes to Claude Code's debug log (`claude --debug`) as one of `not found`, `exit <code>`, `timeout` or `bad line`. The plugin is not part of the npm package; [its spec](docs/superpowers/specs/2026-10-03-zapara-cognitive-load-plugin-design.md) has the rest.
 
 The plugin also makes you rest. When a reading shows a presence streak of 40 minutes or a Fried hour, it holds every prompt you send, typed, queued or from a link in the transcript, in every session that runs it, for ten minutes: `Rest until 14:32 (7 min). Start with "override: <reason>" to go on.` The rest can start while you read, and the band counts it down, `rest until 14:32 (7 min)`. Ten minutes without a prompt is the gap that ends a streak in cogload, so the next one starts at zero. A streak makes you rest once. A first line `override: <reason>`, the reason at least three words, lifts it until that streak ends and sends what follows it; the band then counts `overrides this week`, and `/overrides` lists the last 14 days with their reasons, for the week's review. Answers to Claude's questions, slash commands, a running turn, and prompts from notifications, other sessions or scheduled tasks are never held. [The rest's spec](docs/superpowers/specs/2026-10-04-zapara-forced-rest-design.md) has the details.
@@ -289,6 +293,8 @@ The index was calibrated before I read that, from the 90th percentile of two wee
 The post and this tool disagree about what to watch. Osmani's signal is the quality of your own review: you have passed your ceiling when your confidence in what you are accepting starts dropping. A transcript cannot see that. It can see how much model output went past you, which is the `out-tok` column and ten of the hundred points, and it can see the shape of the hour around it. The index is a proxy with a known blind spot, and the number is worth something only next to your memory of the hour it scores.
 
 Most of the advice in this area stops at fewer threads, smaller scope and more breaks, with few numbers you can hold yourself to. An hour with a score on it is at least something you can disagree with.
+
+Until 0.10.0 the tool was called zapara, Russian slang for a crunch, which told an English reader nothing.
 
 ---
 

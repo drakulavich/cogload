@@ -8,15 +8,20 @@ All notable changes to this project are documented here. The format follows
 ### Added
 - The `cognitive-load` Claude Code plugin shows the current load above the
   prompt. Install it from this repository's marketplace
-  (`/plugin marketplace add drakulavich/zapara`, then
-  `/plugin install cognitive-load@zapara`); the npm package is unchanged.
+  (`/plugin marketplace add drakulavich/cogload`, then
+  `/plugin install cognitive-load@cogload`); the npm package is unchanged.
 
 ### Changed
+- zapara is now cogload: the package is `@drakulavich/cogload`, the command
+  `cogload`, the data directory `~/.claude/cogload/`, the card
+  `cogload-card.png`, the plugin marketplace `cogload`. The cache starts over
+  with one full scan. Run `bun remove -g @drakulavich/zapara` before installing.
+  A `zapara` command stays until 1.0.0 and says on stderr that it was renamed.
 - The `cognitive-load` plugin holds the prompts you type for ten minutes
   after a 40-minute streak or a Fried hour. `override: <reason>` goes on and
   is counted in the band; `/overrides` lists the reasons of the last 14 days.
   The band is hidden while the last hour is calm.
-- The `cognitive-load` band reads the load every minute, one `zapara status`
+- The `cognitive-load` band reads the load every minute, one `cogload status`
   run a minute across sessions, so a rest starts at the 40th minute even
   between turns, and the band counts the rest down.
 

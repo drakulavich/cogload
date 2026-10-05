@@ -56,7 +56,7 @@ zapara is now cogload; the zapara command goes away in 1.0.0
 stdout is unchanged, so readers of `zapara status` keep working: the plugin
 0.3.0 reads stdout only. A second entry file, not the command's name, tells
 the two apart: Bun resolves a bin's symlink, so `process.argv[1]` is the
-real path for both. The alias goes in 1.0.0, a tracked issue.
+real path for both. The alias goes in 1.0.0, [#113](https://github.com/drakulavich/zapara/issues/113).
 
 Both packages installed globally would claim the `zapara` bin. The README's
 install section says to run `bun remove -g @drakulavich/zapara` first, and
