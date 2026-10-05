@@ -21,19 +21,19 @@ const spawn = (home: string, ...args: string[]): Promise<{ code: number; out: st
   return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(([out, err, code]) => ({ code, out, err }));
 };
 const run = (home: string, ...args: string[]) => spawn(home, "--projects", projects, ...args);
-// The same run, under a umask that would narrow every mode zapara asks for.
+// The same run, under a umask that would narrow every mode cogload asks for.
 const masked = (home: string): Promise<{ code: number; out: string; err: string }> => {
   const p = Bun.spawn(["sh", "-c", 'umask 0277; exec bun "$0" "$@"', CLI, "status", "--projects", projects], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
   return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(([out, err, code]) => ({ code, out, err }));
 };
-const home = () => mkdtemp(join(tmpdir(), "zapara-status-home-"));
-const dirOf = (h: string) => join(h, ".claude", "zapara");
+const home = () => mkdtemp(join(tmpdir(), "cogload-status-home-"));
+const dirOf = (h: string) => join(h, ".claude", "cogload");
 const statusPath = (h: string) => join(dirOf(h), "status.json");
 const tmps = async (h: string) => (await readdir(dirOf(h))).filter((n) => n.endsWith(".tmp"));
 
 beforeAll(async () => {
-  projects = await mkdtemp(join(tmpdir(), "zapara-status-proj-"));
-  cwd = await mkdtemp(join(tmpdir(), "zapara-status-cwd-"));
+  projects = await mkdtemp(join(tmpdir(), "cogload-status-proj-"));
+  cwd = await mkdtemp(join(tmpdir(), "cogload-status-cwd-"));
   const d = utcDay(0);
   await writeTree(projects, [{ path: "-Users-me-proj/t.jsonl", lines: [prompt(`${d}T00:00:00.000Z`, A), assistant(`${d}T00:02:00.000Z`, A)], mtime: `${d}T00:02:00.000Z` }]);
 });
@@ -42,8 +42,8 @@ afterAll(async () => {
   await rm(cwd, { recursive: true, force: true });
 });
 
-describe("zapara status", () => {
-  test("writes one JSON line to ~/.claude/zapara/status.json and prints it", async () => {
+describe("cogload status", () => {
+  test("writes one JSON line to ~/.claude/cogload/status.json and prints it", async () => {
     const h = await home();
     const r = await run(h);
     expect([r.code, r.err]).toEqual([0, ""]);
@@ -101,7 +101,7 @@ describe("zapara status", () => {
     // yet. In the last six minutes of a UTC day the extra session lands on
     // tomorrow, so the two agree for that reason instead and the test still
     // passes; only the mutation goes unnoticed in that window.
-    const tree = await mkdtemp(join(tmpdir(), "zapara-status-future-"));
+    const tree = await mkdtemp(join(tmpdir(), "cogload-status-future-"));
     try {
       const d = utcDay(0);
       const ahead = (minutes: number) => new Date(Date.now() + minutes * 60_000).toISOString();
@@ -132,7 +132,7 @@ describe("zapara status", () => {
     const start = Math.floor(Date.now() / 60_000) * 60_000 - hours * 3_600_000;
     const at = (i: number) => new Date(start + i * 300_000).toISOString();
     const n = hours * 12;
-    const tree = await mkdtemp(join(tmpdir(), "zapara-status-streak-"));
+    const tree = await mkdtemp(join(tmpdir(), "cogload-status-streak-"));
     try {
       await writeTree(tree, [{ path: "-Users-me-proj/t.jsonl", lines: Array.from({ length: n }, (_, i) => prompt(at(i), A)), mtime: at(n - 1) }]);
       const p = Bun.spawn(["bun", CLI, "status", "--projects", tree], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: tz, NO_COLOR: "1", HOME: await home() } });
@@ -198,7 +198,7 @@ describe("zapara status", () => {
     const h = await home();
     await run(h);
     const before = await readFile(statusPath(h), "utf8");
-    const locked = await mkdtemp(join(tmpdir(), "zapara-status-locked-"));
+    const locked = await mkdtemp(join(tmpdir(), "cogload-status-locked-"));
     try {
       await chmod(locked, 0o000);
       const r = await spawn(h, "--projects", locked);
@@ -217,7 +217,7 @@ describe("zapara status", () => {
     const r = await run("");
     expect(r.code).toBe(1);
     expect(r.out).toBe("");
-    expect(r.err).toBe("zapara: cannot write the status file\n");
+    expect(r.err).toBe("cogload: cannot write the status file\n");
   });
 
   test("window flags, --explain and --out are usage errors on status", async () => {
@@ -230,7 +230,7 @@ describe("zapara status", () => {
       [["--out", "x.png"], "--out applies to card only"],
     ] as const) {
       const r = await run(h, ...args);
-      expect([args.join(" "), r.code, r.out, r.err.split("\n")[0]]).toEqual([args.join(" "), 2, "", `zapara: ${msg}`]);
+      expect([args.join(" "), r.code, r.out, r.err.split("\n")[0]]).toEqual([args.join(" "), 2, "", `cogload: ${msg}`]);
     }
   });
 });

@@ -98,7 +98,7 @@ class Foreign extends Error {}
 const replaceable = (e: unknown): boolean =>
   e instanceof Foreign || /^SQLITE_(NOTADB|CORRUPT)/.test(String((e as { code?: unknown } | null)?.code));
 
-// Modes are set on what zapara creates; a mode the person set later is theirs.
+// Modes are set on what cogload creates; a mode the person set later is theirs.
 function connect(path: string): Database {
   // Made 0600 before SQLite sees it: SQLite would create it 0644 less the
   // umask, and gives -wal and -shm the database file's mode.
@@ -141,7 +141,7 @@ export function openCache(env: NodeJS.ProcessEnv): TranscriptCache | null {
     // cannot leave a parent the next level cannot be made in; `connect`
     // creates the database 0600 itself, and SQLite gives its WAL files the
     // database's mode.
-    const dir = join(home, ".claude", "zapara");
+    const dir = join(home, ".claude", "cogload");
     // An existing directory keeps the mode it has.
     for (const d of [join(home, ".claude"), dir]) {
       try {

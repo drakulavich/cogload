@@ -31,7 +31,7 @@ test("the source, the card's fonts and sheet, and the licences ship in the tarba
 });
 
 test("the bin ships", async () => {
-  expect(paths).toContain(JSON.parse(await Bun.file(join(import.meta.dir, "../../package.json")).text()).bin.zapara);
+  expect(paths).toContain(JSON.parse(await Bun.file(join(import.meta.dir, "../../package.json")).text()).bin.cogload);
 });
 
 test("tests, docs, scripts, CI and media do not", () => {

@@ -1,11 +1,11 @@
 {
-  "name": "zapara",
+  "name": "cogload",
   "owner": { "name": "Anton Yakutovich" },
   "plugins": [
     {
       "name": "cognitive-load",
       "source": "./plugin",
-      "description": "Shows zapara's cognitive load index above the Claude Code prompt"
+      "description": "Shows cogload's cognitive load index above the Claude Code prompt"
     }
   ]
 }

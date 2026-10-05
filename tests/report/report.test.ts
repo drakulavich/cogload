@@ -15,7 +15,7 @@ const D = "dddddddd-1111-4111-8111-111111111111";
 // the 3h look-back = 2026-09-13T21:00:00.000Z; every fixture below is built
 // against that fixed cutoff.
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), "zapara-report-"));
+  const dir = await mkdtemp(join(tmpdir(), "cogload-report-"));
   try {
     await fn(dir);
   } finally {

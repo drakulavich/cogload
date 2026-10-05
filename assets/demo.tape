@@ -1,9 +1,9 @@
-# zapara README screencast.
+# cogload README screencast.
 #
 # Recorded against the synthetic fixture in tests/fixtures/busy-week, through
 # scripts/demo-fixture.ts, and never against real transcripts. That is the rule, not a
 # convenience: the recording is published, so every number in a frame must be the
-# fixture's. scripts/demo-fixture.ts builds a throwaway directory whose bin/zapara runs
+# fixture's. scripts/demo-fixture.ts builds a throwaway directory whose bin/cogload runs
 # this checkout with --projects pinned to the fixture, which is what makes that true.
 #
 # assets/demo.mp4 and assets/demo.webp are plain files in git, not LFS, so a clone needs
@@ -17,13 +17,13 @@
 #    Use vhs 0.11.0. Version 0.12.0 exits 0 and writes no file
 #    (https://github.com/charmbracelet/vhs/issues/787). vhs drives a real terminal through
 #    ttyd, so `brew install ttyd` first; without it vhs prints one line and leaves the old
-#    file untouched. TZ=UTC is required: the fixture's timestamps are UTC and zapara
+#    file untouched. TZ=UTC is required: the fixture's timestamps are UTC and cogload
 #    buckets by local time, so any other zone shifts the hours away from the samples
 #    pasted in the README.
 #
 #    Record right after building the sandbox. The status step reads today: the sandbox
 #    carries a session whose last action is four minutes old at build time, which is what
-#    gives `zapara status` a live streak instead of a row of nulls, and it goes stale
+#    gives `cogload status` a live streak instead of a row of nulls, and it goes stale
 #    within the hour. The sandbox is also where `status` writes its file, since the
 #    wrapper sets HOME; the recording cannot touch the status line of whoever records it.
 #
@@ -62,7 +62,7 @@ Set FontSize 22
 # 1. the hero: a week of hourly load as a heatmap
 Ctrl+L
 Sleep 500ms
-Type "zapara --to 2026-09-20"
+Type "cogload --to 2026-09-20"
 Sleep 300ms
 Enter
 Sleep 4s
@@ -70,7 +70,7 @@ Sleep 4s
 # 2. one day, hour by hour
 Ctrl+L
 Sleep 500ms
-Type "zapara 2026-09-14"
+Type "cogload 2026-09-14"
 Sleep 300ms
 Enter
 Sleep 4s
@@ -78,7 +78,7 @@ Sleep 4s
 # 3. the same data as JSON, which is what a pipe gets
 Ctrl+L
 Sleep 500ms
-Type "zapara 2026-09-14 --json | head -c 400"
+Type "cogload 2026-09-14 --json | head -c 400"
 Sleep 300ms
 Enter
 Sleep 2500ms
@@ -86,7 +86,7 @@ Sleep 2500ms
 # 4. the line a status line reads, from the sandbox's own today
 Ctrl+L
 Sleep 500ms
-Type "zapara status"
+Type "cogload status"
 Sleep 300ms
 Enter
 Sleep 3s

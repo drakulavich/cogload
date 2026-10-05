@@ -13,9 +13,9 @@ let cwd: string;
 let home: string;
 
 beforeAll(async () => {
-  root = await mkdtemp(join(tmpdir(), "zapara-verbose-"));
-  cwd = await mkdtemp(join(tmpdir(), "zapara-verbose-cwd-"));
-  home = await mkdtemp(join(tmpdir(), "zapara-verbose-home-"));
+  root = await mkdtemp(join(tmpdir(), "cogload-verbose-"));
+  cwd = await mkdtemp(join(tmpdir(), "cogload-verbose-cwd-"));
+  home = await mkdtemp(join(tmpdir(), "cogload-verbose-home-"));
   await writeTree(root, [
     { path: "-Users-me-proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A), assistant("2026-09-14T13:02:00.000Z", A), bigToolResult("2026-09-14T13:03:00.000Z", A, 300_000)], mtime: "2026-09-14T13:03:00.000Z" },
     { path: "-Users-me-proj/b.jsonl", lines: [prompt("2026-09-14T15:00:00.000Z", A)], mtime: "2026-09-14T15:00:00.000Z" },
@@ -42,7 +42,7 @@ describe("--verbose", () => {
     expect(r.out).toBe(plain.out);
     expect(plain.err).toBe("");
     const lines = r.err.trimEnd().split("\n");
-    expect(lines[0]).toMatch(/^zapara \d+\.\d+\.\d+ · bun \d+\.\d+\.\d+ · \w+ \w+ · \d+ cpus$/);
+    expect(lines[0]).toMatch(/^cogload \d+\.\d+\.\d+ · bun \d+\.\d+\.\d+ · \w+ \w+ · \d+ cpus$/);
     expect(lines.slice(1).map((l) => l.split(" ")[0])).toEqual(["start", "open", "scan", "cache", "read", "analyze", "save", "total"]);
     for (const l of lines.slice(1)) expect(l).toMatch(new RegExp(MS));
   });

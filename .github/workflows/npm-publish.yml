@@ -42,7 +42,7 @@ jobs:
       # The same gate as ci.yml: a tag on a broken commit must not publish.
       - run: bun run check
         env:
-          ZAPARA_REQUIRE_WEBVIEW: "1"
+          COGLOAD_REQUIRE_WEBVIEW: "1"
 
       # Trusted publishing needs npm 11.5.1 or newer, which Node 24 bundles. Nothing is
       # installed from the network into the job that holds the OIDC token.

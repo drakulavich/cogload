@@ -32,7 +32,7 @@ type Run = Partial<Answer> | 'not found' | 'timeout' | Promise<Answer> | (() => 
 let clock: ReturnType<typeof mock.clock>
 let runCount = 0
 
-// The engine beneath the plugin: each queued answer is one `zapara status` run.
+// The engine beneath the plugin: each queued answer is one `cogload status` run.
 const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [], store: Record<string, unknown> = {}) => {
   clock = mock.clock(on, { now: NOW })
   runCount = 0
@@ -54,13 +54,13 @@ const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [],
     return Text({ children: ENGINE_BAND })
   })
   on('process.run', async (_$, e) => {
-    expect(e.argv).toEqual(['zapara', 'status'])
+    expect(e.argv).toEqual(['cogload', 'status'])
     runCount++
     const run = typeof runs[0] === 'function' ? runs[0]() : runs.shift()
-    if (run === undefined || run === 'not found') return { deny: 'zapara: command not found' }
+    if (run === undefined || run === 'not found') return { deny: 'cogload: command not found' }
     if (run === 'timeout') {
       await clock.advance(10_000)
-      return { deny: 'zapara: still running' }
+      return { deny: 'cogload: still running' }
     }
     return {
       value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false, ...(await run) },
@@ -456,7 +456,7 @@ describe('every minute', () => {
     expect(await band($)).not.toContain('rest until')
   })
 
-  test('a tick takes a reading under a minute old instead of running zapara', async ($, on) => {
+  test('a tick takes a reading under a minute old instead of running cogload', async ($, on) => {
     engine(on, [live(() => NOW - 20 * 60_000)])
     await start($)
     await clock.advance(30_000)
@@ -468,7 +468,7 @@ describe('every minute', () => {
     expect(runCount).toBe(3)
   })
 
-  test('a tick runs zapara when no reading is stored', async ($, on) => {
+  test('a tick runs cogload when no reading is stored', async ($, on) => {
     engine(on, ['not found', live(() => NOW - 20 * 60_000)])
     await start($)
     expect(runCount).toBe(1)

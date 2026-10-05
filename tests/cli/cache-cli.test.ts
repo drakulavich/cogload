@@ -16,7 +16,7 @@ let cwd: string;
 const temps: string[] = [];
 
 const temp = async (what: string): Promise<string> => {
-  const d = await mkdtemp(join(tmpdir(), `zapara-cache-${what}-`));
+  const d = await mkdtemp(join(tmpdir(), `cogload-cache-${what}-`));
   temps.push(d);
   return d;
 };
@@ -52,7 +52,7 @@ function hitsOf(err: string): { hits: number; misses: number } {
   if (!m) throw new Error("no cache line with counts");
   return { hits: Number(m[1]), misses: Number(m[2]) };
 }
-const cacheDb = (home: string) => join(home, ".claude", "zapara", "cache.db");
+const cacheDb = (home: string) => join(home, ".claude", "cogload", "cache.db");
 function sql(home: string, statement: string): void {
   const db = new Database(cacheDb(home));
   try { db.run(statement); } finally { db.close(); }
@@ -193,7 +193,7 @@ describe("the transcript cache", () => {
 
   test("a cache.db that is plain text is replaced", async () => {
     const { home, projects } = await setup();
-    await mkdir(join(home, ".claude", "zapara"), { recursive: true });
+    await mkdir(join(home, ".claude", "cogload"), { recursive: true });
     await writeFile(cacheDb(home), "not a db");
     const run1 = await spawn(home, projects, "--verbose");
     const run2 = await spawn(home, projects, "--verbose");
@@ -244,7 +244,7 @@ describe("the transcript cache", () => {
 
   test("a transcript with a session id that is not a UUID is never cached", async () => {
     const { home, projects } = await setup();
-    const marker = "zapara-private-marker";
+    const marker = "cogload-private-marker";
     await writeTree(projects, [{ path: `${DIR}/x.jsonl`, lines: [prompt("2026-09-13T08:00:00.000Z", marker), assistant("2026-09-13T08:05:00.000Z", marker)], mtime: "2026-09-13T08:05:00.000Z" }]);
     await spawn(home, projects);
     const run2 = await spawn(home, projects, "--verbose");
@@ -252,8 +252,8 @@ describe("the transcript cache", () => {
     expect(run2.out).toBe((await uncached(projects)).out);
     expect(bucket(run2.out, "2026-09-13", 8).prompts).toBe(1);
     expect(hitsOf(run2.err)).toEqual({ hits: 3, misses: 1 });
-    const zapara = join(home, ".claude", "zapara");
-    const files = (await Array.fromAsync(new Bun.Glob("cache.db*").scan(zapara))).map((f) => join(zapara, f));
+    const cogload = join(home, ".claude", "cogload");
+    const files = (await Array.fromAsync(new Bun.Glob("cache.db*").scan(cogload))).map((f) => join(cogload, f));
     const bytes = Buffer.concat(await Promise.all(files.map((f) => readFile(f))));
     expect(bytes.includes(Buffer.from(marker))).toBe(false);
   });
@@ -271,11 +271,11 @@ describe("the transcript cache", () => {
     expect(lineOf(run2.err, "cache")).toBe("cache   off");
   });
 
-  test("an unwritable ~/.claude/zapara leaves the run as it was", async () => {
+  test("an unwritable ~/.claude/cogload leaves the run as it was", async () => {
     const { home, projects } = await setup();
     const claude = join(home, ".claude");
-    await mkdir(join(claude, "zapara"), { recursive: true });
-    await chmod(join(claude, "zapara"), 0o500);
+    await mkdir(join(claude, "cogload"), { recursive: true });
+    await chmod(join(claude, "cogload"), 0o500);
     const lockedHome = await temp("home");
     await mkdir(join(lockedHome, ".claude"));
     await chmod(join(lockedHome, ".claude"), 0o500);
@@ -286,23 +286,23 @@ describe("the transcript cache", () => {
         expect([run.code, run.err, run.out]).toEqual([0, "", expected]);
       }
     } finally {
-      await chmod(join(claude, "zapara"), 0o700);
+      await chmod(join(claude, "cogload"), 0o700);
       await chmod(join(lockedHome, ".claude"), 0o700);
     }
   });
 
   test("under an open umask the cache's directories and files are still private", async () => {
-    // zapara no longer narrows the process umask (that reached the card), so the
+    // cogload no longer narrows the process umask (that reached the card), so the
     // cache sets its own modes: umask 000 would otherwise leave 0777 and 0644.
     const { home, projects } = await setup();
     const p = Bun.spawn(["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
     expect(await p.exited).toBe(0);
-    const zapara = join(home, ".claude", "zapara");
+    const cogload = join(home, ".claude", "cogload");
     const mode = async (p: string) => (await stat(p)).mode & 0o777;
-    expect([await mode(join(home, ".claude")), await mode(zapara)]).toEqual([0o700, 0o700]);
-    const files = (await Array.fromAsync(new Bun.Glob("cache.db*").scan(zapara))).sort();
+    expect([await mode(join(home, ".claude")), await mode(cogload)]).toEqual([0o700, 0o700]);
+    const files = (await Array.fromAsync(new Bun.Glob("cache.db*").scan(cogload))).sort();
     expect(files).toContain("cache.db");
-    for (const f of files) expect([f, await mode(join(zapara, f))]).toEqual([f, 0o600]);
+    for (const f of files) expect([f, await mode(join(cogload, f))]).toEqual([f, 0o600]);
   });
 
   test("under an open umask a fresh cache.db and its WAL files are never seen with a mode but 0600", async () => {
@@ -312,9 +312,9 @@ describe("the transcript cache", () => {
     // only miss a loose mode, never invent one, so this never fails on a
     // database created 0600; on the chmod-after code it saw 644 in 40 of 40 runs.
     const { home, projects } = await setup();
-    const zapara = join(home, ".claude", "zapara");
-    await mkdir(zapara, { recursive: true, mode: 0o700 });
-    const db = join(zapara, "cache.db");
+    const cogload = join(home, ".claude", "cogload");
+    await mkdir(cogload, { recursive: true, mode: 0o700 });
+    const db = join(cogload, "cache.db");
     const stop = join(home, "stop");
     const poller = join(home, "poll.ts");
     await writeFile(poller, `import { existsSync, statSync } from "node:fs";
@@ -342,7 +342,7 @@ console.log([...seen].sort().join(" "));
 
   test("the cache directory and file get private modes when created, and keep the modes a person sets later", async () => {
     const { home, projects } = await setup();
-    const dir = join(home, ".claude", "zapara");
+    const dir = join(home, ".claude", "cogload");
     await spawn(home, projects);
     expect([(await stat(dir)).mode & 0o777, (await stat(cacheDb(home))).mode & 0o777]).toEqual([0o700, 0o600]);
     await chmod(dir, 0o750);
@@ -374,8 +374,8 @@ console.log([...seen].sort().join(" "));
   test("the cache keeps no path, no message text and no path hash", async () => {
     const { home, projects } = await setup();
     await spawn(home, projects, "--days", "7");
-    const zapara = join(home, ".claude", "zapara");
-    const files = (await Array.fromAsync(new Bun.Glob("cache.db*").scan(zapara))).map((f) => join(zapara, f));
+    const cogload = join(home, ".claude", "cogload");
+    const files = (await Array.fromAsync(new Bun.Glob("cache.db*").scan(cogload))).map((f) => join(cogload, f));
     expect(files).toContain(cacheDb(home));
     const bytes = Buffer.concat(await Promise.all(files.map((f) => readFile(f))));
     const paths = ["a", "b", "c"].map((n) => join(projects, DIR, `${n}.jsonl`));

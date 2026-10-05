@@ -107,7 +107,7 @@ const refresh = async ($: EngineInterface) => {
   let decoded: Status | null = null
   const startedAt = await $.clock.now()
   try {
-    const r = await $.process.run(['zapara', 'status'], { timeoutMs: RUN_TIMEOUT_MS })
+    const r = await $.process.run(['cogload', 'status'], { timeoutMs: RUN_TIMEOUT_MS })
     decoded = r.exitCode === 0 ? decodeStatus(r.stdout, await $.clock.now()) : null
     failure = r.exitCode === 0 ? 'bad line' : `exit ${r.exitCode}`
   } catch {

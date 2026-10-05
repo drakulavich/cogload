@@ -1,6 +1,6 @@
 # How the numbers are made
 
-zapara reads the transcripts Claude Code writes on your machine and turns them
+cogload reads the transcripts Claude Code writes on your machine and turns them
 into one number per hour, the load index, plus a few numbers per day. This page
 walks that path once, from a line in a `.jsonl` file to `load 36` in a status
 line. The specs under `docs/superpowers/specs/` are the authority; this page is
@@ -18,7 +18,7 @@ flowchart LR
   D --> G["grid, day table, JSON"]
   D --> C["card<br/>character, highlights, picture"]
   D --> ST["status.json<br/>the last hour, for a status line"]
-  ST --> PU["pult --zapara<br/>load 36 · streak 2h46 · day 9h15"]
+  ST --> PU["pult --cogload<br/>load 36 · streak 2h46 · day 9h15"]
 ```
 
 The shell is the scan, the CLI, the card's picture step and the status-file
@@ -185,13 +185,13 @@ snapshot. That day also carries `live`, the bucket of the sixty minutes ending a
 
 ## 7. Where the numbers go
 
-**The grid** (`zapara`, `--days`, `--from`/`--to`) is one glyph per hour by
+**The grid** (`cogload`, `--days`, `--from`/`--to`) is one glyph per hour by
 level, seven days by default, with the day's peak and active minutes at the
-end of each row. **The day table** (`zapara today`, a date) is one row per
+end of each row. **The day table** (`cogload today`, a date) is one row per
 active hour with the counts above; `--explain` adds the six parts. A pipe gets
 JSON with the same fields, `mean` included.
 
-**The card** (`zapara card`) takes the grid's window flags, 14 days by default,
+**The card** (`cogload card`) takes the grid's window flags, 14 days by default,
 and names one of four characters by which parts of the index carried that
 window: The Conductor (parallel and
 pace), The Supervisor (supervision and reading), The Marathoner (streak), The
@@ -200,8 +200,8 @@ most it could have had; the highest wins, ties in that order. The highlights
 are ranked against norms in `src/lib/card/card.ts` that order a picture and never enter
 the index. The card spec has the rest.
 
-**The status file** (`zapara status`) writes today's current hour to
-`~/.claude/zapara/status.json` as one line of JSON with nine fields:
+**The status file** (`cogload status`) writes today's current hour to
+`~/.claude/cogload/status.json` as one line of JSON with nine fields:
 
 ```json
 {"schema":1,"asOf":"2026-09-19T12:30:38.300Z","date":"2026-09-19","hour":15,"index":36,"level":"Warming","peak":41,"activeMin":555,"streakMin":166}
@@ -225,7 +225,7 @@ A status line such as [pult](https://github.com/drakulavich/pult)
 reads that file on every render and shows `load 36 · streak 2h46 · day 9h15`:
 the index in the colour of its level, the time since your last ten-minute
 break, and the day's presence so far. When the file is older than five minutes
-the reader starts `zapara status` in the background and reads the fresh file
+the reader starts `cogload status` in the background and reads the fresh file
 on the next render. The status-file spec holds the format and the reader's
 contract.
 

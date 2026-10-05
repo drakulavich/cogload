@@ -1,9 +1,9 @@
 import { localDate } from "../lib/metrics/index.ts";
 
-export const USAGE = `usage: zapara [window]                 the last 7 days, one cell per hour
-       zapara today|yesterday|<date>   one day, one row per active hour
-       zapara card [window] [--out]    the last 14 days as one picture
-       zapara status                   write today's load for a status line
+export const USAGE = `usage: cogload [window]                 the last 7 days, one cell per hour
+       cogload today|yesterday|<date>   one day, one row per active hour
+       cogload card [window] [--out]    the last 14 days as one picture
+       cogload status                   write today's load for a status line
 
 window:
   --days <N>        the last N days, 1..90; with --to, N days ending there
@@ -13,7 +13,7 @@ window:
 options:
   --explain         with a day: the six weighted parts behind each index
   --out <path>      with card: .png, .webp or .html
-                    (default ~/Downloads/zapara-card.png)
+                    (default ~/Downloads/cogload-card.png)
   --json            the same data as JSON; for the grid and a day,
                     a pipe gets JSON without asking
   --projects <dir>  read this directory instead of ~/.claude/projects
@@ -24,8 +24,8 @@ options:
 
 levels: calm 0-29  warming 30-59  heating 60-84  fried 85-100
 
-bugs, ideas and a star: github.com/drakulavich/zapara`;
-export const HINT = "run 'zapara --help' for usage";
+bugs, ideas and a star: github.com/drakulavich/cogload`;
+export const HINT = "run 'cogload --help' for usage";
 
 export type Args = { command: "grid" | "day" | "card" | "status"; to: string; days: number; explain: boolean; json: boolean; out: string | null; projects: string; color: boolean; verbose: boolean; cache: boolean };
 
