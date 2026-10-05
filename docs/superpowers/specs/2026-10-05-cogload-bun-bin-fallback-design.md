@@ -33,8 +33,12 @@ that is not installed at all, a custom `BUN_INSTALL`, and Windows, where
 
 - `run` in `plugin/hooks/register.ts` tries `['cogload', ...args]`; on the
   `not found` outcome it reads `$.env.get('HOME')` and, when set, tries
-  `[`${home}/.bun/bin/cogload`, ...args]` under the same 10-second timeout.
-  The outcome of the second try is the result.
+  `[`${home}/.bun/bin/cogload`, ...args]` under the same 10-second timeout,
+  with `PATH` set to `$HOME/.bun/bin` ahead of Claude Code's own `PATH`.
+  `cogload` is a `#!/usr/bin/env bun` script, and a Bun installed by its
+  script sits in that same directory, so without this the fallback exits
+  127 (`env: bun: No such file or directory`); a Homebrew Bun is still found
+  through the original `PATH`. The outcome of the second try is the result.
 - Nothing is remembered between runs: a failed spawn costs milliseconds, and
   a later `PATH` fix or install takes effect without a restart.
 
@@ -42,7 +46,7 @@ that is not installed at all, a custom `BUN_INSTALL`, and Windows, where
 
 As the specs above: Claude Code plugin of function hooks, plain TypeScript.
 `$.env.get` is the one engine call this adds; `claude plugin validate` lists
-`HOME` as read.
+`HOME` and `PATH` as read.
 
 ## Commands
 
@@ -83,6 +87,8 @@ Cases 3 to 5 assert the calls made, not only what is shown: the toast and
 the output look the same with or without the fallback.
 6. In 1 to 5, no toast, command output or debug log line contains `HOME`'s
    value.
+7. The fallback call carries `PATH` = `<HOME>/.bun/bin:<PATH>`, or
+   `<HOME>/.bun/bin` alone when `PATH` is unset.
 
 User scenarios, tmux, `PATH` without `cogload`, `HOME` a temporary
 directory holding a stub at `.bun/bin/cogload`:
@@ -101,8 +107,8 @@ directory holding a stub at `.bun/bin/cogload`:
 
 ## Definition of Done
 
-- `claude plugin validate plugin` passes and lists `HOME`;
-  `claude plugin test plugin` passes the existing cases and 1 to 6.
+- `claude plugin validate plugin` passes and lists `HOME` and `PATH`;
+  `claude plugin test plugin` passes the existing cases and 1 to 7.
 - `bun run check` passes; `git diff main -- src tests` is empty.
 - User scenarios 1 to 3 pass, with captured screens in the PR.
 - `plugin/.claude-plugin/plugin.json` says 0.8.0.

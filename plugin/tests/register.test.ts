@@ -39,6 +39,7 @@ let commands: string[] = []
 let todayRuns: Run[] = []
 let binRuns: Run[] = []
 let calls: string[][] = []
+let paths: (string | undefined)[] = []
 
 // The engine beneath the plugin: each queued answer is one `cogload status` run, or one `cogload today --json` from todayRuns; binRuns answers BIN.
 const engine = (
@@ -56,6 +57,7 @@ const engine = (
   todayRuns = []
   binRuns = []
   calls = []
+  paths = []
   on('store.get', (_$, e) => ({ value: store[e.key] }))
   on('store.set', (_$, e) => {
     store[e.key] = e.value
@@ -86,6 +88,7 @@ const engine = (
   })
   on('process.run', async (_$, e) => {
     calls.push([...e.argv])
+    paths.push(e.init?.env?.PATH)
     const isToday = e.argv[1] === 'today'
     const isBin = e.argv[0] !== 'cogload'
     expect(e.argv).toEqual([isBin ? BIN : 'cogload', ...(isToday ? ['today', '--json'] : ['status'])])
@@ -869,6 +872,20 @@ describe('cogload in ~/.bun/bin', () => {
     expect(calls).toEqual([STATUS, [BIN, 'status']])
     expect(toasts).toEqual([])
     expect(logs).toEqual([])
+  })
+
+  test('~/.bun/bin goes first on the fallback PATH, so its bun runs the script', async ($, on) => {
+    engine(on, ['not found'], [], [], { welcomed: true }, { HOME, PATH: '/usr/bin:/bin' })
+    binRuns = [{ stdout: line() }]
+    await start($)
+    expect(paths).toEqual([undefined, `${HOME}/.bun/bin:/usr/bin:/bin`])
+  })
+
+  test('with PATH unset, the fallback PATH is ~/.bun/bin alone', async ($, on) => {
+    engine(on, ['not found'], [], [], { welcomed: true })
+    binRuns = [{ stdout: line() }]
+    await start($)
+    expect(paths).toEqual([undefined, `${HOME}/.bun/bin`])
   })
 
   test('without cogload on the PATH, /cogload reads from ~/.bun/bin', async ($, on) => {
