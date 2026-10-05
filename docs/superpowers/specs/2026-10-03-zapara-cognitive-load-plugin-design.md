@@ -67,7 +67,8 @@ status spec already makes equal to the file's content.
    seconds or more passed on `$.clock` since it started, else `not found`;
    the rejection's message says neither.
 
-No timer and no staleness check. The number changes when the person acts, and
+No staleness check beyond the five-minute limit in rule 4; the one-minute
+tick comes from the rest spec. The number changes when the person acts, and
 every turn ends with a run. Between turns `streakMin` stands still; the streak
 itself ends after ten minutes away, so the band is at most one turn behind.
 

@@ -862,6 +862,37 @@ describe('every minute', () => {
   })
 })
 
+describe('a stale reading', () => {
+  const read = (fields: Record<string, unknown> = {}) => ({ stdout: line({ asOf: new Date(NOW).toISOString(), ...fields }) })
+  const failing = (n: number) => Array.from({ length: n }, () => ({ exitCode: 1 }))
+
+  test('while cogload fails, the band draws at 4 minutes and is empty from the tick at 5', async ($, on) => {
+    engine(on, [read(), ...failing(10)])
+    await start($)
+    await clock.advance(4 * 60_000)
+    expect(await band($)).toBe('● Heating · streak 20m')
+    await clock.advance(60_000)
+    expect(await band($)).toBe(ENGINE_BAND)
+  })
+
+  test('after it clears, the next good reading draws the band', async ($, on) => {
+    engine(on, [read(), ...failing(6), live(() => NOW - 20 * 60_000)])
+    await start($)
+    await clock.advance(6 * 60_000)
+    expect(await band($)).toBe(ENGINE_BAND)
+    await clock.advance(60_000)
+    expect(await band($)).toBe('● Heating · streak 27m')
+  })
+
+  test('a rest keeps holding prompts after its reading clears', async ($, on) => {
+    engine(on, [read({ streakMin: 40 }), ...failing(10)])
+    await start($)
+    await clock.advance(5 * 60_000)
+    expect(await band($)).toBe(ENGINE_BAND)
+    expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
+  })
+})
+
 const STATUS = ['cogload', 'status']
 const TODAY = ['cogload', 'today', '--json']
 const expectNoHome = (texts: (string | undefined)[]) => {
