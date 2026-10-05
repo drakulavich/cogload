@@ -7,6 +7,8 @@ const SURFACES = ['terminal', 'desktop'] as const
 const ENGINE_BAND = 'engine band'
 const DAY_MS = 24 * 60 * 60_000
 const ASOF = Date.parse('2026-10-03T09:59:30.000Z')
+const HOME = '/Users/tester'
+const BIN = `${HOME}/.bun/bin/cogload`
 
 const line = (fields: Record<string, unknown> = {}): string =>
   `${JSON.stringify({
@@ -35,13 +37,27 @@ let clock: ReturnType<typeof mock.clock>
 let runCount = 0
 let commands: string[] = []
 let todayRuns: Run[] = []
+let binRuns: Run[] = []
+let calls: string[][] = []
+let paths: (string | undefined)[] = []
 
-// The engine beneath the plugin: each queued answer is one `cogload status` run, or one `cogload today --json` from todayRuns.
-const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [], store: Record<string, unknown> = {}) => {
+// The engine beneath the plugin: each queued answer is one `cogload status` run, or one `cogload today --json` from todayRuns; binRuns answers BIN.
+const engine = (
+  on: On,
+  runs: Run[],
+  logs: string[] = [],
+  toasts: string[] = [],
+  store: Record<string, unknown> = {},
+  env: Record<string, string> = { HOME },
+) => {
   clock = mock.clock(on, { now: NOW })
+  mock.env(on, env)
   runCount = 0
   commands = []
   todayRuns = []
+  binRuns = []
+  calls = []
+  paths = []
   on('store.get', (_$, e) => ({ value: store[e.key] }))
   on('store.set', (_$, e) => {
     store[e.key] = e.value
@@ -71,10 +87,13 @@ const engine = (on: On, runs: Run[], logs: string[] = [], toasts: string[] = [],
     return Text({ children: ENGINE_BAND })
   })
   on('process.run', async (_$, e) => {
+    calls.push([...e.argv])
+    paths.push(e.init?.env?.PATH)
     const isToday = e.argv[1] === 'today'
-    expect(e.argv).toEqual(isToday ? ['cogload', 'today', '--json'] : ['cogload', 'status'])
-    if (!isToday) runCount++
-    const queue = isToday ? todayRuns : runs
+    const isBin = e.argv[0] !== 'cogload'
+    expect(e.argv).toEqual([isBin ? BIN : 'cogload', ...(isToday ? ['today', '--json'] : ['status'])])
+    if (!isToday && !isBin) runCount++
+    const queue = isBin ? binRuns : isToday ? todayRuns : runs
     const run = typeof queue[0] === 'function' ? queue[0]() : queue.shift()
     if (run === undefined || run === 'not found') return { deny: 'cogload: command not found' }
     if (run === 'timeout') {
@@ -832,4 +851,90 @@ describe('every minute', () => {
     await clock.advance(60_000)
     expect(runCount).toBe(2)
   })
+})
+
+const STATUS = ['cogload', 'status']
+const TODAY = ['cogload', 'today', '--json']
+const expectNoHome = (texts: (string | undefined)[]) => {
+  for (const text of texts) expect(text).not.toContain(HOME)
+}
+
+describe('cogload in ~/.bun/bin', () => {
+  test('without cogload on the PATH, the band draws from ~/.bun/bin', async ($, on) => {
+    const logs: string[] = []
+    const toasts: string[] = []
+    engine(on, ['not found'], logs, toasts, { welcomed: true })
+    binRuns = [{ stdout: line() }]
+    await start($)
+    const text = await band($)
+    expectNoHome([text])
+    expect(text).toBe('● Heating · streak 20m')
+    expect(calls).toEqual([STATUS, [BIN, 'status']])
+    expect(toasts).toEqual([])
+    expect(logs).toEqual([])
+  })
+
+  for (const [what, env, path] of [
+    ['set', { HOME, PATH: '/usr/bin:/bin' }, `${HOME}/.bun/bin:/usr/bin:/bin`],
+    ['unset', { HOME }, `${HOME}/.bun/bin`],
+    ['empty', { HOME, PATH: '' }, `${HOME}/.bun/bin`],
+  ] as const) {
+    test(`with PATH ${what}, the fallback runs with PATH ${path}`, async ($, on) => {
+      engine(on, ['not found'], [], [], { welcomed: true }, env)
+      binRuns = [{ stdout: line() }]
+      await start($)
+      expect(paths).toEqual([undefined, path])
+    })
+  }
+
+  test('without cogload on the PATH, /cogload reads from ~/.bun/bin', async ($, on) => {
+    const logs: string[] = []
+    const toasts: string[] = []
+    engine(on, [{ stdout: line() }], logs, toasts, { welcomed: true, rests: [NOW - DAY_MS] })
+    todayRuns = ['not found']
+    binRuns = [{ stdout: today({ sessions: 5 }, { parallel: 25 }) }]
+    await start($)
+    const text = (await $.command.run({ command: 'cogload' })).text
+    expectNoHome([text, ...logs, ...toasts])
+    expect(text).toBe('Heating 80 this hour, at the cap: 5 sessions at once.\nThis week: 1 rest, 0 overrides.')
+    expect(calls).toEqual([STATUS, TODAY, [BIN, 'today', '--json']])
+  })
+
+  for (const [what, env, tried] of [
+    ['missing from both', { HOME }, [STATUS, [BIN, 'status'], TODAY, [BIN, 'today', '--json']]],
+    ['missing with HOME unset', {}, [STATUS, TODAY]],
+  ] as const) {
+    test(`cogload ${what}: the missing toast once and the missing text`, async ($, on) => {
+      const logs: string[] = []
+      const toasts: string[] = []
+      engine(on, ['not found'], logs, toasts, { welcomed: true }, env)
+      await start($)
+      const text = (await $.command.run({ command: 'cogload' })).text
+      expectNoHome([text, ...logs, ...toasts])
+      expect(calls).toEqual(tried)
+      expect(toasts).toEqual([MISSING])
+      expect(text).toBe(MISSING)
+      expect(logs).toEqual(['not found'])
+    })
+  }
+
+  for (const [failure, run] of [
+    ['timeout', 'timeout'],
+    ['exit 1', { exitCode: 1 }],
+    ['bad line', { stdout: '{' }],
+  ] as const) {
+    test(`a cogload that gives ${failure} is not tried again in ~/.bun/bin`, async ($, on) => {
+      const logs: string[] = []
+      const toasts: string[] = []
+      engine(on, [run], logs, toasts, { welcomed: true })
+      binRuns = [{ stdout: line() }]
+      await start($)
+      await clock.advance(0)
+      const text = await band($)
+      expectNoHome([text, ...logs, ...toasts])
+      expect(calls).toEqual([STATUS])
+      expect(text).toBe(ENGINE_BAND)
+      expect(logs).toEqual([failure])
+    })
+  }
 })

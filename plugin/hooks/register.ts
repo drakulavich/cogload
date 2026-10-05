@@ -170,13 +170,24 @@ const weekLine = async ($: EngineInterface, now: number): Promise<string | null>
   return `This week: ${plural(rests, 'rest')}, ${plural(overrides.length, 'override')}${reason}.`
 }
 
-const run = async ($: EngineInterface, args: string[]) => {
+const spawn = async ($: EngineInterface, argv: string[], env?: Record<string, string>) => {
   const startedAt = await $.clock.now()
   try {
-    return await $.process.run(['cogload', ...args], { timeoutMs: RUN_TIMEOUT_MS })
+    return await $.process.run(argv, { timeoutMs: RUN_TIMEOUT_MS, env })
   } catch {
     return (await $.clock.now()) - startedAt >= RUN_TIMEOUT_MS ? 'timeout' : 'not found'
   }
+}
+
+const run = async ($: EngineInterface, args: string[]) => {
+  const r = await spawn($, ['cogload', ...args])
+  if (r !== 'not found') return r
+  const home = await $.env.get('HOME')
+  if (home === undefined) return r
+  const bin = `${home}/.bun/bin`
+  const path = await $.env.get('PATH')
+  // cogload is a `#!/usr/bin/env bun` script, and a script-installed bun sits beside it.
+  return spawn($, [`${bin}/cogload`, ...args], { PATH: path ? `${bin}:${path}` : bin })
 }
 
 const take = async ($: EngineInterface, s: Status) => {

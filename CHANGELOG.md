@@ -5,6 +5,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- When `cogload` is not on Claude Code's `PATH`, the `cognitive-load` plugin
+  starts `~/.bun/bin/cogload`, so a Homebrew Bun or the Desktop app opened
+  from the Dock no longer meets the missing-`cogload` toast.
+
 ### Changed
 - When `cogload` is missing, the `cognitive-load` toast and `/cogload` say
   `cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload`;
