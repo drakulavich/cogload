@@ -127,7 +127,7 @@ If your card told you something about your week, star [the repository](https://g
 | `cogload 2026-09-14 --explain` | One day, with the six weighted components behind each index. |
 | `cogload card` | The last 14 days as one shareable picture, `cogload-card.png` in `~/Downloads`. |
 | `cogload card --days 30 --out me.webp` | Any window from 1 to 90 days; `.png`, `.webp` or `.html` by extension. `--json` prints the card's data instead. |
-| `cogload status` | Writes today's load to `~/.claude/cogload/status.json` for a status line to read, and prints the same line. The file's fields are in [the status file spec](docs/superpowers/specs/2026-09-19-zapara-status-file-design.md). |
+| `cogload status` | Writes today's load to `~/.claude/cogload/status.json` for a status line to read, and prints the same line. The file's fields are in [the status file spec](docs/superpowers/specs/2026-09-19-zapara-status-file-design.md), written when cogload was zapara and kept its files in `~/.claude/zapara/`. |
 
 | Flag | What it does |
 |---|---|
