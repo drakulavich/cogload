@@ -13,6 +13,8 @@ All notable changes to this project are documented here. The format follows
   overrides 7 days instead of 14.
 
 ### Changed
+- The `cognitive-load` band draws Warming in Claude Code's theme colour
+  `warning`, which stays readable on a light theme, instead of plain yellow.
 - The `cognitive-load` band no longer counts the week's overrides; `/cogload`
   does.
 - The `cognitive-load` band starts with a dot in the level's colour,

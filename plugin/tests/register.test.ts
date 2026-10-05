@@ -297,7 +297,7 @@ describe('band', () => {
   }
 
   for (const [level, color] of [
-    ['Warming', 'yellow'],
+    ['Warming', 'warning'],
     ['Heating', '#ff8700'],
     ['Fried', 'red'],
   ] as const) {
