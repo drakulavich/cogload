@@ -31,9 +31,13 @@ different band before the first rest.
 
 In the `AbovePrompt` render of `plugin/hooks/register.ts`, the warning branch
 becomes: no running rest, `0 < streakMin < 40` and `streakWouldRest`, then
-`rest at ${clockTime(streakStart(s) + 40 min)}`. `WARN_AFTER_MIN` goes. A
-Fried hour needs no case of its own: a reading at Fried starts the rest before
-the band draws it, so its band is `rest until`, or `streak` once spent.
+`rest at ${clockTime(streakStart(s) + 40 min)}`. `WARN_AFTER_MIN` goes.
+
+No Fried or 40-minute case is needed. The band reads the `status` state, and
+only `take` writes it, after `startRestIfDue` has started any rest the reading
+is due. So a reading at Fried, or at 40 minutes or more, reaches the band with
+the rest already running (`rest until`), or with its rest spent (`streak 40m`).
+A streak of 0 shows no tail, as today.
 
 ## Tech Stack
 
@@ -62,11 +66,12 @@ docs/reference.md                   the band's paragraphs
 Unit, `claude plugin test plugin`, on the mocked clock, each case failing when
 its behaviour is removed:
 
-1. Streak 19 at 10:00 → `● Heating · rest at 10:21`; a tick later the time is
-   the same.
-2. Streak 37 → `rest at` the same clock time as at 19 minutes of that streak,
-   not `rest in 3 min`.
-3. After an override in this streak → `streak 52m`.
+1. A live streak that began 19 minutes ago → `rest at` its start plus 40
+   minutes; after two more readings, one tick apart, the same time.
+2. Streak 37 → `rest at` that streak's start plus 40 minutes, not
+   `rest in 3 min`.
+3. A rest, then `override: <reason>` typed during it → `streak Nm`, not
+   `rest at`.
 4. A running rest → `rest until`, unchanged.
 5. 45 columns → `● Heating · rest at …` on one line; with a spent streak at 45
    columns → `● Heating` alone.
