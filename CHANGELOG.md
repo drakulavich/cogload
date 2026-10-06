@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- A day with no activity prints `no activity on <date>` instead of a bare
+  table header.
 - When `cogload` keeps failing, the `cognitive-load` band goes blank once its
   reading is five minutes old, instead of showing that reading for hours.
 - During a rest, `Override:` and `OVERRIDE:` lift it like `override:`. A

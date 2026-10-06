@@ -50,7 +50,7 @@ answers "which day was this" and "what did the hours look like".
 - **The open day.** If today has nothing in it yet, today's row is quiet and
   dims like any other. The snapshot line below the grid (`as of HH:MM, this
   hour is still running`) is printed by `snapshotLine` and is unaffected.
-- **`zapara today` on an empty day** already prints a bare header and no rows.
+- **`zapara today` on an empty day** prints `no activity on <date>` and no rows.
   There is nothing there to dim.
 - **The card and `zapara status`** do not show a day row and are untouched.
 - **The totals line** counts what it counts; a quiet day contributes zero to it

@@ -94,7 +94,7 @@ export function renderDay(day: Day, opts: { explain: boolean; color: boolean }):
   const active = day.buckets.filter((b) => b.score !== null);
   // The snapshot line still shows on an empty open day, or a run at 09:00 and
   // one at 18:00 would print the identical line.
-  if (active.length === 0) return [line(cols, cols.map(([name]) => name)), ...snapshotLine(day, opts.color)].join("\n");
+  if (active.length === 0) return [`no activity on ${day.date}`, ...snapshotLine(day, opts.color)].join("\n");
 
   const visible = cols.filter(([name, , f]) => !EVENT_COLS.has(name) || active.some((b) => f(b) !== "0"));
   const leftOut = cols.filter((col) => EVENT_COLS.has(col[0]) && !visible.includes(col));
