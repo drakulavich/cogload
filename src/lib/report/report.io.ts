@@ -36,7 +36,7 @@ async function readWhole(entry: ScanEntry): Promise<Read> {
 export async function report(o: ReportOptions, timing?: Timing, cache?: TranscriptCache | null): Promise<Day[]> {
   const window = { to: o.to, days: o.days, now: o.now, streakFrom: o.streakFrom };
   const { cutoffMs } = windowBounds(window);
-  const stats: ScanStats = { files: 0, tailChecks: 0 };
+  const stats: ScanStats = { files: 0, tailChecks: 0, skipped: 0 };
   let t = performance.now();
   const entries = await scan(o.projects, cutoffMs, stats);
   const scanMs = performance.now() - t;
@@ -56,7 +56,7 @@ export async function report(o: ReportOptions, timing?: Timing, cache?: Transcri
         const r = await readWhole(entry);
         bytes += r.bytes.length;
         reads.set(entry.path, r);
-      } catch { /* vanished or unreadable: skip */ }
+      } catch { stats.skipped++; }
     }
   };
   await Promise.all(Array.from({ length: Math.min(READERS, misses.length) }, reader));
