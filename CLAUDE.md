@@ -17,6 +17,9 @@ confuses you, add one line under Surprises. The design is in
 - **A test asserts what differs with and without the behavior it pins** (#69).
   Tests use fixtures in the real transcript format, through `analyze()`,
   `report()` or the CLI.
+- **CHANGELOG at release only.** A PR leaves `CHANGELOG.md` alone and puts
+  its user-facing line in the PR body; the release PR collects them. PRs that
+  each added a line under `### Fixed` conflicted in turn (#160 to #163).
 
 ## Surprises
 
