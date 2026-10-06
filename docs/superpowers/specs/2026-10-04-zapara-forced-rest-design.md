@@ -29,7 +29,8 @@ What the author sees:
    three words, lifts the hold for the rest of this streak. The first line is
    removed and the rest is sent; when nothing is left, the prompt is dropped
    with the reason `Rest lifted.` The band then shows `overrides this week: 2`
-   while the count is above 0.
+   while the count is above 0. The last line counts too
+   (`2026-10-06-cognitive-load-override-last-line-design.md`).
 6. `/overrides` prints the overrides of the last 14 days, newest first:
    `Thu 03 Oct 14:25  prod is down, fixing it`, or
    `No overrides in 14 days.`
