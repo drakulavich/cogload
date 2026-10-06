@@ -180,10 +180,8 @@ describe("day table", () => {
     expect(lines[3]).toBe("  no reports, interrupts, rejects, questions, plans, mode switches, context switches today");
   });
 
-  test("an empty day keeps the full header and no note", () => {
-    // Mutation: emitting the note, or dropping columns, on a day with no active bucket.
-    const text = renderDay(wednesday, { explain: false, color: false });
-    expect(text).toBe("hour   index  level    sess  prompts  rep  intr  rej  quest  plan  mode  ctx-sw  streak  out-tok");
+  test("an empty day says so in one line, with no header", () => {
+    expect(renderDay(wednesday, { explain: false, color: false })).toBe("no activity on 2026-09-16");
   });
 
   test("an empty day that is still open ends with the snapshot time", () => {
