@@ -47,7 +47,7 @@ After this change:
    the ones pushed through, and quotes the newest override's reason, marked `last:`:
    `This week: 18 rests taken, 2 pushed through (last: "prod is down").` An
    override can only lift a running rest, so an override is pushed through
-   when a rest in the window started at most ten minutes before it, and the
+   when a rest in the window started before it, and the
    window's other rests are taken. An override with no such rest (its rest
    fell out of the window, or started before rests were kept) is left out,
    reason included. With no override it is
