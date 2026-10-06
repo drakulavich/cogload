@@ -117,6 +117,16 @@ const hourLine = (live: Live | null | undefined): string => {
   return `${head}, mostly ${PHRASE[top](live)}.`
 }
 
+type Day = { live?: Live | null; asOf?: string; presence?: { lastAt: string; streakStartAt: string } | null }
+
+const withBandStreak = (day: Day): Live | null | undefined => {
+  if (!day.live || !day.presence || !day.asOf) return day.live
+  const asOf = Date.parse(day.asOf)
+  const minutes = Math.round((asOf - Date.parse(day.presence.streakStartAt)) / 60_000)
+  if (!(asOf - Date.parse(day.presence.lastAt) <= REST_MS) || !Number.isFinite(minutes)) return day.live
+  return { ...day.live, streakMin: minutes }
+}
+
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 
 const restUntil = async ($: EngineInterface, now: number): Promise<number | null> => {
@@ -249,7 +259,7 @@ export const register: Register = on => {
     } catch {}
     if (typeof day !== 'object' || day === null) return { text: NO_READING }
     const week = await weekLine($, await $.clock.now())
-    return { text: [hourLine((day as { live?: Live | null }).live), ...(week === null ? [] : [week])].join('\n') }
+    return { text: [hourLine(withBandStreak(day as Day)), ...(week === null ? [] : [week])].join('\n') }
   })
 
   on('prompt.submit', async ($, e, next) => {
