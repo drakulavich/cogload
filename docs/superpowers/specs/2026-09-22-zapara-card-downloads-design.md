@@ -44,8 +44,8 @@ What it prints:
 
 - The second stdout line is `wrote zapara-card.png to Downloads` for the
   default: the directory's name, never its path, since the base spec forbids
-  printing a path the CLI derived. With `--out` it stays `wrote <out>`, the
-  person's own argument.
+  printing a path the CLI derived. With `--out` it is `wrote <file name>`, the
+  last segment of the person's argument (#155).
 
 Offering to open it:
 
