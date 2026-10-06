@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- After `card --out <path>`, the `wrote` line names the file only
+  (`wrote card.png`), not the folders around it.
 - A day with no activity prints `no activity on <date>` instead of a bare
   table header.
 - When `cogload` keeps failing, the `cognitive-load` band goes blank once its

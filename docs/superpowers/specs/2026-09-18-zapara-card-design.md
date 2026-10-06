@@ -76,7 +76,7 @@ zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [-
 
 Privacy amendment to the base spec: `card` is the one command that writes a
 file. It writes exactly one file, at the path the person gave or the default in
-the current directory, and prints that path back verbatim. It never writes
+the current directory, and prints back the file name of that path. It never writes
 anywhere else and never prints a path it derived from the projects tree or
 from its own install location. The page it renders is self-contained: no
 network request is made while rendering, and the browser engine runs

@@ -38,7 +38,7 @@ Where the card goes:
   zapara-card.png to Downloads: pass --out <path>`, exit 1. The card spec's
   `check the --out directory` would name a flag the person never used.
 - `--out` is unchanged: a relative path is relative to the current directory,
-  the extension picks the format, the value is echoed verbatim.
+  the extension picks the format.
 
 What it prints:
 
@@ -85,7 +85,7 @@ the same everywhere.
 
 The card spec's amendment becomes: `card` writes exactly one file, at the path
 the person gave or at `zapara-card.png` in the home directory's `Downloads`
-folder, and prints back the path the person gave or the words
+folder, and prints back the file name of the path the person gave or the words
 `zapara-card.png to Downloads`. It never writes anywhere else. Opening the
 file hands its path to the platform's opener, a program on the machine; no
 network request is made and nothing is printed.
