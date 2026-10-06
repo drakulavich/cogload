@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-06
+
 ### Fixed
 - `--verbose` says how many unreadable transcripts or project directories
   the scan skipped (`2 unreadable skipped`), so a light day has a reason.
