@@ -685,6 +685,7 @@ describe('/cogload', () => {
 
   for (const [when, lastAt, phrase] of [
     ['in a streak, the streak runs to asOf as on the band', '2026-10-03T09:55:30.000Z', 'a 48m streak'],
+    ['ten minutes away exactly, still the band\'s streak', '2026-10-03T09:49:30.000Z', 'a 48m streak'],
     ['away over ten minutes, the hour\'s streak', '2026-10-03T09:45:00.000Z', 'a 44m streak'],
   ] as const) {
     test(when, async ($, on) => {
