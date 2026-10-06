@@ -77,10 +77,10 @@ If your card told you something about your week, star [the repository](https://g
 
 ## Inside Claude Code
 
-The `cognitive-load` plugin draws the last hour's level and your streak above the prompt, and `/cogload` says what drives it:
+The `cognitive-load` plugin draws the last hour's level above the prompt, with the time your rest starts, and `/cogload` says what drives it:
 
 ```
-● Heating · streak 20m
+● Heating · rest at 14:52
 ```
 
 ```

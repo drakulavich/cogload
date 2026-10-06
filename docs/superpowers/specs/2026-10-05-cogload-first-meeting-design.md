@@ -27,7 +27,8 @@ After this change:
    index, peak and active time leave the band; `cogload` in a terminal
    keeps them. With a zero streak, or under 50 columns, it is `▓ Heating`
    alone. The warning (`rest in N min`), the rest countdown and the
-   overrides count replace or follow the tail as they do today.
+   overrides count replace or follow the tail as they do today. The warning
+   is now `rest at HH:MM` (`2026-10-06-cognitive-load-band-rest-at-design.md`).
 4. During a rest, a prompt whose first line is `override:` with a reason of
    fewer than three words, an empty reason included, is dropped with
    `An override needs a reason of three words or more.`, plus
