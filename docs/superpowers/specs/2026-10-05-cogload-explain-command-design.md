@@ -37,6 +37,12 @@ After this change:
    | streak | `a 57m streak` (the band's minute format) |
    | late | `late at night` |
 
+   The streak is the band's number: from `presence.streakStartAt` to the
+   day's `asOf` while `presence.lastAt` is within ten minutes of `asOf`, as
+   `cogload status` counts it; otherwise the live hour's `streakMin`. The live
+   hour's streak stops at your last action, so it ran a few minutes behind the
+   band while you read ([#171](https://github.com/drakulavich/cogload/issues/171)).
+
 4. The second line counts the rests started and the overrides made in the
    last seven days. With overrides it quotes the newest reason. With
    neither, the line is left out.
