@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- `card --out .png` (an extension with no file name) is a usage error instead
+  of a hidden file named `.png`.
 - A day with no activity prints `no activity on <date>` instead of a bare
   table header.
 - When `cogload` keeps failing, the `cognitive-load` band goes blank once its

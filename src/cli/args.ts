@@ -150,6 +150,8 @@ export function parseArgs(argv: string[], now: Date, env: Record<string, string 
     // Printed back verbatim in `wrote \u2026`, so it must be one plain line.
     if (/[\x00-\x1f\x7f]/.test(a.out)) throw new UsageError("--out must not contain control characters");
     if (!/\.(png|webp|html)$/i.test(a.out)) throw new UsageError("--out must end in .png, .webp or .html");
+    const bare = /(?:^|[/\\])\.(png|webp|html)$/i.exec(a.out);
+    if (bare) throw new UsageError(`--out needs a file name before .${bare[1]}`);
   }
   return a;
 }
