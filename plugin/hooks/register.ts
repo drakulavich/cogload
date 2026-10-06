@@ -172,12 +172,12 @@ const REFRESH_MS = 60_000
 const STALE_MS = 5 * 60_000
 
 const weekLine = async ($: EngineInterface, now: number): Promise<string | null> => {
-  const rests = (await restsSince($, now - WEEK_MS)).length
-  const overrides = await overridesSince($, now - WEEK_MS)
-  if (rests === 0 && overrides.length === 0) return null
-  const newest = overrides.at(-1)
-  const reason = newest === undefined ? '' : ` ("${newest.reason}")`
-  return `This week: ${plural(rests, 'rest')}, ${plural(overrides.length, 'override')}${reason}.`
+  const rests = await restsSince($, now - WEEK_MS)
+  if (rests.length === 0) return null
+  const pushed = (await overridesSince($, now - WEEK_MS)).filter(o => rests.some(at => at <= o.at))
+  const taken = `This week: ${plural(rests.length - pushed.length, 'rest')} taken`
+  const newest = pushed.at(-1)
+  return newest === undefined ? `${taken}.` : `${taken}, ${pushed.length} pushed through (last: "${newest.reason}").`
 }
 
 const spawn = async ($: EngineInterface, argv: string[], env?: Record<string, string>) => {

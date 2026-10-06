@@ -735,25 +735,34 @@ describe('/cogload', () => {
     )
   })
 
-  test("the week's rests and overrides, with the reason", async ($, on) => {
+  test("the week's rests taken and pushed through, with the reason", async ($, on) => {
     const text = await explain($, on, { stdout: today(null) }, {
       rests: [NOW - 8 * DAY_MS, NOW - 2 * DAY_MS, NOW - DAY_MS],
       overrides: [
-        { at: NOW - 8 * DAY_MS, reason: 'old one here' },
-        { at: NOW - DAY_MS, reason: 'prod is down, fixing it' },
+        { at: NOW - 8 * DAY_MS + 60_000, reason: 'old one here' },
+        { at: NOW - DAY_MS + 5 * 60_000, reason: 'prod is down, fixing it' },
       ],
     })
-    expect(text).toBe('Nothing scored this hour.\nThis week: 2 rests, 1 override ("prod is down, fixing it").')
+    expect(text).toBe('Nothing scored this hour.\nThis week: 1 rest taken, 1 pushed through (last: "prod is down, fixing it").')
+  })
+
+  test('an override whose rest fell out of the week leaves the rests taken alone', async ($, on) => {
+    const text = await explain($, on, { stdout: today(null) }, {
+      rests: [NOW - 7 * DAY_MS - 5 * 60_000, NOW - DAY_MS],
+      overrides: [{ at: NOW - 7 * DAY_MS + 60_000, reason: 'prod is down' }],
+    })
+    expect(text).toBe('Nothing scored this hour.\nThis week: 1 rest taken.')
   })
 
   test('two overrides quote the newest reason', async ($, on) => {
     const text = await explain($, on, { stdout: today(null) }, {
+      rests: [NOW - 3 * DAY_MS - 60_000, NOW - DAY_MS - 60_000],
       overrides: [
         { at: NOW - 3 * DAY_MS, reason: 'deploy went wrong' },
         { at: NOW - DAY_MS, reason: 'prod is down' },
       ],
     })
-    expect(text).toBe('Nothing scored this hour.\nThis week: 0 rests, 2 overrides ("prod is down").')
+    expect(text).toBe('Nothing scored this hour.\nThis week: 0 rests taken, 2 pushed through (last: "prod is down").')
   })
 
   test('no rests or overrides, one line', async ($, on) => {
@@ -961,7 +970,7 @@ describe('cogload in ~/.bun/bin', () => {
     await start($)
     const text = (await $.command.run({ command: 'cogload' })).text
     expectNoHome([text, ...logs, ...toasts])
-    expect(text).toBe('Heating 80 this hour, at the cap: 5 sessions at once.\nThis week: 1 rest, 0 overrides.')
+    expect(text).toBe('Heating 80 this hour, at the cap: 5 sessions at once.\nThis week: 1 rest taken.')
     expect(calls).toEqual([STATUS, TODAY, [BIN, 'today', '--json']])
   })
 

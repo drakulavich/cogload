@@ -85,7 +85,7 @@ The `cognitive-load` plugin draws the last hour's level above the prompt, with t
 
 ```
 Heating 80 this hour, at the cap: 16 decisions and 13 context switches, 32 prompts, a 57m streak.
-This week: 2 rests, 1 override ("prod is down, fixing it").
+This week: 1 rest taken, 1 pushed through (last: "prod is down, fixing it").
 ```
 
 It also makes you rest. After 40 minutes of work without a ten-minute gap, or in a Fried hour, it holds your prompts for ten minutes. A first line `override: <reason>`, the reason three words or more, lets you go on.
