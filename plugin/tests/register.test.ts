@@ -351,7 +351,7 @@ const REST_MS = 10 * 60_000
 const hhmm = (ms: number) => new Date(ms).toTimeString().slice(0, 5)
 // The band before a rest: the streak's start plus 40 minutes.
 const restAt = (streakMin: number, asOf = ASOF) => `rest at ${hhmm(asOf + (40 - streakMin) * 60_000)}`
-const HINT = ' To go on now, start the prompt with "override: <reason>".'
+const HINT = ' To go on now, start or end the prompt with "override: <reason>".'
 const DROP = (until: number, { kind = 'composer', hint = true }: { kind?: 'composer' | 'bridge'; hint?: boolean } = {}) => ({
   drop: `Rest until ${hhmm(until)}.${kind === 'composer' ? ' Your prompt is saved.' : ''}${hint ? HINT : ''}`,
 })
@@ -558,7 +558,7 @@ describe('override', () => {
     expect(await band($)).toBe('● Heating · streak 40m')
   })
 
-  for (const prompt of ['override: ok\nfix it', 'override:', 'override: prod down']) {
+  for (const prompt of ['override: ok\nfix it', 'override:', 'override: prod down', 'fix it\noverride: no']) {
     test(`${JSON.stringify(prompt)} asks for a longer reason, goes back into the box and keeps the rest`, async ($, on) => {
       const fills: string[] = []
       engine(on, [{ stdout: line({ streakMin: 40 }) }])
@@ -600,6 +600,28 @@ describe('override', () => {
     await start($)
     expect(await typed($, 'override: prod is down')).toEqual({ drop: 'Rest lifted.' })
     expect(await typed($, 'next')).toEqual({ text: 'next' })
+  })
+
+  for (const [prompt, sent, reason] of [
+    ['fix the retry\noverride: prod is down', 'fix the retry', 'prod is down'],
+    ['fix it\n\noverride: prod is down now\n\n', 'fix it', 'prod is down now'],
+    ['override: prod is down\nfix this\noverride: also prod is down', 'fix this', 'prod is down'],
+  ] as const) {
+    test(`${JSON.stringify(prompt)} lifts the rest and sends ${JSON.stringify(sent)}`, async ($, on) => {
+      const store: Record<string, unknown> = {}
+      engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store)
+      await start($)
+      expect(await typed($, prompt)).toEqual({ text: sent })
+      expect(store.overrides).toEqual([{ at: NOW, reason }])
+    })
+  }
+
+  test('an override line in the middle of a prompt is held like any other', async ($, on) => {
+    const store: Record<string, unknown> = {}
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store)
+    await start($)
+    expect(await typed($, 'a\noverride: prod is down now\nb')).toEqual(DROP(NOW + REST_MS))
+    expect(store.overrides).toBeUndefined()
   })
 
   for (const prompt of ['Override: prod is down', 'OVERRIDE: prod is down']) {
