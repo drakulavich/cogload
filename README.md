@@ -88,7 +88,7 @@ Heating 80 this hour, at the cap: 16 decisions and 13 context switches, 32 promp
 This week: 1 rest taken, 1 pushed through (last: "prod is down, fixing it").
 ```
 
-It also makes you rest. After 40 minutes of work without a ten-minute gap, or in a Fried hour, it holds your prompts for ten minutes. A first line `override: <reason>`, the reason three words or more, lets you go on.
+It also makes you rest. After 40 minutes of work without a ten-minute gap, or in a Fried hour, it holds your prompts for ten minutes. A line `override: <reason>` at the start or the end of the prompt, the reason three words or more, lets you go on.
 
 ## Privacy
 
