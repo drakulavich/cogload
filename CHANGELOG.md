@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- After `card --out <path>`, the `wrote` line names the file only
+  (`wrote card.png`), not the folders around it.
 - `card --out .png` (an extension with no file name) is a usage error instead
   of a hidden file named `.png`.
 - A date after today, as the day or in `--to` or `--from`, is a usage error
