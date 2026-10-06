@@ -277,8 +277,8 @@ for usage` to stderr, exit 2.
 
 Errors: a missing or unreadable projects directory prints one line to stderr
 without the path, exit 1. Anything unexpected prints one line to stderr, never
-a stack trace, exit 1. A window with no data prints the empty grid (or an
-empty day table) and exits 0.
+a stack trace, exit 1. A window with no data prints the empty grid (or, for a
+day, `no activity on <date>`) and exits 0.
 
 ## Architecture
 
