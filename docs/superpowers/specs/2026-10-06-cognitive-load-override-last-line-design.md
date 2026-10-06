@@ -17,8 +17,9 @@ After this change:
 
 1. During a rest, an `override: <reason>` line lifts the rest when it is the
    prompt's first line or its last line. Trailing blank lines do not count
-   as the last line. When both qualify, the first line is the override.
-2. The override line is removed and the other lines are sent; when nothing
+   as the last line. When both qualify, the first line's reason is kept and
+   both lines are removed.
+2. The override line (or both, as above) is removed and the other lines are sent; when nothing
    is left, the prompt is dropped with `Rest lifted.`, as today.
 3. A reason of fewer than three words on either line gets
    `An override needs a reason of three words or more.`, as today.
@@ -34,7 +35,8 @@ change to the rest.
 
 In `prompt.submit` of `plugin/hooks/register.ts`, split `e.text.trimEnd()`
 into lines; take the first line if `OVERRIDE` matches it, else the last line
-when there is more than one; remove that line and join the rest. `HINT`
+when there is more than one; remove that line, and the last line too when
+   it also matches, then join the rest. `HINT`
 gets the new text.
 
 ## Tech Stack
@@ -64,13 +66,15 @@ Unit, `claude plugin test plugin`, each case failing without its behaviour:
 
 1. `fix the retry\noverride: prod is down` during a rest → the rest lifts,
    `fix the retry` is sent, the override is stored with its reason.
-2. `override: prod is down\n` with a trailing blank line, and a last line
-   alone after blank lines → treated as the override line.
-3. `fix it\noverride: no` → the short-reason reply; the prompt goes back
+2. `fix it\n\noverride: prod is down now\n\n` → the rest lifts and
+   `fix it` is sent: blank lines after the last line do not count.
+3. `override: prod is down\nfix this\noverride: also prod is down` → the
+   rest lifts, `fix this` is sent, the stored reason is `prod is down`.
+4. `fix it\noverride: no` → the short-reason reply; the prompt goes back
    into the box.
-4. `a\noverride: prod is down now\nb` → held, `Rest until …`, no override
+5. `a\noverride: prod is down now\nb` → held, `Rest until …`, no override
    stored.
-5. The first held prompt's hint carries the new text.
+6. The first held prompt's hint carries the new text.
 
 ## Boundaries
 
@@ -80,7 +84,7 @@ Unit, `claude plugin test plugin`, each case failing without its behaviour:
 
 ## Definition of Done
 
-- `claude plugin test plugin` passes, cases 1 to 5 included, each failing
+- `claude plugin test plugin` passes, cases 1 to 6 included, each failing
   without its behaviour.
 - `bun run check` passes.
 - The two specs above point here from their override rules.
