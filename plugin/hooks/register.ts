@@ -17,7 +17,7 @@ const TOAST_GAP_MS = 2100
 const HELD: readonly string[] = ['composer', 'bridge']
 const WEEK_MS = 7 * 24 * 60 * 60_000
 const OVERRIDE = /^override:(.*)$/i
-const HINT = ' To go on now, start the prompt with "override: <reason>".'
+const HINT = ' To go on now, start or end the prompt with "override: <reason>".'
 const SHORT = 'An override needs a reason of three words or more.'
 const WELCOME = 'Keep your head cold. The dot above the prompt shows how hot this hour runs.'
 const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload"
@@ -266,13 +266,15 @@ export const register: Register = on => {
     const now = await $.clock.now()
     const until = await restUntil($, now)
     if (until === null) return next(e)
-    const [first, ...body] = e.text.split('\n')
-    const override = OVERRIDE.exec(first)
+    const lines = e.text.trimEnd().split('\n')
+    const first = OVERRIDE.exec(lines[0] ?? '')
+    const last = lines.length > 1 ? OVERRIDE.exec(lines.at(-1) ?? '') : null
+    const override = first ?? last
     const reason = override?.[1].trim() ?? ''
     if (reason.split(/\s+/).length >= 3) {
       await $.store.delete('restUntil')
       await $.store.set('overrides', [...(await overridesSince($, now - WEEK_MS)), { at: now, reason }])
-      const text = body.join('\n').trim()
+      const text = lines.slice(first ? 1 : 0, last ? -1 : undefined).join('\n').trim()
       return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
     }
     const isComposer = e.origin.kind === 'composer'

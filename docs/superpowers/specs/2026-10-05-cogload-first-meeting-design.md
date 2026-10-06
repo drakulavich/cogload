@@ -34,7 +34,8 @@ After this change:
    `An override needs a reason of three words or more.`, plus
    ` Your prompt is saved.` for a `composer` prompt, which goes back into
    the box as other held prompts do. It does not take the one-time override
-   hint.
+   hint. The last line counts as well as the first
+   (`2026-10-06-cognitive-load-override-last-line-design.md`).
 
 The rest's toast keeps its text, index included.
 
