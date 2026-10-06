@@ -683,6 +683,18 @@ describe('/cogload', () => {
     })
   }
 
+  for (const [when, lastAt, phrase] of [
+    ['in a streak, the streak runs to asOf as on the band', '2026-10-03T09:55:30.000Z', 'a 48m streak'],
+    ['ten minutes away exactly, still the band\'s streak', '2026-10-03T09:49:30.000Z', 'a 48m streak'],
+    ['away over ten minutes, the hour\'s streak', '2026-10-03T09:45:00.000Z', 'a 44m streak'],
+  ] as const) {
+    test(when, async ($, on) => {
+      const presence = { lastAt, streakStartAt: '2026-10-03T09:11:30.000Z' }
+      const stdout = today({ streakMin: 44 }, { streak: 10 }).replace('"presence":null', `"presence":${JSON.stringify(presence)}`)
+      expect(await explain($, on, { stdout })).toBe(`Heating 80 this hour, at the cap: ${phrase}.`)
+    })
+  }
+
   test('parts at their cap come heaviest weight first', async ($, on) => {
     const stdout = today({ prompts: 32, decisions: 16, contextSwitches: 13, streakMin: 57 }, { streak: 10, pace: 15, supervision: 30 })
     expect(await explain($, on, { stdout })).toBe(
