@@ -42,6 +42,10 @@ async function main(): Promise<number> {
 }
 
 export function start(): void {
+  process.stdout.on("error", (e: NodeJS.ErrnoException) => {
+    if (e.code === "EPIPE") process.exit(0);
+    throw e;
+  });
   // exitCode, not exit(): exit() drops output still queued for a pipe.
   main().then((code) => { process.exitCode = code; }, (e: unknown) => {
     if (e instanceof HelpRequested) { console.log(USAGE); process.exit(0); }
