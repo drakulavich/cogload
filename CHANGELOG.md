@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- A date after today, as the day or in `--to` or `--from`, is a usage error
+  (`2099-01-01 is in the future`, exit 2) instead of an empty day.
 - When `cogload` keeps failing, the `cognitive-load` band goes blank once its
   reading is five minutes old, instead of showing that reading for hours.
 - During a rest, `Override:` and `OVERRIDE:` lift it like `override:`. A

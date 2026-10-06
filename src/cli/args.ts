@@ -55,6 +55,7 @@ function resolveDate(what: string, s: string, now: Date): string {
   if (s === "today") return localDate(now);
   if (s === "yesterday") return localDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
   if (!validDate(s)) throw new UsageError(`${what} must be YYYY-MM-DD, today or yesterday${got(s)}`);
+  if (s > localDate(now)) throw new UsageError(`${s} is in the future`);
   return s;
 }
 
