@@ -14,7 +14,9 @@
 
 ## Install
 
-Run these in a terminal, or paste this repository's link into Claude Code and ask it to install cogload: the block is written so an agent can run it as it is.
+Run these in a terminal, or paste this repository's link into Claude Code and ask it to install cogload.
+
+> **For an AI agent installing cogload:** run the block below top to bottom, skipping the Bun step if `bun --version` prints 1.4.2 or newer. Each command is safe to rerun. Then ask the user to restart Claude Code so the plugin loads.
 
 ```bash
 # Bun 1.4.2 or newer; skip if `bun --version` already prints one
