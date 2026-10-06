@@ -5,6 +5,22 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-10-06
+
+### Changed
+- The `cognitive-load` band shows when the rest starts, `● Calm · rest at 14:52`,
+  for the whole streak, instead of the streak's minutes and a warning from the
+  35th minute.
+- `/cogload` counts the week's rests taken and the ones pushed through with an
+  override, quoting the latest reason:
+  `This week: 18 rests taken, 2 pushed through (last: "prod is down").`
+
+### Fixed
+- `/cogload` prints the same streak as the band; it ran a few minutes behind
+  while you read.
+- During a rest, `override: <reason>` also works as the prompt's last line; the
+  hint says "start or end the prompt".
+
 ## [0.12.1] - 2026-10-06
 
 ### Fixed
