@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 ### Fixed
 - After `card --out <path>`, the `wrote` line names the file only
   (`wrote card.png`), not the folders around it.
+- `card --out .png` (an extension with no file name) is a usage error instead
+  of a hidden file named `.png`.
+- A date after today, as the day or in `--to` or `--from`, is a usage error
+  (`2099-01-01 is in the future`, exit 2) instead of an empty day.
 - A day with no activity prints `no activity on <date>` instead of a bare
   table header.
 - When `cogload` keeps failing, the `cognitive-load` band goes blank once its

@@ -55,6 +55,7 @@ function resolveDate(what: string, s: string, now: Date): string {
   if (s === "today") return localDate(now);
   if (s === "yesterday") return localDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
   if (!validDate(s)) throw new UsageError(`${what} must be YYYY-MM-DD, today or yesterday${got(s)}`);
+  if (s > localDate(now)) throw new UsageError(`${s} is in the future`);
   return s;
 }
 
@@ -150,6 +151,8 @@ export function parseArgs(argv: string[], now: Date, env: Record<string, string 
     // Its file name is printed back in `wrote \u2026`, so it must be one plain line.
     if (/[\x00-\x1f\x7f]/.test(a.out)) throw new UsageError("--out must not contain control characters");
     if (!/\.(png|webp|html)$/i.test(a.out)) throw new UsageError("--out must end in .png, .webp or .html");
+    const bare = /(?:^|[/\\])\.(png|webp|html)$/i.exec(a.out);
+    if (bare) throw new UsageError(`--out needs a file name before .${bare[1]}`);
   }
   return a;
 }

@@ -234,7 +234,7 @@ describe("cogload card", () => {
   });
 
   test("bad --out values exit 2, print one stderr line without the value, and write nothing", async () => {
-    for (const out of ["x.gif", "x", "a\nb.png", "\x1b[31mx.png", "x\x7f.png"]) {
+    for (const out of ["x.gif", "x", "a\nb.png", "\x1b[31mx.png", "x\x7f.png", ".png", "dir/.webp", ".HTML"]) {
       const r = await run("card", "--to", "2026-09-20", "--out", out);
       expect(r.code).toBe(2);
       expect(r.out).toBe("");
@@ -244,6 +244,7 @@ describe("cogload card", () => {
       expect(r.err).not.toContain("a\nb");
       expect(await files()).toEqual([]);
     }
+    expect((await run("card", "--to", "2026-09-20", "--out", "dir/.webp")).err.split("\n")[0]).toBe("cogload: --out needs a file name before .webp");
   });
 
   test("a card that cannot be written exits 1 with one line that names no path", async () => {
