@@ -19,7 +19,7 @@ After this change:
 
    ```
    Heating 80 this hour, at the cap: 16 decisions and 13 context switches, 32 prompts, a 57m streak.
-   This week: 2 rests, 1 override ("prod is down, fixing it").
+   This week: 1 rest taken, 1 pushed through (last: "prod is down, fixing it").
    ```
 
 2. The first line names every part at its cap (its points equal its
@@ -43,9 +43,15 @@ After this change:
    hour's streak stops at your last action, so it ran a few minutes behind the
    band while you read ([#171](https://github.com/drakulavich/cogload/issues/171)).
 
-4. The second line counts the rests started and the overrides made in the
-   last seven days. With overrides it quotes the newest reason. With
-   neither, the line is left out.
+4. The second line counts, over the last seven days, the rests taken and
+   the ones pushed through, and quotes the newest override's reason, marked `last:`:
+   `This week: 18 rests taken, 2 pushed through (last: "prod is down").` An
+   override can only lift a running rest, so pushed through is the overrides
+   and taken is the rests started less the overrides, never below 0 (the
+   window can drop a rest before its override). With no override it is
+   `This week: 5 rests taken.` With neither, the line is left out. It used
+   to read `20 rests, 20 overrides`, which looked like two unrelated counts
+   ([#174](https://github.com/drakulavich/cogload/issues/174)).
 5. With no scored live hour, the first line is `Nothing scored this hour.`
 6. `/overrides` is gone. Overrides are kept seven days instead of fourteen.
 
@@ -106,8 +112,9 @@ removed:
 4. A share tie between pace and reading → pace.
 5. `live` null → `Nothing scored this hour.`
 6. Two rests and one override in seven days, one of each older →
-   `This week: 2 rests, 1 override ("<reason>").`; two overrides → the
-   newest reason.
+   `This week: 1 rest taken, 1 pushed through (last: "<reason>").`; two
+   overrides → the newest reason; rests and no override → `N rests taken.`;
+   more overrides than rests in the window → `0 rests taken`.
 7. No rests or overrides → one line.
 8. `cogload` missing → the `MISSING` text; exit 1 and unparsable output →
    `cogload gave no reading.`
@@ -120,7 +127,7 @@ User scenarios, tmux, stub `cogload` first on `PATH`:
 | # | Setup | Action | Expected on screen |
 |---|---|---|---|
 | 1 | Stub: today's live hour above | `/cogload` | The first line with the three capped parts |
-| 2 | Stub: streak 40 | Send a prompt, then `override: prod is down`, then `/cogload` | Second line `This week: 1 rest, 1 override ("prod is down").` |
+| 2 | Stub: streak 40 | Send a prompt, then `override: prod is down`, then `/cogload` | Second line `This week: 0 rests taken, 1 pushed through (last: "prod is down").` |
 | 3 | No `cogload` on `PATH` | `/cogload` | The `MISSING` text |
 | 4 | Any | `/overrides` | Claude Code's unknown-command reply |
 
