@@ -6,6 +6,10 @@ Claude Code writes a JSONL transcript for every session under `~/.claude/project
 
 ## Usage
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/drakulavich/cogload/main/assets/demo.webp" alt="cogload in a terminal: week heatmap, day table, JSON, status" width="800">
+</p>
+
 | Command | What it does |
 |---|---|
 | `cogload` | The last 7 days ending today, one cell per hour, in local time. |

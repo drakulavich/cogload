@@ -9,7 +9,7 @@
 <p align="center"><b>How hard was today?</b> cogload reads the transcripts Claude Code already writes on your machine and scores every hour 0–100 from parallel sessions, prompt pace, agent supervision, model output, streak length and late-night work. Nothing leaves the machine, no message text is kept.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/drakulavich/cogload/main/assets/demo.webp" alt="cogload demo: week heatmap, day table, JSON" width="800">
+  <img src="https://raw.githubusercontent.com/drakulavich/cogload/main/assets/plugin.webp" alt="The cognitive-load plugin in Claude Code: a rest holds a prompt, an override lifts it, /cogload names what drives the hour" width="800">
 </p>
 
 ## Install
