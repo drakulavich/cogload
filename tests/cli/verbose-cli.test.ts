@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { chmod, mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assistant, bigToolResult, prompt, sidechain, writeTree } from "../helpers/transcript.ts";
@@ -78,6 +78,30 @@ describe("--verbose", () => {
     const bytes = (await stat(join(root, "-Users-me-proj/a.jsonl"))).size + (await stat(join(root, "-Users-me-proj/b.jsonl"))).size;
     expect(lineOf(r.err, "read")).toMatch(new RegExp(String.raw`^read\s+2 files, ${(bytes / 1e6).toFixed(1)} MB, \d+ at a time` + MS));
     expect(r.err).not.toContain("/");
+  });
+
+  test("counts the unreadable files and directories it skipped, and names neither", async () => {
+    const tree = await mkdtemp(join(tmpdir(), "cogload-verbose-locked-"));
+    const at = "2026-09-14T13:00:00.000Z";
+    await writeTree(tree, [
+      { path: "-Users-me-ok/a.jsonl", lines: [prompt(at, A)], mtime: at },
+      { path: "-Users-me-lockedfile/b.jsonl", lines: [prompt(at, A)], mtime: at },
+      { path: "-Users-me-secretdir/c.jsonl", lines: [prompt(at, A)], mtime: at },
+    ]);
+    await chmod(join(tree, "-Users-me-lockedfile/b.jsonl"), 0o000);
+    await chmod(join(tree, "-Users-me-secretdir"), 0o000);
+    try {
+      const p = Bun.spawn(["bun", CLI, "--projects", tree, "--to", "2026-09-14", "--days", "1", "--json", "--verbose", "--no-cache"], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+      const [err, code] = await Promise.all([new Response(p.stderr).text(), p.exited]);
+      expect(code).toBe(0);
+      // b is seen and fails to read; the locked directory is never entered, so c is not counted as a file.
+      expect(lineOf(err, "scan")).toMatch(new RegExp(String.raw`^scan\s+2 files, 2 in window, 0 tail checks, 2 unreadable skipped` + MS));
+      expect(err).not.toContain("lockedfile");
+      expect(err).not.toContain("secretdir");
+    } finally {
+      await chmod(join(tree, "-Users-me-secretdir"), 0o755);
+      await rm(tree, { recursive: true, force: true });
+    }
   });
 
   test("card adds the render, --json has none to report", async () => {

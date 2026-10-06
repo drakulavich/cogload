@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- `--verbose` says how many unreadable transcripts or project directories
+  the scan skipped (`2 unreadable skipped`), so a light day has a reason.
 - After `card --out <path>`, the `wrote` line names the file only
   (`wrote card.png`), not the folders around it.
 - `card --out .png` (an extension with no file name) is a usage error instead

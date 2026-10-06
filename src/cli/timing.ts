@@ -7,7 +7,7 @@ export function timingLines(t: Timing, env: { version: string; bun: string; plat
   return `cogload ${env.version} · bun ${env.bun} · ${env.platform} ${env.arch} · ${env.cpus} cpus\n`
     + row("start", "bun, modules, arguments", t.startMs ?? 0)
     + (t.openMs !== undefined ? row("open", "cache", t.openMs) : "")
-    + row("scan", `${plural(t.files, "file")}, ${t.inWindow} in window, ${plural(t.tailChecks, "tail check")}`, t.scanMs)
+    + row("scan", `${plural(t.files, "file")}, ${t.inWindow} in window, ${plural(t.tailChecks, "tail check")}${t.skipped ? `, ${t.skipped} unreadable skipped` : ""}`, t.scanMs)
     + (t.cache ? row("cache", `${plural(t.cache.hits, "hit")}, ${plural(t.cache.misses, "miss", "misses")}`, t.lookupMs) : `${"cache".padEnd(8)}off\n`)
     + row("read", `${plural(t.read, "file")}, ${(t.bytes / 1e6).toFixed(1)} MB, ${READERS} at a time`, t.readMs)
     + row("analyze", "", t.analyzeMs)

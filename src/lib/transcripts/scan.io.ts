@@ -2,13 +2,14 @@ import { constants, type Dirent } from "node:fs";
 import { access, open, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 
-// What --verbose reports about the walk: transcripts seen, and how many of them
-// were opened only to read the tail of a file older than the window by mtime.
-export type ScanStats = { files: number; tailChecks: number };
+// What --verbose reports about the walk: transcripts seen, how many of them
+// were opened only to read the tail of a file older than the window by mtime,
+// and how many files or directories could not be read.
+export type ScanStats = { files: number; tailChecks: number; skipped: number };
 export type ScanEntry = { path: string; dev: number; ino: number; size: number; mtimeMs: number };
 
 // A `subagents` directory holds the parent agent's conversation, not the human's.
-export async function scan(projects: string, cutoffMs: number, stats: ScanStats = { files: 0, tailChecks: 0 }): Promise<ScanEntry[]> {
+export async function scan(projects: string, cutoffMs: number, stats: ScanStats = { files: 0, tailChecks: 0, skipped: 0 }): Promise<ScanEntry[]> {
   // No path in any message: the CLI never prints one. A directory that can be
   // listed but not entered (mode 444) would otherwise read as one with no activity.
   let root;
@@ -36,7 +37,7 @@ async function collect(dir: string, entries: Dirent[], cutoffMs: number, out: Sc
       if (entry.name === "subagents") continue;
       try {
         await collect(full, await readdir(full, { withFileTypes: true }), cutoffMs, out, stats);
-      } catch {}
+      } catch { stats.skipped++; }
     } else if (entry.isFile() && entry.name.endsWith(".jsonl")) {
       stats.files++;
       try {
@@ -46,7 +47,7 @@ async function collect(dir: string, entries: Dirent[], cutoffMs: number, out: Sc
           if ((await lastTimestampMs(full)) < cutoffMs) continue;
         }
         out.push({ path: full, dev: st.dev, ino: st.ino, size: st.size, mtimeMs: st.mtimeMs });
-      } catch {}
+      } catch { stats.skipped++; }
     }
   }
 }
