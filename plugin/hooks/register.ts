@@ -12,7 +12,6 @@ const NARROW = 50
 const CLOCK_SKEW_MS = 60_000
 const REST_AFTER_MIN = 40 // NORMS.streakMin in src/lib/metrics/score.ts
 const WEIGHTS = { parallel: 25, pace: 15, supervision: 30, reading: 10, streak: 10, late: 10 } as const // WEIGHTS in src/lib/metrics/score.ts
-const WARN_AFTER_MIN = 35
 const REST_MS = 10 * 60_000 // GAP_MS in src/lib/metrics
 const TOAST_GAP_MS = 2100
 const HELD: readonly string[] = ['composer', 'bridge']
@@ -290,11 +289,10 @@ export const register: Register = on => {
     if (e.props.hasSurvey || s === null || s.index === null || s.level === null) return next(e)
     const now = await $.clock.now()
     const until = await restUntil($, now)
-    const isWarning =
-      until === null && s.streakMin >= WARN_AFTER_MIN && s.streakMin < REST_AFTER_MIN && (await streakWouldRest($, s))
+    const isAhead = until === null && s.streakMin > 0 && s.streakMin < REST_AFTER_MIN && (await streakWouldRest($, s))
     const parts: string[] = []
     if (until !== null) parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`)
-    else if (isWarning) parts.push(`rest in ${REST_AFTER_MIN - s.streakMin} min`)
+    else if (isAhead) parts.push(`rest at ${clockTime(streakStart(s) + REST_AFTER_MIN * 60_000)}`)
     else if (e.props.bodyColumns >= NARROW && s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
     const { Box, Text } = $.ui.resolve(e)
     const head = Text({ color: COLOR[s.level], children: `● ${s.level}` })
