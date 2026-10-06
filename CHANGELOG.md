@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-10-06
+
+### Fixed
+- A reader that closes the pipe early (`cogload | head -1`) no longer gets a
+  stack trace on stderr, and cogload exits 0.
+
+### Changed
+- The README is a short page for a newcomer: install in one block an agent
+  can run, the week, the card, the plugin and privacy in brief. Every command,
+  flag and rule moved verbatim to `docs/reference.md`.
+
 ## [0.12.0] - 2026-10-06
 
 ### Fixed

@@ -1,6 +1,6 @@
 {
   "name": "@drakulavich/cogload",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Keep your head cold. A thermometer for your Claude Code days: every hour scored 0 to 100 from the transcripts already on your disk. Nothing leaves your machine.",
   "license": "MIT",
   "author": "Anton Yakutovich",
