@@ -1,6 +1,6 @@
 import { statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { CardWriteError, cardData, cardHtml, loadAssets, openCard, renderCard, sentenceText } from "../lib/card/index.ts";
 import { report, type Timing } from "../lib/report/index.ts";
 import { renderStatus, statusOf, streakFrom, writeStatus } from "../lib/status/index.ts";
@@ -29,9 +29,9 @@ export async function status(a: Args, now: Date, cache: TranscriptCache | null, 
   return 0;
 }
 
-// The label names the folder, not the path: the CLI never prints a derived path.
+// The label names a file or folder, never a path: the CLI prints no path, not even one typed in.
 function cardTarget(out: string | null): { path: string; label: string; unwritable?: string } {
-  if (out !== null) return { path: out, label: out };
+  if (out !== null) return { path: out, label: basename(out) };
   const dir = join(homedir(), "Downloads");
   let isDir = false;
   try { isDir = statSync(dir).isDirectory(); } catch {}

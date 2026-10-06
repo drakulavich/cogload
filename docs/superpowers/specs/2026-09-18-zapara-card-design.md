@@ -49,8 +49,10 @@ zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [-
 - `--json` prints the card's data (below) to stdout and writes no file.
 - Without `--json`, stdout gets two lines: the character line
   (`The Conductor: 5 sessions at once, 54 context switches in one hour`) and
-  `wrote zapara-card.png`, echoing `--out` exactly as given. No other path is
-  ever printed.
+  `wrote zapara-card.png`, the last path segment of `--out`: the folders
+  around it often name a client or project and end up in logs and
+  screenshots ([#155](https://github.com/drakulavich/cogload/issues/155)).
+  No path is ever printed.
 - A window with no active hour prints `no activity from 2026-09-01 to
   2026-09-14` (the window's own dates; `no activity on 2026-09-14` for one
   day) to stderr, writes nothing, exits 1. With `--json` it prints `null`
@@ -74,7 +76,7 @@ zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [-
 
 Privacy amendment to the base spec: `card` is the one command that writes a
 file. It writes exactly one file, at the path the person gave or the default in
-the current directory, and prints that path back verbatim. It never writes
+the current directory, and prints back the file name of that path. It never writes
 anywhere else and never prints a path it derived from the projects tree or
 from its own install location. The page it renders is self-contained: no
 network request is made while rendering, and the browser engine runs
@@ -411,7 +413,8 @@ Scenarios:
   exits 1 with the one-line message and no file; `--out x.gif` exits 2 with
   a usage line; `--out` with an embedded newline and `--out` with an ESC byte
   each exit 2, print one stderr line without the value, and create no file;
-  stdout's second line is `wrote <exactly the --out given>`.
+  stdout's second line is `wrote <the file name of --out>`, and a
+  recognisable folder name in `--out` appears in neither stdout nor stderr.
 - CLI rendering and the fit test run only where a `Bun.WebView` can be
   constructed: the suite probes once; when the probe fails the tests skip,
   unless `ZAPARA_REQUIRE_WEBVIEW=1` is set, in which case they fail with

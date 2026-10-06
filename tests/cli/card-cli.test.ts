@@ -123,9 +123,17 @@ describe("cogload card", () => {
   test("--out x.html writes exactly the cardHtml string and prints the two lines", async () => {
     const r = await run("card", "--to", "2026-09-20", "--out", "./x.html");
     expect(r.code).toBe(0);
-    expect(r.out).toBe("The Marathoner: Longest streak 7h53m without a break, 68% of your hours calm.\nwrote ./x.html\n");
+    expect(r.out).toBe("The Marathoner: Longest streak 7h53m without a break, 68% of your hours calm.\nwrote x.html\n");
     const expected = cardHtml(cardData(await report({ projects, to: "2026-09-20", days: 14 }), { days: 14 })!, await loadAssets());
     expect(await readFile(join(cwd, "x.html"), "utf8")).toBe(expected);
+  });
+
+  test("--out in a folder prints the file name and never the folder", async () => {
+    await mkdir(join(cwd, "secret-client"));
+    const r = await run("card", "--to", "2026-09-20", "--out", join(cwd, "secret-client", "card.html"));
+    expect(r.code).toBe(0);
+    expect(r.out.endsWith("\nwrote card.html\n")).toBe(true);
+    expect(r.out + r.err).not.toContain("secret-client");
   });
 
   test("--out X.HTML is case-insensitive and writes exactly the cardHtml string", async () => {
@@ -226,7 +234,7 @@ describe("cogload card", () => {
   });
 
   test("bad --out values exit 2, print one stderr line without the value, and write nothing", async () => {
-    for (const out of ["x.gif", "x", "a\nb.png", "\x1b[31mx.png", "x\x7f.png"]) {
+    for (const out of ["x.gif", "x", "a\nb.png", "\x1b[31mx.png", "x\x7f.png", ".png", "dir/.webp", ".HTML"]) {
       const r = await run("card", "--to", "2026-09-20", "--out", out);
       expect(r.code).toBe(2);
       expect(r.out).toBe("");
@@ -236,6 +244,7 @@ describe("cogload card", () => {
       expect(r.err).not.toContain("a\nb");
       expect(await files()).toEqual([]);
     }
+    expect((await run("card", "--to", "2026-09-20", "--out", "dir/.webp")).err.split("\n")[0]).toBe("cogload: --out needs a file name before .webp");
   });
 
   test("a card that cannot be written exits 1 with one line that names no path", async () => {
