@@ -56,7 +56,7 @@ Sleep 400ms
 Enter
 Sleep 3500ms
 
-# 4. what drives the hour, and the week's rests and overrides
+# 4. what drives the hour, and the week's rests taken and pushed through
 Type "/cogload"
 Sleep 800ms
 Enter
