@@ -22,6 +22,8 @@ After this change:
    rest does. The one-minute tick counts it down. The overrides count,
    when above 0, is appended after it as it is today, during a rest too:
    `▓ Heating 68 · rest in 3 min · overrides this week: 1`.
+   Replaced: the band now shows `rest at HH:MM` for the whole streak
+   (`2026-10-06-cognitive-load-band-rest-at-design.md`).
 2. At 40 the rest starts as today, with the same toast.
 3. A held `composer` prompt is dropped with
    `Rest until 14:32. Your prompt is saved.`; a held `bridge` prompt, which
