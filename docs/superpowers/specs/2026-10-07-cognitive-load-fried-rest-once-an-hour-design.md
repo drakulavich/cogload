@@ -31,6 +31,19 @@ In `startRestIfDue` of `plugin/hooks/register.ts`: a reading is due when
 at least `HOUR_MS` before `now`. When the rest starts on a Fried reading, set
 `friedAt = now` next to `spent`.
 
+```mermaid
+flowchart TD
+  R[decoded reading] --> S{streakMin ≥ 40?}
+  S -- yes --> P{start more than 10 min from spent?}
+  S -- no --> F{Fried?}
+  F -- no --> N[no rest]
+  F -- yes --> H{"friedAt missing or ≥ 60 min ago? (new)"}
+  H -- no --> N
+  H -- yes --> P
+  P -- no --> N
+  P -- yes --> Y["rest 10 min; spent = start; friedAt = now if Fried (new)"]
+```
+
 ## Tech Stack
 
 As the spec above: Claude Code plugin of function hooks, plain TypeScript.
