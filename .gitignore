@@ -7,3 +7,5 @@ docs/superpowers/plans/
 cogload-card.png
 plugin/tsconfig.json
 plugin/.claude-plugin/types/
+# CocoIndex Code (ccc)
+/.cocoindex_code/
