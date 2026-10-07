@@ -136,7 +136,10 @@ const mount = ($: Engine, props: { bodyColumns?: number; hasSurvey?: boolean } =
 
 const band = async (...args: Parameters<typeof mount>) => {
   const texts = await (await mount(...args)).findAll({ type: 'Text' })
-  return texts.map(t => t.text).join('')
+  return texts
+    .map(t => t.text)
+    .filter(t => t !== ENGINE_BAND)
+    .join('')
 }
 
 describe('reading', () => {
@@ -164,10 +167,17 @@ describe('reading', () => {
     expect(logs).toEqual(['exit 1'])
   })
 
+  test('keeps the band beneath on screen under its own line', async ($, on) => {
+    engine(on, [{ stdout: line() }])
+    await start($)
+    const texts = await (await mount($)).findAll({ type: 'Text' })
+    expect(texts.map(t => t.text)).toEqual(['● Heating', ` · ${restAt(20)}`, ENGINE_BAND])
+  })
+
   test('a failed first run draws no band', async ($, on) => {
     engine(on, [{ exitCode: 1 }])
     await start($)
-    expect(await band($)).toBe(ENGINE_BAND)
+    expect(await band($)).toBe('')
   })
 
   for (const [name, stdout] of [
@@ -183,7 +193,7 @@ describe('reading', () => {
       const logs: string[] = []
       engine(on, [{ stdout }], logs)
       await start($)
-      expect(await band($)).toBe(ENGINE_BAND)
+      expect(await band($)).toBe('')
       expect(logs).toEqual(['bad line'])
     })
   }
@@ -198,7 +208,7 @@ describe('reading', () => {
     const logs: string[] = []
     engine(on, ['not found', { stdout: line() }], logs)
     await start($)
-    expect(await band($)).toBe(ENGINE_BAND)
+    expect(await band($)).toBe('')
     await turn($)
     expect(await band($)).toBe(`● Heating · ${restAt(20)}`)
     expect(logs).toEqual(['not found'])
@@ -293,19 +303,20 @@ describe('band', () => {
     test(`no band for a null index (${surface})`, async ($, on) => {
       engine(on, [{ stdout: line({ index: null, level: null }) }])
       await start($)
-      expect(await band($, {}, surface)).toBe(ENGINE_BAND)
+      expect(await band($, {}, surface)).toBe('')
     })
   }
 
   test('no band before a reading', async ($, on) => {
     engine(on, [])
-    expect(await band($)).toBe(ENGINE_BAND)
+    expect(await band($)).toBe('')
   })
 
   test('no band under a survey', async ($, on) => {
     engine(on, [{ stdout: line() }])
     await start($)
-    expect(await band($, { hasSurvey: true })).toBe(ENGINE_BAND)
+    const texts = await (await mount($, { hasSurvey: true })).findAll({ type: 'Text' })
+    expect(texts.map(t => t.text)).toEqual([ENGINE_BAND])
   })
 
   for (const surface of SURFACES) {
@@ -998,14 +1009,14 @@ describe('a stale reading', () => {
     await clock.advance(4 * 60_000)
     expect(await band($)).toBe(`● Heating · ${restAt(20, NOW)}`)
     await clock.advance(60_000)
-    expect(await band($)).toBe(ENGINE_BAND)
+    expect(await band($)).toBe('')
   })
 
   test('after it clears, the next good reading draws the band', async ($, on) => {
     engine(on, [read(), ...failing(6), live(() => NOW - 20 * 60_000)])
     await start($)
     await clock.advance(6 * 60_000)
-    expect(await band($)).toBe(ENGINE_BAND)
+    expect(await band($)).toBe('')
     await clock.advance(60_000)
     expect(await band($)).toBe(`● Heating · ${restAt(20, NOW)}`)
   })
@@ -1014,7 +1025,7 @@ describe('a stale reading', () => {
     engine(on, [read({ streakMin: 40 }), ...failing(10)])
     await start($)
     await clock.advance(5 * 60_000)
-    expect(await band($)).toBe(ENGINE_BAND)
+    expect(await band($)).toBe('')
     expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
   })
 })
@@ -1099,7 +1110,7 @@ describe('cogload in ~/.bun/bin', () => {
       const text = await band($)
       expectNoHome([text, ...logs, ...toasts])
       expect(calls).toEqual([STATUS])
-      expect(text).toBe(ENGINE_BAND)
+      expect(text).toBe('')
       expect(logs).toEqual([failure])
     })
   }

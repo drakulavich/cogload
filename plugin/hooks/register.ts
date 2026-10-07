@@ -302,8 +302,9 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const beneath = await next(e)
     const s = await read($, status)
-    if (e.props.hasSurvey || s === null || s.index === null || s.level === null) return next(e)
+    if (e.props.hasSurvey || s === null || s.index === null || s.level === null) return beneath
     const now = await $.clock.now()
     const until = await restUntil($, now)
     const isAhead = until === null && s.streakMin > 0 && s.streakMin < REST_AFTER_MIN && (await streakWouldRest($, s))
@@ -313,7 +314,8 @@ export const register: Register = on => {
     else if (e.props.bodyColumns >= NARROW && s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
     const { Box, Text } = $.ui.resolve(e)
     const head = Text({ color: COLOR[s.level], children: `● ${s.level}` })
-    if (parts.length === 0) return head
-    return Box({ children: [head, Text({ dimColor: true, children: parts.map(p => ` · ${p}`).join('') })] })
+    const own =
+      parts.length === 0 ? head : Box({ children: [head, Text({ dimColor: true, children: parts.map(p => ` · ${p}`).join('') })] })
+    return Box({ flexDirection: 'column', children: [own, beneath] })
   })
 }
