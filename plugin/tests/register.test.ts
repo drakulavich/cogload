@@ -468,6 +468,44 @@ describe('rest', () => {
     expect(await typed($, 'next')).toEqual(DROP(clock.now() + REST_MS))
   })
 
+  test('a Fried hour rests once: the next streak inside the hour passes', async ($, on) => {
+    const toasts: string[] = []
+    let streakStart = NOW - 5 * 60_000
+    engine(on, [live(() => streakStart, { level: 'Fried', index: 90 })], [], toasts, { welcomed: true })
+    await start($)
+    await clock.advance(11 * 60_000)
+    streakStart = clock.now()
+    await clock.advance(60_000)
+    expect(toasts).toHaveLength(1)
+    expect(await typed($, 'next')).toEqual({ text: 'next' })
+  })
+
+  test('a Fried reading an hour after the last Fried rest rests again', async ($, on) => {
+    const toasts: string[] = []
+    let streakStart = NOW - 5 * 60_000
+    engine(on, [live(() => streakStart, { level: 'Fried', index: 90 })], [], toasts, { welcomed: true })
+    await start($)
+    await clock.advance(61 * 60_000)
+    streakStart = clock.now() - 5 * 60_000
+    await clock.advance(60_000)
+    expect(toasts).toHaveLength(2)
+    expect(await typed($, 'next')).toEqual(DROP(clock.now() + REST_MS))
+  })
+
+  test('a 40-minute streak rests inside a Fried hour', async ($, on) => {
+    const toasts: string[] = []
+    let streakStart = NOW - 5 * 60_000
+    engine(on, [live(() => streakStart, { level: 'Fried', index: 90 })], [], toasts, { welcomed: true })
+    await start($)
+    await clock.advance(11 * 60_000)
+    streakStart = clock.now()
+    await clock.advance(39 * 60_000)
+    expect(toasts).toHaveLength(1)
+    await clock.advance(60_000)
+    expect(toasts).toHaveLength(2)
+    expect(await typed($, 'next')).toEqual(DROP(clock.now() + REST_MS))
+  })
+
   for (const [columns, surface] of [
     [120, 'terminal'],
     [40, 'desktop'],

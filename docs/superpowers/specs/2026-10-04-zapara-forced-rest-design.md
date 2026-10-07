@@ -62,7 +62,8 @@ overrides: { at: number; reason: string }[]  // older than 14 days dropped on ea
   shows the rest): `streakMin` ≥ 40 or
   `level` Fried, and this start more than ten minutes from `spent` (or no
   `spent`) → `restUntil = now + 10 min`, `spent` = this start, toast. A streak holds once: answering Claude during the rest can
-  keep the streak alive, and it must not hold again.
+  keep the streak alive, and it must not hold again. A Fried hour holds once
+  (`2026-10-07-cognitive-load-fried-rest-once-an-hour-design.md`).
 - On `prompt.submit` from `composer` or `bridge` with `now` before
   `restUntil`: an override deletes `restUntil` and appends `{ at: now, reason }`;
   anything else returns `{ drop: <the reason above> }`. A `restUntil` in the past holds nothing; it is
