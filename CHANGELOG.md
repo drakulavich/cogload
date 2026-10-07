@@ -5,6 +5,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.12.3] - 2026-10-07
+
+### Changed
+- During a rest each held prompt gets a new idea for the break, the minutes
+  left and the way out; the way out is now `skip: <reason>`, and `/cogload`
+  counts skipped rests. (#183)
+
+### Fixed
+- A Fried hour holds you once: after a rest, a Fried reading starts no other
+  rest for an hour, while a 40-minute streak still does. (#180)
+- The level line no longer hides bands that other plugins draw above the
+  prompt, such as watchtower's. (#185)
+
 ## [0.12.2] - 2026-10-06
 
 ### Changed
