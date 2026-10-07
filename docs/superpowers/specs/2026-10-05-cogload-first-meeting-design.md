@@ -35,7 +35,8 @@ After this change:
    ` Your prompt is saved.` for a `composer` prompt, which goes back into
    the box as other held prompts do. It does not take the one-time override
    hint. The last line counts as well as the first
-   (`2026-10-06-cognitive-load-override-last-line-design.md`).
+   (`2026-10-06-cognitive-load-override-last-line-design.md`). The word is
+   `skip` now and the one-time hint is gone (`2026-10-07-cognitive-load-skip-and-rest-phrases-design.md`).
 
 The rest's toast keeps its text, index included.
 

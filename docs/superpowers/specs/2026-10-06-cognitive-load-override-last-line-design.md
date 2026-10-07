@@ -2,7 +2,8 @@
 
 Extends `2026-10-04-zapara-forced-rest-design.md` (rule 5) and
 `2026-10-05-cogload-first-meeting-design.md` (rule 4); everything not
-mentioned here stays as they say.
+mentioned here stays as they say. The line reads `skip: <reason>` since
+`2026-10-07-cognitive-load-skip-and-rest-phrases-design.md`.
 
 ## Objective
 

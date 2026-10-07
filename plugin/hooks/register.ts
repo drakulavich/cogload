@@ -17,9 +17,18 @@ const TOAST_GAP_MS = 2100
 const HELD: readonly string[] = ['composer', 'bridge']
 const WEEK_MS = 7 * 24 * 60 * 60_000
 const HOUR_MS = 60 * 60_000
-const OVERRIDE = /^override:(.*)$/i
-const HINT = ' To go on now, start or end the prompt with "override: <reason>".'
-const SHORT = 'An override needs a reason of three words or more.'
+const SKIP = /^(?:skip|override):(.*)$/i
+const PHRASES = [
+  'Stand up and stretch.',
+  'Water, then a window.',
+  'Look at something far away.',
+  'Walk to the kitchen and back.',
+  'Roll your shoulders, unclench your jaw.',
+  'Close your eyes for a minute.',
+  'Breathe out slower than you breathe in.',
+  'The code will wait.',
+]
+const SHORT = 'A skip needs a reason of three words or more.'
 const WELCOME = 'Keep your head cold. The dot above the prompt shows how hot this hour runs.'
 const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload"
 const NO_READING = 'cogload gave no reading.'
@@ -182,7 +191,7 @@ const weekLine = async ($: EngineInterface, now: number): Promise<string | null>
   const pushed = (await overridesSince($, now - WEEK_MS)).filter(o => rests.some(at => at <= o.at))
   const taken = `This week: ${plural(rests.length - pushed.length, 'rest')} taken`
   const newest = pushed.at(-1)
-  return newest === undefined ? `${taken}.` : `${taken}, ${pushed.length} pushed through (last: "${newest.reason}").`
+  return newest === undefined ? `${taken}.` : `${taken}, ${pushed.length} skipped (last: "${newest.reason}").`
 }
 
 const spawn = async ($: EngineInterface, argv: string[], env?: Record<string, string>) => {
@@ -237,7 +246,7 @@ export const register: Register = on => {
   // Not awaited: the engine holds the turn until these hooks return.
   on('session.start', async ($, e, next) => {
     const result = await next(e)
-    await $.command.register({ name: 'cogload', description: "What drives this hour's load, and the week's rests and overrides" })
+    await $.command.register({ name: 'cogload', description: "What drives this hour's load, and the week's rests and skips" })
     toastOnce($, 'welcomed', WELCOME)
       .catch(() => {})
       .then(() => refresh($))
@@ -272,10 +281,10 @@ export const register: Register = on => {
     const until = await restUntil($, now)
     if (until === null) return next(e)
     const lines = e.text.trimEnd().split('\n')
-    const first = OVERRIDE.exec(lines[0] ?? '')
-    const last = lines.length > 1 ? OVERRIDE.exec(lines.at(-1) ?? '') : null
-    const override = first ?? last
-    const reason = override?.[1].trim() ?? ''
+    const first = SKIP.exec(lines[0] ?? '')
+    const last = lines.length > 1 ? SKIP.exec(lines.at(-1) ?? '') : null
+    const skip = first ?? last
+    const reason = skip?.[1].trim() ?? ''
     if (reason.split(/\s+/).length >= 3) {
       await $.store.delete('restUntil')
       await $.store.set('overrides', [...(await overridesSince($, now - WEEK_MS)), { at: now, reason }])
@@ -284,11 +293,12 @@ export const register: Register = on => {
     }
     const isComposer = e.origin.kind === 'composer'
     if (isComposer) await $.prompt.fill({ text: e.text, mode: 'replace' }).catch(() => {})
-    const saved = isComposer ? ' Your prompt is saved.' : ''
-    if (override !== null) return { drop: `${SHORT}${saved}` }
-    const isTaught = (await $.store.get('taught')) === true
-    if (!isTaught) await $.store.set('taught', true)
-    return { drop: `Rest until ${clockTime(until)}.${saved}${isTaught ? '' : HINT}` }
+    if (skip !== null) return { drop: `${SHORT}${isComposer ? ' Your prompt is saved.' : ''}` }
+    const phrase = await $.store.get('phrase')
+    const n = typeof phrase === 'number' ? phrase : 0
+    await $.store.set('phrase', (n + 1) % PHRASES.length)
+    const left = `${Math.ceil((until - now) / 60_000)} min left${isComposer ? ', your prompt is saved' : ''}`
+    return { drop: `${PHRASES[n % PHRASES.length]} ${left}. To go on: "skip: <reason>".` }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {

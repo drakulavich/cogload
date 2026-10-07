@@ -22,6 +22,8 @@ What the author sees:
    It is dropped with
    `Rest until 14:32 (7 min). Start with "override: <reason>" to go on.`
    A prompt typed in the box goes back into it, so nothing has to be retyped.
+   Each held prompt now gets a phrase for the break and `skip: <reason>`
+   (`2026-10-07-cognitive-load-skip-and-rest-phrases-design.md`).
 3. The band reads `▓ Heating 68 · rest until 14:32`, under 50 columns too.
 4. At 14:32 prompts go through again. Ten minutes without a prompt is
    cogload's gap (`GAP_MS`), so the streak is over and the next starts at 0.
@@ -30,7 +32,8 @@ What the author sees:
    removed and the rest is sent; when nothing is left, the prompt is dropped
    with the reason `Rest lifted.` The band then shows `overrides this week: 2`
    while the count is above 0. The last line counts too
-   (`2026-10-06-cognitive-load-override-last-line-design.md`).
+   (`2026-10-06-cognitive-load-override-last-line-design.md`). The line is
+   `skip: <reason>` now, `override:` kept as a synonym (`2026-10-07-cognitive-load-skip-and-rest-phrases-design.md`).
 6. `/overrides` prints the overrides of the last 14 days, newest first:
    `Thu 03 Oct 14:25  prod is down, fixing it`, or
    `No overrides in 14 days.`
