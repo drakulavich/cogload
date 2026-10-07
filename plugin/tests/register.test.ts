@@ -351,11 +351,20 @@ const REST_MS = 10 * 60_000
 const hhmm = (ms: number) => new Date(ms).toTimeString().slice(0, 5)
 // The band before a rest: the streak's start plus 40 minutes.
 const restAt = (streakMin: number, asOf = ASOF) => `rest at ${hhmm(asOf + (40 - streakMin) * 60_000)}`
-const HINT = ' To go on now, start or end the prompt with "override: <reason>".'
-const DROP = (until: number, { kind = 'composer', hint = true }: { kind?: 'composer' | 'bridge'; hint?: boolean } = {}) => ({
-  drop: `Rest until ${hhmm(until)}.${kind === 'composer' ? ' Your prompt is saved.' : ''}${hint ? HINT : ''}`,
+const PHRASES = [
+  'Stand up and stretch.',
+  'Water, then a window.',
+  'Look at something far away.',
+  'Walk to the kitchen and back.',
+  'Roll your shoulders, unclench your jaw.',
+  'Close your eyes for a minute.',
+  'Breathe out slower than you breathe in.',
+  'The code will wait.',
+]
+const DROP = (until: number, { kind = 'composer', n = 0 }: { kind?: 'composer' | 'bridge'; n?: number } = {}) => ({
+  drop: `${PHRASES[n]} ${Math.ceil((until - clock.now()) / 60_000)} min left${kind === 'composer' ? ', your prompt is saved' : ''}. To go on: "skip: <reason>".`,
 })
-const SHORT = 'An override needs a reason of three words or more.'
+const SHORT = 'A skip needs a reason of three words or more.'
 const typed = ($: Engine, text: string, kind: 'composer' | 'bridge' = 'composer') =>
   $.prompt.submit({ text, wait: false, origin: { kind } })
 
@@ -388,19 +397,31 @@ describe('rest', () => {
     expect(await band($)).toBe(`● Fried · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
   })
 
-  test('a held composer prompt says it is saved, and the override only the first time', async ($, on) => {
+  test('each held composer prompt gets the next phrase, the minutes left, that it is saved and the way out', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
+    expect(await typed($, 'next task')).toEqual({
+      drop: 'Stand up and stretch. 10 min left, your prompt is saved. To go on: "skip: <reason>".',
+    })
     await clock.advance(3 * 60_000)
-    expect(await typed($, 'next task')).toEqual(DROP(NOW + REST_MS))
-    expect(await typed($, 'next task')).toEqual(DROP(NOW + REST_MS, { hint: false }))
+    expect(await typed($, 'next task')).toEqual({
+      drop: 'Water, then a window. 7 min left, your prompt is saved. To go on: "skip: <reason>".',
+    })
   })
 
-  test('a held bridge prompt says only the time, and the override the first time', async ($, on) => {
+  test('the ninth held prompt starts the phrases over', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
-    expect(await typed($, 'next task', 'bridge')).toEqual(DROP(NOW + REST_MS, { kind: 'bridge' }))
-    expect(await typed($, 'next task', 'bridge')).toEqual(DROP(NOW + REST_MS, { kind: 'bridge', hint: false }))
+    for (const n of PHRASES.keys()) expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS, { n }))
+    expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
+  })
+
+  test('a held bridge prompt says nothing about saving', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    await start($)
+    expect(await typed($, 'next task', 'bridge')).toEqual({
+      drop: 'Stand up and stretch. 10 min left. To go on: "skip: <reason>".',
+    })
   })
 
   test('a composer prompt dropped by the rest goes back into the box', async ($, on) => {
@@ -580,7 +601,7 @@ describe('rest at', () => {
 })
 
 describe('override', () => {
-  test('after the drop that taught it, an override lifts the rest and sends the second line', async ($, on) => {
+  test('after a held prompt, an override lifts the rest and sends the second line', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
     expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
@@ -625,14 +646,6 @@ describe('override', () => {
     expect(fills).toEqual([])
   })
 
-  test('a short override does not take the hint', async ($, on) => {
-    engine(on, [{ stdout: line({ streakMin: 40 }) }])
-    await start($)
-    expect(await typed($, 'override: ok')).toEqual({ drop: `${SHORT} Your prompt is saved.` })
-    expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
-    expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS, { hint: false }))
-  })
-
   test('an override alone lifts the rest and sends nothing', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
@@ -660,6 +673,25 @@ describe('override', () => {
     await start($)
     expect(await typed($, 'a\noverride: prod is down now\nb')).toEqual(DROP(NOW + REST_MS))
     expect(store.overrides).toBeUndefined()
+  })
+
+  for (const [prompt, sent] of [
+    ['fix it\nskip: prod is down now', { text: 'fix it' }],
+    ['Skip: prod is down now', { drop: 'Rest lifted.' }],
+  ] as const) {
+    test(`${JSON.stringify(prompt)} lifts the rest and keeps the reason`, async ($, on) => {
+      const store: Record<string, unknown> = {}
+      engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store)
+      await start($)
+      expect(await typed($, prompt)).toEqual(sent)
+      expect(store.overrides).toEqual([{ at: NOW, reason: 'prod is down now' }])
+    })
+  }
+
+  test('a short skip asks for a longer reason', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40 }) }])
+    await start($)
+    expect(await typed($, 'skip: no')).toEqual({ drop: 'A skip needs a reason of three words or more. Your prompt is saved.' })
   })
 
   for (const prompt of ['Override: prod is down', 'OVERRIDE: prod is down']) {
@@ -795,7 +827,7 @@ describe('/cogload', () => {
     )
   })
 
-  test("the week's rests taken and pushed through, with the reason", async ($, on) => {
+  test("the week's rests taken and skipped, with the reason", async ($, on) => {
     const text = await explain($, on, { stdout: today(null) }, {
       rests: [NOW - 8 * DAY_MS, NOW - 2 * DAY_MS, NOW - DAY_MS],
       overrides: [
@@ -803,7 +835,7 @@ describe('/cogload', () => {
         { at: NOW - DAY_MS + 5 * 60_000, reason: 'prod is down, fixing it' },
       ],
     })
-    expect(text).toBe('Nothing scored this hour.\nThis week: 1 rest taken, 1 pushed through (last: "prod is down, fixing it").')
+    expect(text).toBe('Nothing scored this hour.\nThis week: 1 rest taken, 1 skipped (last: "prod is down, fixing it").')
   })
 
   test('an override whose rest fell out of the week leaves the rests taken alone', async ($, on) => {
@@ -822,7 +854,7 @@ describe('/cogload', () => {
         { at: NOW - DAY_MS, reason: 'prod is down' },
       ],
     })
-    expect(text).toBe('Nothing scored this hour.\nThis week: 0 rests taken, 2 pushed through (last: "prod is down").')
+    expect(text).toBe('Nothing scored this hour.\nThis week: 0 rests taken, 2 skipped (last: "prod is down").')
   })
 
   test('no rests or overrides, one line', async ($, on) => {

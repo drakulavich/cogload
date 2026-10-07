@@ -9,7 +9,7 @@
 <p align="center"><b>How hard was today?</b> cogload reads the transcripts Claude Code already writes on your machine and scores every hour 0–100 from parallel sessions, prompt pace, agent supervision, model output, streak length and late-night work. Nothing leaves the machine, no message text is kept.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/drakulavich/cogload/main/assets/plugin.webp" alt="The cognitive-load plugin in Claude Code: a rest holds a prompt, an override lifts it, /cogload names what drives the hour" width="800">
+  <img src="https://raw.githubusercontent.com/drakulavich/cogload/main/assets/plugin.webp" alt="The cognitive-load plugin in Claude Code: a rest holds a prompt, a skip lifts it, /cogload names what drives the hour" width="800">
 </p>
 
 ## Install
@@ -85,14 +85,14 @@ The `cognitive-load` plugin draws the last hour's level above the prompt, with t
 
 ```
 Heating 80 this hour, at the cap: 16 decisions and 13 context switches, 32 prompts, a 57m streak.
-This week: 1 rest taken, 1 pushed through (last: "prod is down, fixing it").
+This week: 1 rest taken, 1 skipped (last: "prod is down, fixing it").
 ```
 
-It also makes you rest. After 40 minutes of work without a ten-minute gap, or in a Fried hour, it holds your prompts for ten minutes. A line `override: <reason>` at the start or the end of the prompt, the reason three words or more, lets you go on.
+It also makes you rest. After 40 minutes of work without a ten-minute gap, or in a Fried hour, it holds your prompts for ten minutes. Each held prompt gets the next short idea for the break, the minutes left and the way out: `Stand up and stretch. 7 min left, your prompt is saved. To go on: "skip: <reason>".` A `skip: <reason>` line at the start or the end of the prompt, the reason three words or more, lifts the rest.
 
 ## Privacy
 
-cogload reads `~/.claude/projects` on your machine and sends nothing anywhere. It keeps, writes and prints no message text, prompt length, file path or session title: what survives from a transcript is timestamps, session ids, event kinds and token counts. The plugin keeps one piece of text, the reason you give for an override. [The reference](docs/reference.md#privacy) lists every file cogload and the plugin write.
+cogload reads `~/.claude/projects` on your machine and sends nothing anywhere. It keeps, writes and prints no message text, prompt length, file path or session title: what survives from a transcript is timestamps, session ids, event kinds and token counts. The plugin keeps one piece of text, the reason you give for a skip. [The reference](docs/reference.md#privacy) lists every file cogload and the plugin write.
 
 ## More
 
