@@ -40,8 +40,9 @@ After this change:
    same way and is mentioned nowhere.
 4. A shorter reason, or none, gets `A skip needs a reason of three words or
    more.`, and a typed prompt goes back into the box, as today.
-5. The one-time hint and its `taught` flag go: every held prompt carries the
-   way out. A stored `taught` is left alone and no longer read.
+5. The one-time hint and its `taught` flag go: every prompt held without a
+   `skip:` or `override:` line carries the way out. A too-short skip gets
+   only the reply in 4, with no phrase: it already names the way out. A stored `taught` is left alone and no longer read.
 6. `/cogload` reads `This week: 3 rests taken, 1 skipped (last: "prod is
    down, fixing it").`, and the command's description says "the week's rests
    and skips". Skips are still stored under `overrides`, so the week's count
