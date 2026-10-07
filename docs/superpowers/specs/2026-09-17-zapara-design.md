@@ -1,10 +1,10 @@
-# zapara: cognitive load index from Claude Code transcripts
+# cogload: cognitive load index from Claude Code transcripts
 
 Date: 2026-09-17. Status: approved design for the MVP.
 
 ## Purpose
 
-`zapara` reads the transcripts Claude Code already writes under `~/.claude/projects`
+`cogload` reads the transcripts Claude Code already writes under `~/.claude/projects`
 and turns them into an hourly Cognitive Load Index (0–100) for the person driving
 the sessions. The MVP has one job: show a week of history as a picture that a human
 can check against their own memory, so the formula can be judged and calibrated.
@@ -198,12 +198,12 @@ norms live in one exported constant in `src/score.ts` so a change is one diff.
 
 ## CLI
 
-Runs from TypeScript on Bun, no build step. `bin.zapara` points at `src/index.ts`
+Runs from TypeScript on Bun, no build step. `bin.cogload` points at `src/index.ts`
 with a `#!/usr/bin/env bun` shebang.
 
 ```
-zapara [window]                 # the last 7 days, one cell per hour (the grid)
-zapara today|yesterday|<date>   # one day, one row per active hour, [--explain]
+cogload [window]                 # the last 7 days, one cell per hour (the grid)
+cogload today|yesterday|<date>   # one day, one row per active hour, [--explain]
 window: --days N | --to <date> | --from <date> --to <date>
 common flags: --json  --projects <dir>  --no-color  -h/--help  -V/--version
 ```
@@ -265,14 +265,14 @@ streak they are in; nothing else about that event enters the window.
 JSON is also the default when stdout is not a TTY. The day that
 contains the moment the report ran also carries `asOf`, that moment as an ISO
 8601 UTC string; every other day omits the field. That day's own numbers cover
-only events timestamped at or before `asOf`, so a record appended while zapara
+only events timestamped at or before `asOf`, so a record appended while cogload
 was reading, or one later than the snapshot, is excluded even though it falls
 inside the window.
 
 Defaults and validation: `--to` defaults to today. `--days` defaults to 7 and
 accepts an integer from 1 to 90. A date must be `YYYY-MM-DD` and a real
 calendar date, or the words `today` and `yesterday`. Any other value, an
-unknown command or an unknown flag prints one line plus `run 'zapara --help'
+unknown command or an unknown flag prints one line plus `run 'cogload --help'
 for usage` to stderr, exit 2.
 
 Errors: a missing or unreadable projects directory prints one line to stderr
@@ -312,7 +312,7 @@ src/lib/
                                  Bun.WebView and Bun.Image, opens the result
                                  (2026-09-18-zapara-card-design.md)
   status/         status.ts      today's Day → the status line
-                  statusfile.io.ts  the line → ~/.claude/zapara/status.json
+                  statusfile.io.ts  the line → ~/.claude/cogload/status.json
                                  (2026-09-19-zapara-status-file-design.md)
 ```
 
@@ -445,7 +445,7 @@ the behavior it pins.
 
 ## Repository
 
-Private GitHub repository `drakulavich/zapara`. MIT. Layout follows pult and
+Private GitHub repository `drakulavich/cogload`. MIT. Layout follows pult and
 oura-cli: `package.json` with `bin`, `test`, `typecheck` and `check` scripts;
 `tsconfig.json` strict with `noUncheckedIndexedAccess`; `README.md` with quick
 start and the week picture; `CHANGELOG.md` (Keep a Changelog); `CLAUDE.md` as a

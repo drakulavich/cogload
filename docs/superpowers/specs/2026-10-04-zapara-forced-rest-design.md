@@ -2,7 +2,7 @@
 
 Extends `2026-10-03-zapara-cognitive-load-plugin-design.md`; everything not
 mentioned here stays as that spec says. That plugin is an MVP and may change.
-Tracks [#105](https://github.com/drakulavich/zapara/issues/105).
+Tracks [#105](https://github.com/drakulavich/cogload/issues/105).
 
 ## Objective
 
@@ -24,7 +24,7 @@ What the author sees:
    A prompt typed in the box goes back into it, so nothing has to be retyped.
 3. The band reads `▓ Heating 68 · rest until 14:32`, under 50 columns too.
 4. At 14:32 prompts go through again. Ten minutes without a prompt is
-   zapara's gap (`GAP_MS`), so the streak is over and the next starts at 0.
+   cogload's gap (`GAP_MS`), so the streak is over and the next starts at 0.
 5. A prompt whose first line is `override: <reason>`, the reason at least
    three words, lifts the hold for the rest of this streak. The first line is
    removed and the rest is sent; when nothing is left, the prompt is dropped
@@ -82,14 +82,14 @@ overrides: { at: number; reason: string }[]  // older than 14 days dropped on ea
   `$.ui.toast`, `$.command.register`; events `session.start`,
   `turn.complete`, `prompt.submit`, `command.run`, `ui.render`
   (`AbovePrompt`).
-- zapara 0.9.0 on `PATH`, read through `zapara status`; unchanged.
+- cogload 0.9.0 on `PATH`, read through `cogload status`; unchanged.
 
 ## Commands
 
 ```
 claude plugin validate plugin     # manifest, hooks, $.state/$.store keys
 claude plugin test plugin         # plugin/tests/*.test.ts against the engine
-bun run check                     # zapara: typecheck, biome + knip, tests (TZ=UTC)
+bun run check                     # cogload: typecheck, biome + knip, tests (TZ=UTC)
 claude --plugin-dir plugin --debug-file /tmp/cl/debug.log   # user scenarios, in tmux
 ```
 
@@ -123,7 +123,7 @@ on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
 ```
 
 The 40 and the ten minutes are constants with one comment line each naming
-the zapara constant they must equal (`NORMS.streakMin`, `GAP_MS`): the
+the cogload constant they must equal (`NORMS.streakMin`, `GAP_MS`): the
 plugin imports nothing from `src/`, so a recalibration there would leave it
 behind silently. No other comments.
 
@@ -152,7 +152,7 @@ case asserts what differs with and without the behaviour it pins (CLAUDE.md):
 9. `/overrides` with overrides 2, 9 and 15 days old → two lines, newest
    first; the 15-day one gone after the next write; none → the empty line.
 
-User scenarios: tmux, `--plugin-dir plugin`, a stub `zapara` first on
+User scenarios: tmux, `--plugin-dir plugin`, a stub `cogload` first on
 `PATH`; they need a logged-in Claude Code, so they run locally and the
 implementation PR carries the captured screens.
 
@@ -190,7 +190,7 @@ implementation PR carries the captured screens.
   the override reasons of the last 14 days are kept locally in the plugin's
   store and dropped after.
 - CHANGELOG `## [Unreleased]` / `### Changed` carries one entry for it.
-- The outcome, checked a month after release with `zapara --days 30`: fewer
+- The outcome, checked a month after release with `cogload --days 30`: fewer
   Heating and Fried hours and fewer streaks over 40 minutes than the 30 days
   before. This one judges the idea, not the implementation PR.
 
