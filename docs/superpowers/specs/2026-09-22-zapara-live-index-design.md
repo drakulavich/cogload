@@ -1,4 +1,4 @@
-# zapara live index: the status line's number stops resetting on the hour
+# cogload live index: the status line's number stops resetting on the hour
 
 Extends `2026-09-19-zapara-status-file-design.md`, which extends
 `2026-09-17-zapara-design.md`. Everything not mentioned here stays as those
@@ -198,6 +198,6 @@ format, `TZ=UTC`, each with the one-line mutation that fails it:
 
 ## Later
 
-Not in this change: a `live` column or footer in `zapara today`; a
+Not in this change: a `live` column or footer in `cogload today`; a
 configurable window length; a live index for a day other than the open one;
 the wording change in pult's README.

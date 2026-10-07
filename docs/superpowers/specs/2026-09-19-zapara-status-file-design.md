@@ -1,18 +1,18 @@
-# zapara status: one small file for a status line
+# cogload status: one small file for a status line
 
 Extends `2026-09-17-zapara-design.md`. Everything not mentioned here stays as
 that spec says.
 
 ## Purpose
 
-A status line wants one number from zapara, the load of the last hour, and
+A status line wants one number from cogload, the load of the last hour, and
 it wants it in a few milliseconds, every thirty seconds,
-without reading a single transcript. zapara takes about half a second to
+without reading a single transcript. cogload takes about half a second to
 compute a day, which is too slow for a status line and far too slow for one
-that Claude Code kills and restarts on every event. So zapara writes the
+that Claude Code kills and restarts on every event. So cogload writes the
 number down, and the status line reads it back.
 
-`zapara status` computes today and writes a one-line JSON file at a fixed
+`cogload status` computes today and writes a one-line JSON file at a fixed
 path. Whoever renders a status line reads that file, draws the number, and
 decides for itself when the file is old enough to ask for a new one. The base
 spec listed a statusline segment under non-goals and promised this cache
@@ -20,7 +20,7 @@ file as the later step; this is that step. The consumer in mind is
 [pult](https://github.com/drakulavich/pult), but the file is plain JSON at a
 plain path, and any status line can read it.
 
-zapara stays a program that runs and exits. This spec adds no hook, no timer,
+cogload stays a program that runs and exits. This spec adds no hook, no timer,
 no daemon and no watcher; refreshing is the reader's job, and the contract
 for it is written down below so the two sides agree without sharing code.
 
@@ -32,11 +32,11 @@ its own; it cannot be implemented on a `main` that lacks it.
 ## CLI
 
 ```
-zapara status [--projects DIR]
+cogload status [--projects DIR]
 ```
 
 - Computes the local calendar day that contains `now`, exactly as
-  `zapara today` does (same `report()`, same window, same `asOf` rule: events
+  `cogload today` does (same `report()`, same window, same `asOf` rule: events
   after `now` are not counted).
 - Writes the status file, then prints the same JSON line to stdout. `--json`
   is accepted and changes nothing, since the output is already JSON.
@@ -52,14 +52,14 @@ zapara status [--projects DIR]
 `--help` gains one line in the command list:
 
 ```
-       zapara status                   write today's load for a status line
+       cogload status                   write today's load for a status line
 ```
 
 ## The file
 
-Path: `~/.claude/zapara/status.json`, where `~` is the home directory, on
+Path: `~/.claude/cogload/status.json`, where `~` is the home directory, on
 every platform. There is one file per user, whatever `--projects` was; the
-file describes the projects directory zapara read, and a reader has no way
+file describes the projects directory cogload read, and a reader has no way
 to tell which one, so a person who runs `status` against a second directory
 overwrites the first. The directory is created on first use.
 
@@ -90,7 +90,7 @@ field that keeps growing while you sit there. It is computed from the day's
 `presence` (`lastAt`, `streakStartAt`) against `asOf`, so it does not reset at
 an hour boundary and does not wait for your next action to grow. On a day with no activity the
 file is still written, with the `null`s and zeros above, so a reader can tell
-"nothing yet today" from "zapara never ran".
+"nothing yet today" from "cogload never ran".
 
 Privacy: the file holds these nine values and nothing else. No path, no
 project, no session count, no text, no token count: a status line has no use
@@ -110,7 +110,7 @@ for them and the file may sit in a directory other tools read.
   run is under a second, so runs do not pile up.
 - The temporary file is removed on every path out of a failed write. One
   left by a crash (a kill between create and rename) stays where it is:
-  zapara never opens, reuses or deletes a temporary file it did not create
+  cogload never opens, reuses or deletes a temporary file it did not create
   in this run, because from the outside a crashed run and a slow one look
   the same, and deleting a slow run's file would break the promise above.
   Such a leftover is a few hundred bytes with a name no later run picks, and
@@ -128,10 +128,10 @@ for them and the file may sit in a directory other tools read.
 
 ## Contract for a reader
 
-Written here so pult and zapara agree without either reading the other's
+Written here so pult and cogload agree without either reading the other's
 source.
 
-- Read `~/.claude/zapara/status.json` and decode it strictly. The file is
+- Read `~/.claude/cogload/status.json` and decode it strictly. The file is
   written by another program and can be replaced by any tool the same user
   runs, so the reader trusts nothing in it: it is one JSON object; `schema`
   is `1`; `asOf` parses as an ISO 8601 instant no later than 60 seconds after
@@ -147,23 +147,23 @@ source.
   Whatever else the reader shows (`peak`, `activeMin` as hours and minutes)
   comes from the same file.
 - Staleness is `now - asOf`, or no data at all. When the file is stale, the
-  reader runs `zapara status` as a detached process with stdin, stdout and
+  reader runs `cogload status` as a detached process with stdin, stdout and
   stderr closed, does not wait for it, and draws what it has; the next read
   picks up the new file. This is how the file comes to exist on a machine
-  that never ran zapara: the first render finds nothing, starts one run, and
+  that never ran cogload: the first render finds nothing, starts one run, and
   the render after that has the file. The threshold is the reader's (pult's
   is five minutes).
 - A reader may start a run on every stale render; nothing coordinates readers,
   and concurrent runs are harmless because the file is written atomically.
   Renders are seconds apart and a run is under a second, so runs do not pile
   up.
-- `asOf` moves only when zapara actually ran, so a reader that shows the
+- `asOf` moves only when cogload actually ran, so a reader that shows the
   snapshot's age shows the truth.
-- `zapara` is found on the reader's `PATH`; a reader with a
-  `bun`-locating wrapper (pult's) can fall back to `bunx @drakulavich/zapara
+- `cogload` is found on the reader's `PATH`; a reader with a
+  `bun`-locating wrapper (pult's) can fall back to `bunx @drakulavich/cogload
   status`. When neither is found the reader shows the file it has, or
   nothing, and never an error.
-- A reader may instead run `zapara status` itself and decode the line it
+- A reader may instead run `cogload status` itself and decode the line it
   prints by the same rules, since that line equals the file's content. Such
   a reader judges no staleness and reads no file; the `cognitive-load`
   plugin does this after every turn
@@ -174,7 +174,7 @@ source.
 - `src/statusfile.ts` is a new shell module. It is the second file, after
   `src/image.ts`, allowed to write a file, and the only one allowed to write
   the status file; CLAUDE.md's shell rule names it. It owns the path
-  (`join(homedir(), ".claude", "zapara", "status.json")`), `mkdir`, the
+  (`join(homedir(), ".claude", "cogload", "status.json")`), `mkdir`, the
   temporary file, `rename`, and the modes. It exports one function,
   `writeStatus(line: string): Promise<void>`.
 - `src/status.ts` is core: `statusOf(day: Day, now: Date): Status` builds
@@ -214,7 +214,7 @@ Fixture-driven through the public seams, as the base spec requires:
 - `tests/shell/status-cli.test.ts`: the CLI with `HOME` pointing at a temp
   directory and `--projects` at a fixture tree with activity today
   (`utcDay(0)`): exit 0, stdout is one JSON line equal to the file's content,
-  the file exists at `<HOME>/.claude/zapara/status.json` with mode `0600`,
+  the file exists at `<HOME>/.claude/cogload/status.json` with mode `0600`,
   the directory with `0700`, no `status.json.tmp` beside it, and `asOf`
   matches the ISO shape. A second run with an unreadable projects directory:
   exit 1, one line on stderr, no path in it, and the file's content is
@@ -230,13 +230,13 @@ Fixture-driven through the public seams, as the base spec requires:
 
 ## README, CHANGELOG, CLAUDE.md
 
-- README: one row in the usage table (`zapara status`, "write today's load
+- README: one row in the usage table (`cogload status`, "write today's load
   for a status line") and a short section "Status line" with the file path,
   the field table, the reader contract in three sentences, and a link to
   pult as the reader that exists. The Limits bullet on the snapshot points
   here.
-- CHANGELOG `## [Unreleased]`, `### Added`: "`zapara status` writes today's
-  load to `~/.claude/zapara/status.json` for a status line to read; the file
+- CHANGELOG `## [Unreleased]`, `### Added`: "`cogload status` writes today's
+  load to `~/.claude/cogload/status.json` for a status line to read; the file
   format and the reader's refresh contract are in the spec."
 - CLAUDE.md shell rule: `src/statusfile.ts` joins `src/image.ts` as a file
   writer, for the status file only.

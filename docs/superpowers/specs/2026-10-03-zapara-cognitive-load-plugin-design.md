@@ -1,4 +1,4 @@
-# cognitive-load: zapara's load above the Claude Code prompt
+# cognitive-load: cogload's load above the Claude Code prompt
 
 Extends `2026-09-19-zapara-status-file-design.md` and
 `2026-09-22-zapara-live-index-design.md`. Everything not mentioned here stays
@@ -40,14 +40,14 @@ A band above the prompt, one line:
 
 The plugin is a second kind of reader of the status contract. pult reads the
 file, judges staleness from `asOf` and starts a detached run. The plugin
-instead runs `zapara status` itself and reads the line it prints, which the
+instead runs `cogload status` itself and reads the line it prints, which the
 status spec already makes equal to the file's content.
 
 1. On `session.start`, after `next(e)` resolves, and on `turn.complete`, after
    `next(e)` resolves, the plugin starts
-   `$.process.run(["zapara", "status"], { timeoutMs: 10000 })` and returns
+   `$.process.run(["cogload", "status"], { timeoutMs: 10000 })` and returns
    without waiting for it. The engine holds the turn until a `turn.complete`
-   hook returns: awaiting the run made a hung `zapara` cost every turn ten
+   hook returns: awaiting the run made a hung `cogload` cost every turn ten
    seconds (user scenario 5, first run). A run still going when the module
    unloads is dropped quietly.
 2. It decodes stdout by the status spec's reader rules, unchanged: one JSON
@@ -58,7 +58,7 @@ status spec already makes equal to the file's content.
 3. A line that decodes is stored with `$.state` under `cognitive-load.status`:
    the nine fields, nothing else. A ui.render read of that state redraws the
    band when it changes.
-4. Anything else (`zapara` not found, a non-zero exit, the timeout, a line
+4. Anything else (`cogload` not found, a non-zero exit, the timeout, a line
    that does not decode) keeps the last good reading until it is five minutes
    old (`2026-10-06-cognitive-load-stale-band-design.md`), or no band when
    there is none, and writes one line with `$.ui.log(..., { to: "debug" })` naming the
@@ -73,11 +73,11 @@ every turn ends with a run. Between turns `streakMin` stands still; the streak
 itself ends after ten minutes away, so the band is at most one turn behind.
 
 A run took 117 to 262 ms on 2026-10-03 (`$.process.run` from a throwaway mod,
-zapara 0.8.1, warm and cold cache). The hooks do not wait for the run, so a
+cogload 0.8.1, warm and cold cache). The hooks do not wait for the run, so a
 slow one never holds the person's turn. Runs from several sessions at once
 are harmless: the status file is written atomically, as the status spec says.
 
-`zapara` is found on the `PATH` Claude Code was started with. A Homebrew Bun
+`cogload` is found on the `PATH` Claude Code was started with. A Homebrew Bun
 does not put `~/.bun/bin` there; the README says so, as it already does for
 the CLI. No `bunx` fallback.
 
@@ -92,7 +92,7 @@ the CLI only, and the paragraph says what the optional plugin does.
 ## Layout
 
 ```
-.claude-plugin/marketplace.json     marketplace "zapara", one plugin: ./plugin
+.claude-plugin/marketplace.json     marketplace "cogload", one plugin: ./plugin
 plugin/
   .claude-plugin/plugin.json        name "cognitive-load", version 0.1.0, types
   hooks/hooks.json                  { "modules": ["./register.ts"] }
@@ -104,8 +104,8 @@ plugin/
 Install:
 
 ```
-/plugin marketplace add drakulavich/zapara
-/plugin install cognitive-load@zapara
+/plugin marketplace add drakulavich/cogload
+/plugin install cognitive-load@cogload
 ```
 
 The module is plain TypeScript with no JSX: the band is built by calling
@@ -115,13 +115,13 @@ the global `h` without JSX is typed too loosely for a render hook.
 
 `plugin/` is not in `package.json`'s `files`, so the npm package does not
 change. The plugin has its own version, starting at 0.1.0, not tied to
-zapara's.
+cogload's.
 
 ## Testing
 
 `claude plugin test plugin` runs `plugin/tests/register.test.ts` against the
 engine. The test's own `process.run` hook sits beneath the plugin and answers
-for `zapara`, so no binary is needed. Each case asserts what differs with and
+for `cogload`, so no binary is needed. Each case asserts what differs with and
 without the behaviour it pins (CLAUDE.md, #69):
 
 1. `session.start` with a Heating line: the band holds `Heating 68`, `peak 81`,
@@ -157,25 +157,25 @@ Claude Code session. Each runs `claude --plugin-dir plugin --debug-file
 a logged-in Claude Code, so they run on a developer's machine, not in CI; the
 implementation PR carries the captured screens as evidence.
 
-Most scenarios put a stub `zapara` first on `PATH`: a shell script in a temp
+Most scenarios put a stub `cogload` first on `PATH`: a shell script in a temp
 directory that prints a fixed status line, exits with a given code, or sleeps.
-The stub never touches `~/.claude/zapara`. Scenarios 1 and 2 use the real
-zapara.
+The stub never touches `~/.claude/cogload`. Scenarios 1 and 2 use the real
+cogload.
 
 | # | Setup | Action | Expected on screen |
 |---|---|---|---|
-| 1 | Real zapara 0.9.0 on `PATH`, activity today | Start a session | The band appears without a prompt being sent; its index equals `zapara status` run in another terminal within the same minute |
-| 2 | As 1 | Send two prompts, a minute apart | The band changes after a turn, and after each turn matches a fresh `zapara status` |
+| 1 | Real cogload 0.9.0 on `PATH`, activity today | Start a session | The band appears without a prompt being sent; its index equals `cogload status` run in another terminal within the same minute |
+| 2 | As 1 | Send two prompts, a minute apart | The band changes after a turn, and after each turn matches a fresh `cogload status` |
 | 3 | Stub prints a Fried line | Start, send one prompt | `█ Fried 92 · …` in Fried's colour |
 | 4 | Stub prints a Heating line, then is edited to exit 1 | Send a prompt after the edit | The Heating line stays; `debug.log` has `exit 1` |
 | 5 | Stub sleeps 15 s | Send a prompt | The answer arrives without waiting for the stub; no band; `debug.log` has `timeout` |
-| 6 | No `zapara` on `PATH` | Start, send a prompt | No band, nothing about zapara in the transcript; `debug.log` has `not found` |
+| 6 | No `cogload` on `PATH` | Start, send a prompt | No band, nothing about cogload in the transcript; `debug.log` has `not found` |
 | 7 | Stub prints `index: null` | Start | No band |
 | 8 | Stub prints a line with `schema` 2 | Start | No band; `debug.log` has `bad line` |
 | 9 | Stub as 3, tmux window 45 columns wide | Start, then widen to 120 | `█ Fried 92` only, then the full line |
 | 10 | Stub as 3, three sessions in three windows | One prompt in each | All three bands show the same line; no window shows an error |
 | 11 | Stub as 3 | `/reload-plugins` | The band is back at once with the same line, before any new turn |
-| 12 | Installed from the marketplace (`/plugin marketplace add` with the branch's local checkout, `/plugin install cognitive-load@zapara`) | Restart, send a prompt; then `/plugin uninstall` | The band appears; after uninstall and restart it is gone and `~/.claude/zapara` is unchanged by the uninstall |
+| 12 | Installed from the marketplace (`/plugin marketplace add` with the branch's local checkout, `/plugin install cognitive-load@cogload`) | Restart, send a prompt; then `/plugin uninstall` | The band appears; after uninstall and restart it is gone and `~/.claude/cogload` is unchanged by the uninstall |
 | 13 | Stub writes `/Users/secret/path` and a prompt-like sentence to stderr and exits 1 | Send a prompt | Neither string is on the screen or in `debug.log` |
 
 Scenario 5 also checks the turn: the answer arrives within a few seconds of
@@ -186,20 +186,20 @@ through the install commands a person types; the rest load the folder with
 ## README, CHANGELOG, status spec
 
 - README: a section "Inside Claude Code" with the two install commands, what
-  the band shows, and that `zapara` must be on Claude Code's `PATH`. "Status
+  the band shows, and that `cogload` must be on Claude Code's `PATH`. "Status
   line" names the plugin as a second reader beside pult. "Privacy" as above.
 - CHANGELOG `## [Unreleased]`, `### Added`: "The `cognitive-load` Claude Code
   plugin shows the current load above the prompt. Install it from this
   repository's marketplace; the npm package is unchanged."
 - `2026-09-19-zapara-status-file-design.md`, "Contract for a reader": one
-  paragraph saying a reader may instead run `zapara status` and decode its
+  paragraph saying a reader may instead run `cogload status` and decode its
   stdout by the same rules, linking this spec.
 
 ## Later
 
 Not in this change: an hourly sparkline in the band (needs hours the status
 line does not carry), toasts when the level crosses into Heating or Fried, a
-`/zapara` command with the day in a pane, a `bunx` fallback, and a timer that
+`/cogload` command with the day in a pane, a `bunx` fallback, and a timer that
 refreshes between turns.
 
 ## Definition of done
