@@ -16,6 +16,7 @@ const REST_MS = 10 * 60_000 // GAP_MS in src/lib/metrics
 const TOAST_GAP_MS = 2100
 const HELD: readonly string[] = ['composer', 'bridge']
 const WEEK_MS = 7 * 24 * 60 * 60_000
+const HOUR_MS = 60 * 60_000
 const OVERRIDE = /^override:(.*)$/i
 const HINT = ' To go on now, start or end the prompt with "override: <reason>".'
 const SHORT = 'An override needs a reason of three words or more.'
@@ -151,13 +152,17 @@ const streakWouldRest = async ($: EngineInterface, s: Status): Promise<boolean> 
 }
 
 const startRestIfDue = async ($: EngineInterface, s: Status) => {
-  if (s.streakMin < REST_AFTER_MIN && s.level !== 'Fried') return
-  if (!(await streakWouldRest($, s))) return
   const now = await $.clock.now()
+  const isFried = s.level === 'Fried'
+  const friedAt = await $.store.get('friedAt')
+  const isFriedDue = isFried && (typeof friedAt !== 'number' || now - friedAt >= HOUR_MS)
+  if (s.streakMin < REST_AFTER_MIN && !isFriedDue) return
+  if (!(await streakWouldRest($, s))) return
   const until = now + REST_MS
   await $.store.set('restUntil', until)
   await $.store.set('rests', [...(await restsSince($, now - WEEK_MS)), now])
   await $.store.set('spent', streakStart(s))
+  if (isFried) await $.store.set('friedAt', now)
   await toast($, `Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`)
 }
 
