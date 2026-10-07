@@ -315,7 +315,8 @@ describe('band', () => {
   test('no band under a survey', async ($, on) => {
     engine(on, [{ stdout: line() }])
     await start($)
-    expect(await band($, { hasSurvey: true })).toBe('')
+    const texts = await (await mount($, { hasSurvey: true })).findAll({ type: 'Text' })
+    expect(texts.map(t => t.text)).toEqual([ENGINE_BAND])
   })
 
   for (const surface of SURFACES) {
