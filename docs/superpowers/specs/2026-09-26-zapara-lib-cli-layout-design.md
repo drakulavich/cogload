@@ -1,4 +1,4 @@
-# zapara layout: a library of features and a thin CLI
+# cogload layout: a library of features and a thin CLI
 
 Extends `2026-09-17-zapara-design.md`. Everything not mentioned here stays as
 that spec says. Nothing a user can see changes: the same flags, the same
@@ -6,7 +6,7 @@ output bytes, the same files written.
 
 ## Purpose
 
-zapara is changed mostly by coding agents. An agent pays for every file it
+cogload is changed mostly by coding agents. An agent pays for every file it
 opens, so the cost of a change is the number of lines it has to read before it
 knows where the change goes and what it may touch. Today `src/` is sixteen
 files side by side. `src/index.ts` alone mixes the usage text, argument and
@@ -19,7 +19,7 @@ adds a flag reads `src/cli/args.ts`. A boundary it crosses by mistake
 fails `bun run check` with a message that names the rule. It does not have to
 read the rules first to follow them.
 
-zapara stays a CLI. The library is an internal layer with no public API, no
+cogload stays a CLI. The library is an internal layer with no public API, no
 `exports` field and no semver promise to anyone but the CLI.
 
 ## Layout
@@ -67,7 +67,7 @@ Two naming rules carry the design:
   by all features and imported directly.
 
 The functions themselves do not change. Where a function moves with a new
-parameter, it is to make it pure: `timingLines` takes the zapara version,
+parameter, it is to make it pure: `timingLines` takes the cogload version,
 Bun version, platform, arch and CPU count as an argument instead of reading
 them.
 
@@ -137,9 +137,9 @@ is the only devDependency; that is known and left for a separate change.
   every test.
 - No test assertion changes; the diff of `tests/` is file moves and import
   paths.
-- `zapara card --json`, `zapara --json` and the card page (`--out card.html`)
+- `cogload card --json`, `cogload --json` and the card page (`--out card.html`)
   are the same bytes as 0.8.0 over the same projects tree and the same `--to`.
-  `zapara status` reads the clock and takes no `--to`, so its tests in
+  `cogload status` reads the clock and takes no `--to`, so its tests in
   `tests/cli/` are what holds it.
 - Each Biome rule and the Knip check is shown to fire once:
   the plan makes one throwaway violation per rule, runs the check, and

@@ -2,11 +2,11 @@
 
 Extends `2026-10-04-zapara-forced-rest-design.md` and the plugin spec it
 extends; everything not mentioned here stays as they say. Tracks
-[#109](https://github.com/drakulavich/zapara/issues/109).
+[#109](https://github.com/drakulavich/cogload/issues/109).
 
 ## Objective
 
-The plugin reads `zapara status` only when a session starts and after a
+The plugin reads `cogload status` only when a session starts and after a
 turn. The streak keeps growing while the author reads a long answer or
 thinks, so a rest due at the 40th minute starts at the next turn's end,
 which can be many minutes later. The band also says `rest until 10:27` with
@@ -17,7 +17,7 @@ With a one-minute timer:
 
 1. Every 60 seconds each session takes a fresh reading: the last one any
    session of the plugin got, when its `asOf` is under 60 seconds old, else a
-   new `zapara status` run. Usually that is one run a minute however many
+   new `cogload status` run. Usually that is one run a minute however many
    sessions are open, as with pult; sessions whose ticks fall within one run
    may each run, never more than one a minute each. A reading that is due
    for a rest starts it then, with the same toast as after a turn.
@@ -36,7 +36,7 @@ behave as `2026-10-04-zapara-forced-rest-design.md` says.
 - `session.start` starts `$.clock.every(60_000, tick)` after its first
   refresh. `tick` uses the stored `reading` when `now - asOf` is under 60
   seconds, the way pult judges its file by `asOf`; otherwise it runs
-  `zapara status` as a turn does. Turns and `session.start` always run it.
+  `cogload status` as a turn does. Turns and `session.start` always run it.
   The timer lives until the module reloads; a reload fires `session.start`
   again, which starts a new one.
 - Each reading a tick takes is written to `$.state`, so the band redraws
@@ -47,12 +47,12 @@ behave as `2026-10-04-zapara-forced-rest-design.md` says.
 - Runs from the timer and from a turn may overlap; the MVP already keeps the
   run that finishes last.
 
-Cost: usually one `zapara status` a minute across all sessions, at most one
+Cost: usually one `cogload status` a minute across all sessions, at most one
 a minute per session when their ticks coincide (`$.store` has no
 compare-and-set to claim a run), plus one per turn. A run took 107 ms warm and 399 ms with a transcript being written
 (2026-10-04, 490 transcripts, `--verbose`). The stored reading is shared only
-by sessions of the plugin; `~/.claude/zapara/status.json` is not read, so a
-stub `zapara` in the user scenarios does not race the real one.
+by sessions of the plugin; `~/.claude/cogload/status.json` is not read, so a
+stub `cogload` in the user scenarios does not race the real one.
 
 ## Tech Stack
 
@@ -97,9 +97,9 @@ code:
 3. A timer run after the rest ends draws the normal line, without
    `rest until`.
 4. A tick whose stored `reading` is 30 seconds old does not run
-   `zapara status`; one older than a minute does; with none stored, it runs.
+   `cogload status`; one older than a minute does; with none stored, it runs.
 
-User scenarios, tmux, `--plugin-dir plugin`, the stub `zapara` from #107 that
+User scenarios, tmux, `--plugin-dir plugin`, the stub `cogload` from #107 that
 derives `streakMin` from a fixed start:
 
 | # | Setup | Action | Expected on screen |
@@ -111,7 +111,7 @@ derives `streakMin` from a fixed start:
 
 - Always: `claude plugin test plugin` and `bun run check` before each commit.
 - Ask first: a period other than 60 s, a timer anywhere but `session.start`,
-  reading `~/.claude/zapara/status.json`.
+  reading `~/.claude/cogload/status.json`.
 - Never: more than one timer per session.
 
 ## Success Criteria

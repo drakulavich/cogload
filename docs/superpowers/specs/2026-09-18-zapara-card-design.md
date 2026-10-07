@@ -1,11 +1,11 @@
-# zapara card: a shareable picture of your last two weeks
+# cogload card: a shareable picture of your last two weeks
 
 Extends `2026-09-17-zapara-design.md`. Everything not mentioned here stays as
 that spec says.
 
 ## Purpose
 
-`zapara card` turns a window of transcripts into one image a person wants to
+`cogload card` turns a window of transcripts into one image a person wants to
 send to a colleague: a character that names how they drive Claude Code, one
 sentence with two numbers behind that name, the peak hour, a load spectrum,
 up to three highlights (fewer when a number is zero), and the project's line. It exists to make the tool travel:
@@ -25,20 +25,20 @@ where it is the trait. Every number reads as an achievement, not as a
 timesheet; a person should never want to hide their card from a manager or a
 partner.
 
-The card is a picture of numbers zapara already computes. It adds no new
+The card is a picture of numbers cogload already computes. It adds no new
 signal, no new score, and no new data source.
 
 ## CLI
 
 ```
-zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [--json] [--projects DIR]
+cogload card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [--json] [--projects DIR]
 ```
 
 - The window flags are the grid's (base spec, CLI), with `--days` defaulting
   to 14 instead of 7. So is the clock: the card reads the window with the
   run's `now`, and a record timestamped after it counts for nothing, as on
   the grid.
-- `--out` defaults to `zapara-card.png` in the current directory. The format
+- `--out` defaults to `cogload-card.png` in the current directory. The format
   is the extension: `.png` or `.webp` for the picture, `.html` for the page
   the picture is taken of (written as is, no browser involved, for checking
   the design). Any other extension is a usage error (exit 2). A value
@@ -49,7 +49,7 @@ zapara card [--days N | --to <date> | --from <date> --to <date>] [--out PATH] [-
 - `--json` prints the card's data (below) to stdout and writes no file.
 - Without `--json`, stdout gets two lines: the character line
   (`The Conductor: 5 sessions at once, 54 context switches in one hour`) and
-  `wrote zapara-card.png`, the last path segment of `--out`: the folders
+  `wrote cogload-card.png`, the last path segment of `--out`: the folders
   around it often name a client or project and end up in logs and
   screenshots ([#155](https://github.com/drakulavich/cogload/issues/155)).
   No path is ever printed.
@@ -253,7 +253,7 @@ the sentence and the numbers; every small label is JetBrains Mono.
 | Spectrum bar | 8 px tall, radius 4, four segments in order calm, warming, heating, fried, widths in percent, 2-px gaps, segments of 0 % omitted |
 | Legend | 14 px below the bar, JetBrains Mono 12.5 px `#6b6b76`: a 6-px dot, the percent in `#a1a1aa` weight 500, the level name, items separated by two spaces |
 | Highlights | 30 px below, three, two or one equal panels with 16-px gaps: radius 12, 1-px border at 10 % white, 2.5 % white fill, inner top highlight, padding 18×16; value Inter 700 38 px, letter-spacing −1.6 px, tabular figures, white; caption 8 px below, JetBrains Mono 12 px `#6b6b76`, sentence case, one line (`sessions at once`, `switches in one hour`, `longest streak`, …) |
-| Repo link | at (60, 566), two lines: JetBrains Mono 11 px uppercase `#6b6b76`, letter-spacing 1.5 px, `GET YOURS`; 8 px below, JetBrains Mono 500 17 px in the character's light accent, letter-spacing −0.2 px: `github.com/drakulavich/zapara` |
+| Repo link | at (60, 566), two lines: JetBrains Mono 11 px uppercase `#6b6b76`, letter-spacing 1.5 px, `GET YOURS`; 8 px below, JetBrains Mono 500 17 px in the character's light accent, letter-spacing −0.2 px: `github.com/drakulavich/cogload` |
 | Source line | right-aligned to x = 1140 at y = 588, JetBrains Mono 12 px `#a1a1aa`: `computed locally from your Claude Code transcripts · nothing leaves your machine` |
 
 Level colours: calm `#7ee2a3`, warming `#fbd77a`, heating `#ff8700`, fried
@@ -322,19 +322,19 @@ src/image.ts     loadAssets() → Promise<CardAssets>      reads assets/fonts an
 ```
 
 `loadAssets` reads the five files relative to `import.meta.dir`; a missing
-or unreadable one is `assets missing: reinstall zapara` on stderr, exit 1,
+or unreadable one is `assets missing: reinstall cogload` on stderr, exit 1,
 with no path. `renderCard` writes the HTML as is when `out` ends in `.html`. Every write
 goes through one helper that maps any failure to the `cannot write the card`
 line above, so no path reaches stderr.
 Otherwise it opens `new Bun.WebView({ width: 2400, height: 1260 })`,
-writes the page to a 0600 file in a `zapara-card-` temporary directory,
+writes the page to a 0600 file in a `cogload-card-` temporary directory,
 navigates to its `file://` URL, waits until
 `document.fonts.status` is `loaded` and every `<img>` reports `complete`
 (polled through `evaluate`, 15-second budget), takes a PNG screenshot, resizes
 it to 2400×1260 with `Bun.Image` when it is larger, re-encodes to WebP when
 asked, writes the file, and closes the view and removes the temporary
 directory (also on failure, and on SIGINT, SIGTERM or SIGHUP during the
-render, after which zapara exits 128 plus the signal's number, 130 for Ctrl-C). A constructor
+render, after which cogload exits 128 plus the signal's number, 130 for Ctrl-C). A constructor
 or navigation failure whose message says no browser is available becomes the
 `card needs a browser engine` line.
 
@@ -417,7 +417,7 @@ Scenarios:
   recognisable folder name in `--out` appears in neither stdout nor stderr.
 - CLI rendering and the fit test run only where a `Bun.WebView` can be
   constructed: the suite probes once; when the probe fails the tests skip,
-  unless `ZAPARA_REQUIRE_WEBVIEW=1` is set, in which case they fail with
+  unless `COGLOAD_REQUIRE_WEBVIEW=1` is set, in which case they fail with
   the probe's message. `ci.yml` sets that variable, so the raster coverage
   cannot disappear silently after a runner image or Bun change (GitHub's
   Ubuntu runners ship Chrome today; the variable is what guarantees it is

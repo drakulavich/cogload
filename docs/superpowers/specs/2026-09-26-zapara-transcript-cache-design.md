@@ -1,4 +1,4 @@
-# zapara cache: parse each transcript once
+# cogload cache: parse each transcript once
 
 Extends `2026-09-17-zapara-design.md`. Everything not mentioned here stays as
 that spec says.
@@ -12,7 +12,7 @@ the sessions still open have changed: 8 files in the last day, against 816 in
 the window. `derive` takes 21 ms. The time goes into parsing text that was
 parsed the run before.
 
-zapara keeps the events it parsed from each transcript in one SQLite file and
+cogload keeps the events it parsed from each transcript in one SQLite file and
 parses a transcript again only when the file has changed. Every command uses
 the same cache: `card` and the grid on demand, and `status` each time a status
 line finds its file stale.
@@ -29,7 +29,7 @@ from, and so can the whole file. That decides the design below. There are no
 migrations, every doubt resolves to a miss, and durability is traded for
 speed.
 
-One SQLite database, `~/.claude/zapara/cache.db`, opened with `bun:sqlite`
+One SQLite database, `~/.claude/cogload/cache.db`, opened with `bun:sqlite`
 (built into Bun, so the rule of no runtime dependencies holds). `~` is `HOME`
 from the environment, as for the status file: an empty `HOME` means no cache,
 not a fallback path. The directory is created 0700 and the database 0600, by
@@ -38,7 +38,7 @@ itself with an exclusive 0600 open before SQLite opens it (SQLite would create
 it 0644 less the umask; it gives `-wal` and `-shm` the database's mode). The process umask is not
 touched: it would outlive the cache and narrow the card the same run writes,
 so a card written with the cache on came out 0600 and with `--no-cache` 0644.
-Modes are set only when zapara creates the directory or the file; one that
+Modes are set only when cogload creates the directory or the file; one that
 exists keeps the mode it has, so a mode the person chose is not reset by the
 next run.
 
@@ -68,7 +68,7 @@ no index on `used_at`; at under a thousand rows a full scan costs nothing.
 
 ### Versions
 
-A database whose `user_version` is not the one this zapara
+A database whose `user_version` is not the one this cogload
 writes is deleted with its WAL files and created again.
 
 `parser` is the parser fingerprint: the SHA-256 of `src/parse.ts` and
@@ -77,7 +77,7 @@ package version. `parse.ts` imports nothing else, and both files ship in the
 npm package, so the fingerprint is the same from a checkout or an install.
 Every row carries the fingerprint of the run that wrote it, and a row with
 another fingerprint is never a hit. The fingerprint lives in the row rather
-than once per database because two versions of zapara can run at the same
+than once per database because two versions of cogload can run at the same
 time: an old run that started before an upgrade may still write its rows
 after a new run has cleaned up, and those rows must not pass for current.
 Any edit to the parser or the event shape, or a release, reprocesses
@@ -153,7 +153,7 @@ and the result cannot depend on which files hit.
 
 ### Concurrent runs
 
-A status line runs `zapara status` over one day while a
+A status line runs `cogload status` over one day while a
 `card` may run over fourteen. Two runs can write the same row, and a plain
 upsert would let the narrow run replace the wide row: every `card` after it
 misses, the status line narrows the row again, and the cache stops helping
@@ -181,7 +181,7 @@ the `WHERE` is a guard the tests do not pin.
 ### Files that change during a run
 
 The guarantee of identical output covers transcripts that do not change
-during the run. A transcript being written while zapara reads it gives
+during the run. A transcript being written while cogload reads it gives
 different answers from one run to the next with or without a cache; the
 `fstat` pair only keeps such a read out of the cache, so a later run does
 not reuse a half-written snapshot.
@@ -189,7 +189,7 @@ not reuse a half-written snapshot.
 ### Housekeeping
 
 In the same transaction, rows with `used_at` older than 90
-days, the widest window zapara accepts, are deleted. There is no `VACUUM`;
+days, the widest window cogload accepts, are deleted. There is no `VACUUM`;
 the file stays at a few megabytes.
 
 ## The core
@@ -290,7 +290,7 @@ lines on stderr differ by design and are asserted on their own.
 - A lookup that fails prints `cache   off` under `--verbose`.
 - The directory and the database are 0700 and 0600 when created, and keep
   modes set on them afterwards.
-- An unwritable `~/.claude/zapara` gives the `--no-cache` output and exit 0.
+- An unwritable `~/.claude/cogload` gives the `--no-cache` output and exit 0.
 - The cache files contain neither the fixture's paths nor any of its message
   text, nor the SHA-256 of any fixture path.
 - A transcript renamed within the tree is a hit on the next run, and its
@@ -303,7 +303,7 @@ fail the appended-prompt test; a hit that ignores `from_ms` must fail the
 one-day-then-seven-days test; a hit that ignores `tail` must fail the rewritten-file
 test; a hit that ignores `parser` must fail the old-parser test.
 
-Performance target: a warm `zapara card --json` on this machine, with no
+Performance target: a warm `cogload card --json` on this machine, with no
 transcript changed since the last run, under 1 second.
 
 ## Later
