@@ -7,7 +7,7 @@ not mentioned here stays as it says.
 
 A rest started by a Fried reading was followed by another, and another,
 while the hour stayed Fried ([#180](https://github.com/drakulavich/cogload/issues/180)).
-The rest is ten minutes without a prompt, which is zapara's gap, so it ends
+The rest is ten minutes without a prompt, which is cogload's gap, so it ends
 the streak. The next prompt opens a new streak, more than ten minutes from
 `spent`, and the hour score has not dropped in ten minutes: the reading is
 Fried again, and a new rest starts. A 40-minute streak does not loop, because
