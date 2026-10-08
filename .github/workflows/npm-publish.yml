@@ -30,7 +30,7 @@ jobs:
           printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::$version is a prerelease; those are not published"; exit 1; }
           [ "$GITHUB_REF_NAME" = "v$version" ] || { echo "::error::tag is $GITHUB_REF_NAME but package.json says $version"; exit 1; }
           awk -v ver="$version" '
-            /^## \[/ { if (inblock) exit; if ($0 ~ "\\[" ver "\\]") { inblock = 1; next } }
+            /^## \[/ { if (inblock) exit; if (index($0, "## [" ver "]") == 1) { inblock = 1; next } }
             inblock { print }
           ' CHANGELOG.md > release-notes.md
           grep -q '[^[:space:]]' release-notes.md || { echo "::error::CHANGELOG.md has no ## [$version] block"; exit 1; }
