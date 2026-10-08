@@ -116,12 +116,13 @@ const PHRASE: Record<Part, (l: Live) => string> = {
 }
 const BY_WEIGHT = (Object.keys(WEIGHTS) as Part[]).sort((a, b) => WEIGHTS[b] - WEIGHTS[a])
 
-const hourLine = (live: Live | null | undefined): string => {
+const hourLine = (live: Live | null | undefined, hourStreakMin: number): string => {
   const score = live?.score
   if (!live || !score) return 'Nothing scored this hour.'
   const head = `${score.level} ${score.index} this hour`
   const capped = BY_WEIGHT.filter(p => score.parts[p] >= WEIGHTS[p])
-  if (capped.length > 0) return `${head}, at the cap: ${capped.map(p => PHRASE[p](live)).join(', ')}.`
+  const atCap = { ...live, streakMin: Math.max(live.streakMin, hourStreakMin) }
+  if (capped.length > 0) return `${head}, at the cap: ${capped.map(p => PHRASE[p](atCap)).join(', ')}.`
   const top = BY_WEIGHT.reduce((a, b) => (score.parts[b] / WEIGHTS[b] > score.parts[a] / WEIGHTS[a] ? b : a))
   return `${head}, mostly ${PHRASE[top](live)}.`
 }
@@ -272,7 +273,7 @@ export const register: Register = on => {
     } catch {}
     if (typeof day !== 'object' || day === null) return { text: NO_READING }
     const week = await weekLine($, await $.clock.now())
-    return { text: [hourLine(withBandStreak(day as Day)), ...(week === null ? [] : [week])].join('\n') }
+    return { text: [hourLine(withBandStreak(day as Day), (day as Day).live?.streakMin ?? 0), ...(week === null ? [] : [week])].join('\n') }
   })
 
   on('prompt.submit', async ($, e, next) => {

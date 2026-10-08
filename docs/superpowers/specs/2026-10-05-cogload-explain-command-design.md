@@ -42,6 +42,10 @@ After this change:
    `cogload status` counts it; otherwise the live hour's `streakMin`. The live
    hour's streak stops at your last action, so it ran a few minutes behind the
    band while you read ([#171](https://github.com/drakulavich/cogload/issues/171)).
+   When the streak part is at its cap, the phrase prints the longer of that
+   and the hour's streak: right after a rest the live streak is short, and
+   `at the cap: a 10m streak` read as wrong
+   ([#187](https://github.com/drakulavich/cogload/issues/187)).
 
 4. The second line counts, over the last seven days, the rests taken and
    the ones pushed through, and quotes the newest override's reason, marked `last:`:
