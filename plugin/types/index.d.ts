@@ -10,6 +10,8 @@ export type Status = {
   peak: number | null
   activeMin: number
   streakMin: number
+  restAt: string | null
+  restMin: number
 }
 
 declare module 'claude-code' {

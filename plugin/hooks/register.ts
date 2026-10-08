@@ -10,9 +10,6 @@ const LEVELS = ['Calm', 'Warming', 'Heating', 'Fried'] as const
 const COLOR: Record<Level, string> = { Calm: 'success', Warming: 'warning', Heating: '#ff8700', Fried: 'red' }
 const NARROW = 50
 const CLOCK_SKEW_MS = 60_000
-const REST_AFTER_MIN = 40 // NORMS.streakMin in src/lib/metrics/score.ts
-const WEIGHTS = { parallel: 25, pace: 15, supervision: 30, reading: 10, streak: 10, late: 10 } as const // WEIGHTS in src/lib/metrics/score.ts
-const REST_MS = 10 * 60_000 // GAP_MS in src/lib/metrics
 const TOAST_GAP_MS = 2100
 const HELD: readonly string[] = ['composer', 'bridge']
 const WEEK_MS = 7 * 24 * 60 * 60_000
@@ -32,9 +29,11 @@ const SHORT = 'A skip needs a reason of three words or more.'
 const WELCOME = 'Keep your head cold. The dot above the prompt shows how hot this hour runs.'
 const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload"
 const NO_READING = 'cogload gave no reading.'
+const OLDER = 'cogload is older than this plugin: bun add -g @drakulavich/cogload@latest'
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/
 
 type Override = { at: number; reason: string }
-type Part = keyof typeof WEIGHTS
+type Part = 'parallel' | 'pace' | 'supervision' | 'reading' | 'streak' | 'late'
 type Live = {
   sessions: number
   prompts: number
@@ -42,13 +41,15 @@ type Live = {
   contextSwitches: number
   outputTokens: number
   streakMin: number
-  score: { index: number; level: Level; parts: Record<Part, number> } | null
+  score: { index: number; level: Level; capped?: Part[]; top: Part } | null
 }
 
 const isInt = (v: unknown, min: number, max: number): v is number =>
   Number.isInteger(v) && (v as number) >= min && (v as number) <= max
 
 const isIndex = (v: unknown): v is number | null => v === null || isInt(v, 0, 100)
+
+const isInstant = (v: unknown): v is string => typeof v === 'string' && ISO_INSTANT.test(v)
 
 const decodeStatus = (stdout: string, nowMs: number): Status | null => {
   let s: unknown
@@ -59,8 +60,7 @@ const decodeStatus = (stdout: string, nowMs: number): Status | null => {
   }
   if (typeof s !== 'object' || s === null || Array.isArray(s)) return null
   const o = s as Record<string, unknown>
-  const isIsoInstant = typeof o.asOf === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(o.asOf)
-  const asOf = isIsoInstant ? Date.parse(o.asOf as string) : Number.NaN
+  const asOf = isInstant(o.asOf) ? Date.parse(o.asOf) : Number.NaN
   const isLevel = o.index === null ? o.level === null : LEVELS.includes(o.level as Level)
   const isValid =
     o.schema === 1 &&
@@ -73,7 +73,9 @@ const decodeStatus = (stdout: string, nowMs: number): Status | null => {
     isIndex(o.peak) &&
     isLevel &&
     isInt(o.activeMin, 0, 1500) &&
-    isInt(o.streakMin, 0, 1500)
+    isInt(o.streakMin, 0, 1500) &&
+    (o.restAt === null || isInstant(o.restAt)) &&
+    isInt(o.restMin, 1, 60)
   return isValid
     ? {
         schema: 1,
@@ -85,6 +87,8 @@ const decodeStatus = (stdout: string, nowMs: number): Status | null => {
         peak: o.peak as number | null,
         activeMin: o.activeMin as number,
         streakMin: o.streakMin as number,
+        restAt: o.restAt as string | null,
+        restMin: o.restMin as number,
       }
     : null
 }
@@ -114,28 +118,14 @@ const PHRASE: Record<Part, (l: Live) => string> = {
   streak: l => `a ${formatMinutes(l.streakMin)} streak`,
   late: () => 'late at night',
 }
-const BY_WEIGHT = (Object.keys(WEIGHTS) as Part[]).sort((a, b) => WEIGHTS[b] - WEIGHTS[a])
 
-const hourLine = (live: Live | null | undefined, hourStreakMin: number): string => {
-  const score = live?.score
-  if (!live || !score) return 'Nothing scored this hour.'
+const hourLine = (live: Live, score: NonNullable<Live['score']>, capped: Part[]): string => {
   const head = `${score.level} ${score.index} this hour`
-  const capped = BY_WEIGHT.filter(p => score.parts[p] >= WEIGHTS[p])
-  const atCap = { ...live, streakMin: Math.max(live.streakMin, hourStreakMin) }
-  if (capped.length > 0) return `${head}, at the cap: ${capped.map(p => PHRASE[p](atCap)).join(', ')}.`
-  const top = BY_WEIGHT.reduce((a, b) => (score.parts[b] / WEIGHTS[b] > score.parts[a] / WEIGHTS[a] ? b : a))
-  return `${head}, mostly ${PHRASE[top](live)}.`
+  if (capped.length > 0) return `${head}, at the cap: ${capped.map(p => PHRASE[p](live)).join(', ')}.`
+  return `${head}, mostly ${PHRASE[score.top](live)}.`
 }
 
-type Day = { live?: Live | null; asOf?: string; presence?: { lastAt: string; streakStartAt: string } | null }
-
-const withBandStreak = (day: Day): Live | null | undefined => {
-  if (!day.live || !day.presence || !day.asOf) return day.live
-  const asOf = Date.parse(day.asOf)
-  const minutes = Math.round((asOf - Date.parse(day.presence.streakStartAt)) / 60_000)
-  if (!(asOf - Date.parse(day.presence.lastAt) <= REST_MS) || !Number.isFinite(minutes)) return day.live
-  return { ...day.live, streakMin: minutes }
-}
+type Day = { live?: Live | null }
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 
@@ -154,24 +144,21 @@ const restsSince = async ($: EngineInterface, since: number): Promise<number[]> 
   return Array.isArray(list) ? (list as number[]).filter(at => at > since) : []
 }
 
-const streakStart = (s: Status): number => Date.parse(s.asOf) - s.streakMin * 60_000
-
-const streakWouldRest = async ($: EngineInterface, s: Status): Promise<boolean> => {
-  const spent = await $.store.get('spent')
-  return typeof spent !== 'number' || Math.abs(streakStart(s) - spent) > REST_MS
-}
+const isSpent = async ($: EngineInterface, s: Status): Promise<boolean> =>
+  s.restAt !== null && (await $.store.get('spent')) === s.restAt
 
 const startRestIfDue = async ($: EngineInterface, s: Status) => {
   const now = await $.clock.now()
   const isFried = s.level === 'Fried'
   const friedAt = await $.store.get('friedAt')
   const isFriedDue = isFried && (typeof friedAt !== 'number' || now - friedAt >= HOUR_MS)
-  if (s.streakMin < REST_AFTER_MIN && !isFriedDue) return
-  if (!(await streakWouldRest($, s))) return
-  const until = now + REST_MS
+  const isStreakDue = s.restAt !== null && Date.parse(s.asOf) >= Date.parse(s.restAt)
+  if (!isStreakDue && !isFriedDue) return
+  if (await isSpent($, s)) return
+  const until = now + s.restMin * 60_000
   await $.store.set('restUntil', until)
   await $.store.set('rests', [...(await restsSince($, now - WEEK_MS)), now])
-  await $.store.set('spent', streakStart(s))
+  await $.store.set('spent', s.restAt)
   if (isFried) await $.store.set('friedAt', now)
   await toast($, `Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`)
 }
@@ -220,6 +207,15 @@ const take = async ($: EngineInterface, s: Status) => {
   await update($, status, () => s)
 }
 
+const isOlder = (stdout: string): boolean => {
+  try {
+    const o = JSON.parse(stdout.trim())
+    return o?.schema === 1 && o.restAt === undefined
+  } catch {
+    return false
+  }
+}
+
 const refresh = async ($: EngineInterface) => {
   const r = await run($, ['status'])
   const decoded = typeof r === 'string' || r.exitCode !== 0 ? null : decodeStatus(r.stdout, await $.clock.now())
@@ -227,6 +223,7 @@ const refresh = async ($: EngineInterface) => {
     const failure = typeof r === 'string' ? r : r.exitCode === 0 ? 'bad line' : `exit ${r.exitCode}`
     $.ui.log(failure, { to: 'debug' })
     if (failure === 'not found') await toastOnce($, 'missingShown', MISSING)
+    if (typeof r !== 'string' && r.exitCode === 0 && isOlder(r.stdout)) await toastOnce($, 'olderShown', OLDER)
     return false
   }
   await $.store.set('reading', decoded)
@@ -272,8 +269,12 @@ export const register: Register = on => {
       if (r !== 'timeout' && r.exitCode === 0) day = JSON.parse(r.stdout)
     } catch {}
     if (typeof day !== 'object' || day === null) return { text: NO_READING }
+    const live = (day as Day).live
+    const capped = live?.score?.capped
+    if (live?.score && !Array.isArray(capped)) return { text: OLDER }
+    const hour = live?.score && capped ? hourLine(live, live.score, capped) : 'Nothing scored this hour.'
     const week = await weekLine($, await $.clock.now())
-    return { text: [hourLine(withBandStreak(day as Day), (day as Day).live?.streakMin ?? 0), ...(week === null ? [] : [week])].join('\n') }
+    return { text: [hour, ...(week === null ? [] : [week])].join('\n') }
   })
 
   on('prompt.submit', async ($, e, next) => {
@@ -308,10 +309,10 @@ export const register: Register = on => {
     if (e.props.hasSurvey || s === null || s.index === null || s.level === null) return beneath
     const now = await $.clock.now()
     const until = await restUntil($, now)
-    const isAhead = until === null && s.streakMin > 0 && s.streakMin < REST_AFTER_MIN && (await streakWouldRest($, s))
+    const isAhead = until === null && s.restAt !== null && Date.parse(s.restAt) > Date.parse(s.asOf) && !(await isSpent($, s))
     const parts: string[] = []
     if (until !== null) parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`)
-    else if (isAhead) parts.push(`rest at ${clockTime(streakStart(s) + REST_AFTER_MIN * 60_000)}`)
+    else if (isAhead && s.restAt !== null) parts.push(`rest at ${clockTime(Date.parse(s.restAt))}`)
     else if (e.props.bodyColumns >= NARROW && s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`)
     const { Box, Text } = $.ui.resolve(e)
     const head = Text({ color: COLOR[s.level], children: `● ${s.level}` })

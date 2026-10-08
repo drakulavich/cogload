@@ -10,8 +10,11 @@ const ASOF = Date.parse('2026-10-03T09:59:30.000Z')
 const HOME = '/Users/tester'
 const BIN = `${HOME}/.bun/bin/cogload`
 
-const line = (fields: Record<string, unknown> = {}): string =>
-  `${JSON.stringify({
+const iso = (ms: number) => new Date(ms).toISOString()
+
+// `cogload status`: restAt, unless given, is where cogload puts it, the streak's start plus 40 minutes.
+const line = (fields: Record<string, unknown> = {}): string => {
+  const s = {
     schema: 1,
     asOf: '2026-10-03T09:59:30.000Z',
     date: '2026-10-03',
@@ -21,13 +24,22 @@ const line = (fields: Record<string, unknown> = {}): string =>
     peak: 81,
     activeMin: 375,
     streakMin: 20,
+    restMin: 10,
     ...fields,
-  })}\n`
+  }
+  const restAt = s.streakMin === 0 ? null : iso(Date.parse(s.asOf) + (40 - (s.streakMin as number)) * 60_000)
+  return `${JSON.stringify({ restAt, ...s })}\n`
+}
 
 const live =
   (start: () => number, fields: Record<string, unknown> = {}) =>
   (): Partial<Answer> => ({
-    stdout: line({ asOf: new Date(clock.now()).toISOString(), streakMin: Math.floor((clock.now() - start()) / 60_000), ...fields }),
+    stdout: line({
+      asOf: iso(clock.now()),
+      streakMin: Math.floor((clock.now() - start()) / 60_000),
+      restAt: iso(start() + 40 * 60_000),
+      ...fields,
+    }),
   })
 
 type Answer = { exitCode: number; stdout: string; stderr?: string }
@@ -188,6 +200,10 @@ describe('reading', () => {
     ['asOf two minutes ahead', line({ asOf: '2026-10-03T10:02:00.000Z' })],
     ['asOf without an instant timezone', line({ asOf: '2026-10-03' })],
     ['two lines', `warning\n${line()}`],
+    ['restAt that is no instant', line({ restAt: '10:40' })],
+    ['restMin 0', line({ restMin: 0 })],
+    ['restMin 61', line({ restMin: 61 })],
+    ['restMin 1.5', line({ restMin: 1.5 })],
   ] as const) {
     test(`rejects ${name}`, async ($, on) => {
       const logs: string[] = []
@@ -266,7 +282,7 @@ describe('band', () => {
     [5, '5m'],
   ] as const) {
     test(`formats ${streakMin} minutes once the rest is spent`, async ($, on) => {
-      engine(on, [{ stdout: line({ streakMin }) }], [], [], { spent: ASOF - streakMin * 60_000 })
+      engine(on, [{ stdout: line({ streakMin }) }], [], [], { spent: restAtOf(streakMin) })
       await start($)
       expect(await band($)).toBe(`● Heating · streak ${shown}`)
     })
@@ -295,7 +311,7 @@ describe('band', () => {
 
   for (const surface of SURFACES) {
     test(`short form when narrow (${surface})`, async ($, on) => {
-      engine(on, [{ stdout: line() }], [], [], { spent: ASOF - 20 * 60_000 })
+      engine(on, [{ stdout: line() }], [], [], { spent: restAtOf(20) })
       await start($)
       expect(await band($, { bodyColumns: 40 }, surface)).toBe(`● Heating`)
     })
@@ -362,6 +378,7 @@ const REST_MS = 10 * 60_000
 const hhmm = (ms: number) => new Date(ms).toTimeString().slice(0, 5)
 // The band before a rest: the streak's start plus 40 minutes.
 const restAt = (streakMin: number, asOf = ASOF) => `rest at ${hhmm(asOf + (40 - streakMin) * 60_000)}`
+const restAtOf = (streakMin: number) => iso(ASOF + (40 - streakMin) * 60_000)
 const PHRASES = [
   'Stand up and stretch.',
   'Water, then a window.',
@@ -386,6 +403,43 @@ describe('rest', () => {
     await start($)
     expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
     expect(toasts).toEqual([`Rest until ${hhmm(NOW + REST_MS)}. Streak 40m, Heating 68.`])
+  })
+
+  test('a rest starts when asOf reaches restAt, whatever the streak', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 20, restAt: iso(ASOF) }) }])
+    await start($)
+    expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
+  })
+
+  test('a rest does not start a minute before restAt, whatever the streak', async ($, on) => {
+    const toasts: string[] = []
+    engine(on, [{ stdout: line({ streakMin: 45, restAt: iso(ASOF + 60_000) }) }], [], toasts, { welcomed: true })
+    await start($)
+    expect(await typed($, 'next')).toEqual({ text: 'next' })
+    expect(toasts).toEqual([])
+  })
+
+  test('a rest lasts restMin minutes', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40, restMin: 7 }) }])
+    await start($)
+    expect(await band($)).toBe(`● Heating · rest until ${hhmm(NOW + 7 * 60_000)} (7 min)`)
+    await clock.advance(7 * 60_000)
+    expect(await typed($, 'next')).toEqual({ text: 'next' })
+  })
+
+  test('the same restAt after a rest starts no second one; a new restAt does', async ($, on) => {
+    const toasts: string[] = []
+    let fields: Record<string, unknown> = { streakMin: 40, restAt: iso(NOW) }
+    engine(on, [() => ({ stdout: line({ asOf: iso(clock.now()), ...fields }) })], [], toasts, { welcomed: true })
+    await start($)
+    await clock.advance(12 * 60_000)
+    fields = { streakMin: 40, restAt: iso(NOW) }
+    await clock.advance(60_000)
+    expect(toasts).toHaveLength(1)
+    expect(await typed($, 'go')).toEqual({ text: 'go' })
+    fields = { streakMin: 40, restAt: iso(clock.now()) }
+    await clock.advance(60_000)
+    expect(toasts).toHaveLength(2)
   })
 
   test('a 39-minute Warming streak does not', async ($, on) => {
@@ -588,7 +642,7 @@ describe('rest at', () => {
   })
 
   test('a spent streak at 45 columns is the level alone', async ($, on) => {
-    engine(on, [{ stdout: line({ streakMin: 37 }) }], [], [], { spent: ASOF - 37 * 60_000 })
+    engine(on, [{ stdout: line({ streakMin: 37 }) }], [], [], { spent: restAtOf(37) })
     await start($)
     expect(await band($, { bodyColumns: 45 })).toBe('● Heating')
   })
@@ -599,16 +653,23 @@ describe('rest at', () => {
     expect(await band($)).toBe(`● Calm · ${restAt(37)}`)
   })
 
-  for (const [what, offset] of [
-    ['a streak that already held', 0],
-    ['a streak that started five minutes before the last rest', 5 * 60_000],
-  ] as const) {
-    test(`none for ${what}`, async ($, on) => {
-      engine(on, [{ stdout: line({ streakMin: 37 }) }], [], [], { spent: ASOF - 37 * 60_000 + offset })
-      await start($)
-      expect(await band($)).toBe('● Heating · streak 37m')
-    })
-  }
+  test('none for a streak that already held', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 37 }) }], [], [], { spent: restAtOf(37) })
+    await start($)
+    expect(await band($)).toBe('● Heating · streak 37m')
+  })
+
+  test('a restAt five minutes off the spent one is another streak', async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 37 }) }], [], [], { spent: iso(Date.parse(restAtOf(37)) - 5 * 60_000) })
+    await start($)
+    expect(await band($)).toBe(`● Heating · ${restAt(37)}`)
+  })
+
+  test("shows restAt in local time, not the streak's minutes", async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 20, restAt: iso(ASOF + 7 * 60_000) }) }])
+    await start($)
+    expect(await band($)).toBe(`● Heating · rest at ${hhmm(ASOF + 7 * 60_000)}`)
+  })
 })
 
 describe('override', () => {
@@ -766,7 +827,7 @@ const METRICS = {
 const NO_PARTS = { parallel: 0, pace: 0, supervision: 0, reading: 0, streak: 0, late: 0 }
 
 // `cogload today --json`: the day, with `live` the last sixty minutes.
-const today = (live: Record<string, unknown> | null, parts: Record<string, number> = {}, score = { index: 80, level: 'Heating' }) =>
+const today = (live: Record<string, unknown> | null, score: Record<string, unknown> = {}) =>
   `${JSON.stringify({
     date: '2026-10-03',
     peak: 81,
@@ -775,7 +836,7 @@ const today = (live: Record<string, unknown> | null, parts: Record<string, numbe
     presence: null,
     buckets: [],
     asOf: '2026-10-03T09:59:30.000Z',
-    live: live && { ...METRICS, ...live, score: { ...score, parts: { ...NO_PARTS, ...parts } } },
+    live: live && { ...METRICS, ...live, score: { index: 80, level: 'Heating', parts: NO_PARTS, capped: [], top: 'supervision', ...score } },
   })}\n`
 
 const explain = async ($: Engine, on: On, answer: Run, store: Record<string, unknown> = {}) => {
@@ -786,52 +847,44 @@ const explain = async ($: Engine, on: On, answer: Run, store: Record<string, unk
 }
 
 describe('/cogload', () => {
-  for (const [part, points, metrics, phrase] of [
-    ['parallel', 25, { sessions: 5 }, '5 sessions at once'],
-    ['pace', 15, { prompts: 32 }, '32 prompts'],
-    ['supervision', 30, { decisions: 16, contextSwitches: 13 }, '16 decisions and 13 context switches'],
-    ['reading', 10, { outputTokens: 81_400 }, '81k output tokens'],
-    ['streak', 10, { streakMin: 57 }, 'a 57m streak'],
-    ['late', 10, { lateNight: true }, 'late at night'],
+  for (const [part, metrics, phrase] of [
+    ['parallel', { sessions: 5 }, '5 sessions at once'],
+    ['pace', { prompts: 32 }, '32 prompts'],
+    ['supervision', { decisions: 16, contextSwitches: 13 }, '16 decisions and 13 context switches'],
+    ['reading', { outputTokens: 81_400 }, '81k output tokens'],
+    ['streak', { streakMin: 57 }, 'a 57m streak'],
+    ['late', { lateNight: true }, 'late at night'],
   ] as const) {
     test(`${part} alone at its cap`, async ($, on) => {
-      expect(await explain($, on, { stdout: today(metrics, { [part]: points }) })).toBe(`Heating 80 this hour, at the cap: ${phrase}.`)
+      expect(await explain($, on, { stdout: today(metrics, { capped: [part] }) })).toBe(`Heating 80 this hour, at the cap: ${phrase}.`)
     })
   }
 
-  for (const [when, lastAt, phrase] of [
-    ['in a streak, the streak runs to asOf as on the band', '2026-10-03T09:55:30.000Z', 'a 48m streak'],
-    ['ten minutes away exactly, still the band\'s streak', '2026-10-03T09:49:30.000Z', 'a 48m streak'],
-    ['away over ten minutes, the hour\'s streak', '2026-10-03T09:45:00.000Z', 'a 44m streak'],
-  ] as const) {
-    test(when, async ($, on) => {
-      const presence = { lastAt, streakStartAt: '2026-10-03T09:11:30.000Z' }
-      const stdout = today({ streakMin: 44 }, { streak: 10 }).replace('"presence":null', `"presence":${JSON.stringify(presence)}`)
-      expect(await explain($, on, { stdout })).toBe(`Heating 80 this hour, at the cap: ${phrase}.`)
-    })
-  }
-
-  test("after a rest, the streak at the cap is the hour's, not the new one", async ($, on) => {
-    const presence = { lastAt: '2026-10-03T09:58:30.000Z', streakStartAt: '2026-10-03T09:49:30.000Z' }
-    const stdout = today({ streakMin: 44 }, { streak: 10 }).replace('"presence":null', `"presence":${JSON.stringify(presence)}`)
-    expect(await explain($, on, { stdout })).toBe('Heating 80 this hour, at the cap: a 44m streak.')
-  })
-
-  test('parts at their cap come heaviest weight first', async ($, on) => {
-    const stdout = today({ prompts: 32, decisions: 16, contextSwitches: 13, streakMin: 57 }, { streak: 10, pace: 15, supervision: 30 })
-    expect(await explain($, on, { stdout })).toBe(
-      'Heating 80 this hour, at the cap: 16 decisions and 13 context switches, 32 prompts, a 57m streak.',
+  test("names the parts in capped, in cogload's order", async ($, on) => {
+    const stdout = today(
+      { prompts: 32, decisions: 16, contextSwitches: 13, streakMin: 57 },
+      { capped: ['streak', 'pace', 'supervision'], parts: { ...NO_PARTS, streak: 10, pace: 15, supervision: 30 } },
     )
+    expect(await explain($, on, { stdout })).toBe('Heating 80 this hour, at the cap: a 57m streak, 32 prompts, 16 decisions and 13 context switches.')
   })
 
-  test('with none at its cap, the largest share of its weight', async ($, on) => {
-    const stdout = today({ sessions: 4, decisions: 6, contextSwitches: 12 }, { parallel: 18.8, supervision: 20 }, { index: 45, level: 'Warming' })
-    expect(await explain($, on, { stdout })).toBe('Warming 45 this hour, mostly 4 sessions at once.')
+  test("with none capped, cogload's top part", async ($, on) => {
+    const stdout = today(
+      { sessions: 4, outputTokens: 40_000 },
+      { index: 45, level: 'Warming', top: 'reading', parts: { ...NO_PARTS, parallel: 18.8, reading: 2 } },
+    )
+    expect(await explain($, on, { stdout })).toBe('Warming 45 this hour, mostly 40k output tokens.')
   })
 
-  test('a tie on share goes to the heavier weight', async ($, on) => {
-    const stdout = today({ prompts: 10, outputTokens: 40_000 }, { pace: 7.5, reading: 5 }, { index: 13, level: 'Calm' })
-    expect(await explain($, on, { stdout })).toBe('Calm 13 this hour, mostly 10 prompts.')
+  test("quotes live's streak as cogload counts it", async ($, on) => {
+    const presence = { lastAt: '2026-10-03T09:58:30.000Z', streakStartAt: '2026-10-03T09:11:30.000Z' }
+    const stdout = today({ streakMin: 9 }, { capped: ['streak'] }).replace('"presence":null', `"presence":${JSON.stringify(presence)}`)
+    expect(await explain($, on, { stdout })).toBe('Heating 80 this hour, at the cap: a 9m streak.')
+  })
+
+  test('a score without capped is an older cogload', async ($, on) => {
+    const stdout = today({}).replace(',"capped":[],"top":"supervision"', '')
+    expect(await explain($, on, { stdout }, { rests: [NOW - DAY_MS] })).toBe(OLDER)
   })
 
   test('no live hour', async ($, on) => {
@@ -901,6 +954,7 @@ describe('/cogload', () => {
 
 const WELCOME = 'Keep your head cold. The dot above the prompt shows how hot this hour runs.'
 const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload"
+const OLDER = 'cogload is older than this plugin: bun add -g @drakulavich/cogload@latest'
 
 describe('first meeting', () => {
   test('the first session.start shows the welcome toast; a second one does not', async ($, on) => {
@@ -942,6 +996,16 @@ describe('first meeting', () => {
     await turn($)
     await turn($)
     expect(toasts).toEqual([MISSING])
+  })
+
+  test('a status line without restAt shows the older text once and no band', async ($, on) => {
+    const toasts: string[] = []
+    const old = JSON.stringify(Object.fromEntries(Object.entries(JSON.parse(line())).filter(([k]) => k !== 'restAt' && k !== 'restMin')))
+    engine(on, [{ stdout: old }, { stdout: old }], [], toasts, { welcomed: true })
+    await start($)
+    await turn($)
+    expect(toasts).toEqual([OLDER])
+    expect(await band($)).toBe('')
   })
 
   for (const [what, run] of [
@@ -1075,7 +1139,7 @@ describe('cogload in ~/.bun/bin', () => {
     const toasts: string[] = []
     engine(on, [{ stdout: line() }], logs, toasts, { welcomed: true, rests: [NOW - DAY_MS] })
     todayRuns = ['not found']
-    binRuns = [{ stdout: today({ sessions: 5 }, { parallel: 25 }) }]
+    binRuns = [{ stdout: today({ sessions: 5 }, { capped: ['parallel'] }) }]
     await start($)
     const text = (await $.command.run({ command: 'cogload' })).text
     expectNoHome([text, ...logs, ...toasts])
