@@ -51,7 +51,7 @@ describe("cogload status", () => {
     expect(r.out).toBe(file);
     expect(file.endsWith("\n") && file.split("\n").length === 2).toBe(true);
     const s = JSON.parse(file);
-    expect(Object.keys(s)).toEqual(["schema", "asOf", "date", "hour", "index", "level", "peak", "activeMin", "streakMin"]);
+    expect(Object.keys(s)).toEqual(["schema", "asOf", "date", "hour", "index", "level", "peak", "activeMin", "streakMin", "restAt", "restMin"]);
     expect(s.schema).toBe(1);
     expect(s.date).toBe(utcDay(0));
     expect(s.asOf).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);

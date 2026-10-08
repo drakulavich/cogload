@@ -19,7 +19,7 @@ Claude Code writes a JSONL transcript for every session under `~/.claude/project
 | `cogload 2026-09-14 --explain` | One day, with the six weighted components behind each index. |
 | `cogload card` | The last 14 days as one shareable picture, `cogload-card.png` in `~/Downloads`. |
 | `cogload card --days 30 --out me.webp` | Any window from 1 to 90 days; `.png`, `.webp` or `.html` by extension. `--json` prints the card's data instead. |
-| `cogload status` | Writes today's load to `~/.claude/cogload/status.json` for a status line to read, and prints the same line. The file's fields are in [the status file spec](superpowers/specs/2026-09-19-zapara-status-file-design.md), written when cogload was zapara and kept its files in `~/.claude/zapara/`. |
+| `cogload status` | Writes today's load to `~/.claude/cogload/status.json` for a status line to read, and prints the same line. The file's fields are in [the status file spec](superpowers/specs/2026-09-19-zapara-status-file-design.md), written when cogload was zapara and kept its files in `~/.claude/zapara/`. Since 0.13.0 the line also carries `restAt`, when the running streak reaches 40 minutes (`null` with no streak), and `restMin`, how long a rest must be to end a streak (`10`). |
 
 | Flag | What it does |
 |---|---|
