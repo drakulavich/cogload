@@ -811,6 +811,12 @@ describe('/cogload', () => {
     })
   }
 
+  test("after a rest, the streak at the cap is the hour's, not the new one", async ($, on) => {
+    const presence = { lastAt: '2026-10-03T09:58:30.000Z', streakStartAt: '2026-10-03T09:49:30.000Z' }
+    const stdout = today({ streakMin: 44 }, { streak: 10 }).replace('"presence":null', `"presence":${JSON.stringify(presence)}`)
+    expect(await explain($, on, { stdout })).toBe('Heating 80 this hour, at the cap: a 44m streak.')
+  })
+
   test('parts at their cap come heaviest weight first', async ($, on) => {
     const stdout = today({ prompts: 32, decisions: 16, contextSwitches: 13, streakMin: 57 }, { streak: 10, pace: 15, supervision: 30 })
     expect(await explain($, on, { stdout })).toBe(
