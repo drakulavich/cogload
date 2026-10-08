@@ -75,6 +75,33 @@ describe("score", () => {
     expect(score(m({ streakMin: 1 }))?.index).toBe(0);
   });
 
+  test("capped lists the parts at their full weight, heaviest first", () => {
+    expect(score(m({ streakMin: 40, sessions: 5 }))?.capped).toEqual(["parallel", "streak"]);
+    expect(score(m({ streakMin: 39, sessions: 4 }))?.capped).toEqual([]);
+  });
+
+  test("capped breaks a tie in weight by the order of the weights", () => {
+    expect(score(m({ lateNight: true, outputTokens: 80_000, streakMin: 40 }))?.capped).toEqual(["reading", "streak", "late"]);
+  });
+
+  test("top is the part closest to its weight when nothing is capped", () => {
+    // parallel 2/4 = 0.5, pace 12/20 = 0.6, streak 10/40 = 0.25: pace is closest
+    // though parallel has more points (12.5 against 9).
+    const s = score(m({ sessions: 3, prompts: 12, streakMin: 10 }));
+    expect(s?.capped).toEqual([]);
+    expect(s?.top).toBe("pace");
+  });
+
+  test("top on a tie is the heavier part", () => {
+    // parallel 2/4 and streak 20/40 are both halfway.
+    expect(score(m({ sessions: 3, streakMin: 20 }))?.top).toBe("parallel");
+  });
+
+  test("top compares the fractions before rounding", () => {
+    // reading 4/80000 → 0.0005 of its weight rounds to 0 points; pace is 0.
+    expect(score(m({ outputTokens: 4 }))?.top).toBe("reading");
+  });
+
   test("no sessions means no score", () => {
     expect(score(m({ sessions: 0, activeMin: 0 }))).toBeNull();
   });

@@ -1,4 +1,4 @@
-import type { Level, Metrics, Parts, Score } from "../types.ts";
+import type { Level, Metrics, Part, Parts, Score } from "../types.ts";
 
 // Calibration lives here and nowhere else. Integer points of 100, so 0.5 sums
 // stay exact; norms are the p90 of two weeks on two machines (see CHANGELOG).
@@ -10,6 +10,8 @@ const LEVELS: readonly { max: number; level: Level }[] = [
   { max: 84, level: "Heating" },
   { max: 100, level: "Fried" },
 ];
+
+const BY_WEIGHT = (Object.keys(WEIGHTS) as Part[]).sort((a, b) => WEIGHTS[b] - WEIGHTS[a]);
 
 const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
 
@@ -29,6 +31,10 @@ export function score(m: Metrics): Score | null {
   const reading = clamp01(m.outputTokens / NORMS.readingTokens);
   const streak = clamp01(m.streakMin / NORMS.streakMin);
   const late = m.lateNight ? 1 : 0;
+
+  const fractions: Record<Part, number> = { parallel, pace, supervision, reading, streak, late };
+  const capped = BY_WEIGHT.filter((p) => fractions[p] === 1);
+  const top = BY_WEIGHT.reduce((a, b) => (fractions[b] > fractions[a] ? b : a));
 
   const raw = {
     parallel: WEIGHTS.parallel * parallel,
@@ -51,5 +57,5 @@ export function score(m: Metrics): Score | null {
   const index = Math.round(
     raw.parallel + raw.pace + raw.supervision + raw.reading + raw.streak + raw.late,
   );
-  return { index, level: levelOf(index), parts };
+  return { index, level: levelOf(index), parts, capped, top };
 }
