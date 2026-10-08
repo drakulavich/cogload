@@ -79,8 +79,9 @@ from `streakStartAt` to `now` when `lastAt` is within `GAP_MS` of `now`, and
 0 otherwise. Hour buckets keep the longest streak in the hour, because they
 describe a past hour, not now.
 
-**Cooling.** For the live bucket only. Take two scores, both with the running
-streak:
+**Cooling.** For the live bucket only. Take two scores. Both count the running
+streak of rule 2, so their streak parts are equal and cooling never changes
+the streak part:
 - `full`, the sixty minutes ending at `now`, as today;
 - `after`, the same window but starting at the running streak's first action.
   When no streak is running (`now − lastAt > GAP_MS`), `after` holds nothing
@@ -170,7 +171,8 @@ format. Each case fails without its change:
    bucket's `streakMin` is 10 and equals `status.streakMin`. Today it is 44.
 4a. Cooling, same fixture shape with a busy 40 minutes before the break:
    - a 5-minute pause leaves the live index as `full`;
-   - an 11-minute break gives `after + 0.45 × (full − after)` in every part;
+   - an 11-minute break gives `after + 0.45 × (full − after)` in every part, the
+     streak part being the running streak's in both;
    - a 20-minute break gives `after`;
    - 15 minutes into a break with no action yet gives `0.25 × full`.
    Each value differs from today's live index.
