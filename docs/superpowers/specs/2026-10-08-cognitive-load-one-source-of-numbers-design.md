@@ -90,8 +90,8 @@ the streak part:
 The break is the time between the last action before the running streak and
 its first action. While no streak is running, it is `now − lastAt`. When no
 action precedes it in what cogload read, the break is long and `w` is 0. Then
-`w = 1` for a break of `GAP_MS` or less, and `max(0, 1 − break / 20 min)`
-otherwise. Each part's fraction is `after + w × (full − after)`. The index,
+`w = max(0, 1 − break / 20 min)`. A break is always longer than `GAP_MS`,
+because a shorter pause does not end the streak, so `w` is below 0.5. Each part's fraction is `after + w × (full − after)`. The index,
 level, `capped` and `top` come from those fractions by the rules of `score()`.
 `20 min` is a new norm, `NORMS.coolMin`, next to the others in `score.ts`.
 `status.index`, `level` and `peak` follow the live index as they do today.
