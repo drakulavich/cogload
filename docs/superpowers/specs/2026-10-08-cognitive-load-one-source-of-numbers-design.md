@@ -144,7 +144,7 @@ format. Each case fails without its change:
 3. A score with streak and parallel at their weight has
    `capped` = `["parallel", "streak"]`. A score with nothing capped has
    `top` = the part closest to its weight.
-4. A 44-minute streak, a 10-minute break, and 10 minutes of work: the live
+4. A 44-minute streak, an 11-minute break (one past `GAP_MS`), and 10 minutes of work: the live
    bucket's `streakMin` is 10 and equals `status.streakMin`. Today it is 44.
 
 Plugin, `claude plugin test plugin`:
