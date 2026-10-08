@@ -23,21 +23,22 @@ const t = transcript([
 
 describe("status: today's load in nine fields", () => {
   test("the last sixty minutes, and the day's peak and active time", () => {
-    const now = new Date("2026-09-14T14:32:00.000Z");
+    const now = new Date("2026-09-14T14:25:00.000Z");
     const [day] = analyze([t], { to: "2026-09-14", days: 1, now });
     const current = day!.buckets[14]!, busiest = day!.buckets[13]!;
     const s = statusOf(day!, now);
     expect(s).toEqual({
-      schema: 1, asOf: "2026-09-14T14:32:00.000Z", date: "2026-09-14", hour: 14,
+      schema: 1, asOf: "2026-09-14T14:25:00.000Z", date: "2026-09-14", hour: 14,
       index: day!.live!.score!.index, level: day!.live!.score!.level,
       peak: day!.peak, activeMin: day!.activeMin, streakMin: 0,
     });
-    // The window (13:32, 14:32] holds the tail of the busy hour and the quiet
-    // exchange: less than the peak, more than the quiet hour's own bucket.
+    // The window (13:25, 14:25] holds the tail of the busy hour and the quiet
+    // exchange, a quarter of it after a 15-minute break: less than the peak,
+    // more than the quiet hour's own bucket.
     expect(s.peak).toBe(busiest.score!.index);
     expect(s.index!).toBeLessThan(s.peak!);
     expect(s.index!).toBeGreaterThan(current.score!.index);
-    // 22 minutes since the 14:10 prompt, so the streak is over; the hour's own
+    // 15 minutes since the 14:10 prompt, so the streak is over; the hour's own
     // bucket agrees here, but the status answers about now, not about the hour.
     expect([current.streakMin, s.streakMin]).toEqual([0, 0]);
     expect(s.streakMin).toBeLessThan(busiest.streakMin);
