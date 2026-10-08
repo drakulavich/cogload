@@ -36,7 +36,12 @@ After this change:
 2. One streak. The live score counts the streak running at `asOf`, the same
    minutes as `status.streakMin`. After a rest, the streak part of the live
    index drops to 0 with the band.
-3. The rules about the person stay in the plugin and keep their numbers. That
+3. A break cools the live index. After a break longer than `GAP_MS`, the load
+   from before it counts at `w = max(0, 1 − break / 20 min)`: an 11-minute
+   break keeps 45% of it, 20 minutes or more keeps none. A pause of
+   `GAP_MS` or less is no break and keeps all of it. While the break is still
+   going, its length so far counts, so the band cools during a rest.
+4. The rules about the person stay in the plugin and keep their numbers. That
    covers which reading starts a rest, Fried once an hour (`HOUR_MS`), the
    week's count (`WEEK_MS`), `skip:` and its three words, the phrases, and
    every sentence it prints. Those rules don't depend on how cogload measures.
@@ -73,6 +78,23 @@ part closest to its weight, by the comparison `hourLine` makes today.
 from `streakStartAt` to `now` when `lastAt` is within `GAP_MS` of `now`, and
 0 otherwise. Hour buckets keep the longest streak in the hour, because they
 describe a past hour, not now.
+
+**Cooling.** For the live bucket only. Take two scores, both with the running
+streak:
+- `full`, the sixty minutes ending at `now`, as today;
+- `after`, the same window but starting at the running streak's first action.
+  When no streak is running (`now − lastAt > GAP_MS`), `after` holds nothing
+  and scores 0.
+
+The break is the time between the last action before the running streak and
+its first action. While no streak is running, it is `now − lastAt`. When no
+action precedes it in what cogload read, the break is long and `w` is 0. Then
+`w = 1` for a break of `GAP_MS` or less, and `max(0, 1 − break / 20 min)`
+otherwise. Each part's fraction is `after + w × (full − after)`. The index,
+level, `capped` and `top` come from those fractions by the rules of `score()`.
+`20 min` is a new norm, `NORMS.coolMin`, next to the others in `score.ts`.
+`status.index`, `level` and `peak` follow the live index as they do today.
+Hour buckets do not cool.
 
 **Plugin.**
 - `decodeStatus` requires `restAt` (an ISO instant or `null`) and `restMin`
@@ -146,6 +168,12 @@ format. Each case fails without its change:
    `top` = the part closest to its weight.
 4. A 44-minute streak, an 11-minute break (one past `GAP_MS`), and 10 minutes of work: the live
    bucket's `streakMin` is 10 and equals `status.streakMin`. Today it is 44.
+4a. Cooling, same fixture shape with a busy 40 minutes before the break:
+   - a 5-minute pause leaves the live index as `full`;
+   - an 11-minute break gives `after + 0.45 × (full − after)` in every part;
+   - a 20-minute break gives `after`;
+   - 15 minutes into a break with no action yet gives `0.25 × full`.
+   Each value differs from today's live index.
 
 Plugin, `claude plugin test plugin`:
 
@@ -174,7 +202,7 @@ Case 4 replaces it: after a rest no streak is at the cap.
 
 - `grep -nE "REST_AFTER_MIN|REST_MS|WEIGHTS|withBandStreak|streakStart\b" plugin/hooks/register.ts`
   prints nothing.
-- `bun run check` passes, cases 1 to 4 included, each failing without its
+- `bun run check` passes, cases 1 to 4a included, each failing without its
   change.
 - `claude plugin test plugin` passes, cases 5 to 9 included, each failing
   without its change.
@@ -186,9 +214,8 @@ Case 4 replaces it: after a rest no streak is at the cap.
 - Plugin 0.10.0. The PR body carries the CHANGELOG lines for cogload 0.13.0
   and plugin 0.10.0.
 
-## Open Questions
+## Follow-up
 
-- The live index after a rest drops by up to 10 points, the streak part. That
-  is the point of rule 2. If a person reads the drop as cogload forgetting the
-  hour, the alternative is to keep the score as it is and have `/cogload` say
-  "a 44m streak before your rest". That keeps two streaks but explains them.
+- With cooling, a Fried rest no longer meets a Fried reading ten minutes
+  later, so the plugin's "Fried once an hour" rule (#181) may have nothing
+  left to do. An issue after this lands, not part of it.
