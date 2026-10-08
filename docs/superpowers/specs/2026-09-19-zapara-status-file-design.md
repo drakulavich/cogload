@@ -142,7 +142,8 @@ source.
   `0`..`23`; `index` and `peak` are `null` or integers `0`..`100`; `level` is
   `null` exactly when `index` is, else one of the four names; `activeMin` and
   `streakMin` are integers `0`..`1500`, the ceiling being a DST fall-back day
-  of 25 hours. Anything else, and a missing or
+  of 25 hours; `restAt` is `null` or an ISO 8601 instant; `restMin` is an
+  integer `1`..`60`. Anything else, and a missing or
   unreadable file, is treated as no data: the segment is not drawn, and the
   file counts as stale.
 - Draw `index`, the last sixty minutes' load, coloured by `level`; `null` draws nothing.
