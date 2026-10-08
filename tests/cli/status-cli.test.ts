@@ -20,6 +20,10 @@ const spawn = (home: string, ...args: string[]): Promise<{ code: number; out: st
   const p = Bun.spawn(["bun", CLI, "status", ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
   return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(([out, err, code]) => ({ code, out, err }));
 };
+const spawnToday = (home: string, ...args: string[]): Promise<{ code: number; out: string; err: string }> => {
+  const p = Bun.spawn(["bun", CLI, "today", "--json", ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+  return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(([out, err, code]) => ({ code, out, err }));
+};
 const run = (home: string, ...args: string[]) => spawn(home, "--projects", projects, ...args);
 // The same run, under a umask that would narrow every mode cogload asks for.
 const masked = (home: string): Promise<{ code: number; out: string; err: string }> => {
@@ -160,6 +164,24 @@ describe("cogload status", () => {
     // reach past the ceiling, or the line says a few minutes under it.
     expect((await statusOfRun(28, 23)).s.streakMin).toBe(1500);
     expect((await statusOfRun(28, 12)).s.streakMin).toBe(1500);
+  });
+
+  test("today JSON and status report the same 28-hour running streak", async () => {
+    const now = new Date();
+    const start = Math.floor(now.getTime() / 60_000) * 60_000 - (28 * 60 + 5) * 60_000;
+    const at = (i: number) => new Date(start + i * 300_000).toISOString();
+    const tree = await mkdtemp(join(tmpdir(), "cogload-today-streak-"));
+    try {
+      const last = 28 * 12;
+      await writeTree(tree, [{ path: "-Users-me-proj/t.jsonl", lines: Array.from({ length: last + 1 }, (_, i) => prompt(at(i), A)), mtime: at(last) }]);
+      const [h1, h2] = [await home(), await home()];
+      const [status, today] = await Promise.all([spawn(h1, "--projects", tree), spawnToday(h2, "--projects", tree)]);
+      expect([status.code, today.code, status.err, today.err]).toEqual([0, 0, "", ""]);
+      expect(JSON.parse(today.out).live.streakMin).toBe(JSON.parse(status.out).streakMin);
+      expect(JSON.parse(today.out).live.streakMin).toBe(1500);
+    } finally {
+      await rm(tree, { recursive: true, force: true });
+    }
   });
 
   test("four runs at once leave one complete line and no temp file", async () => {

@@ -1,4 +1,4 @@
-import { GAP_MS, NORMS } from "../metrics/index.ts";
+import { GAP_MS, MAX_STREAK_MIN, NORMS } from "../metrics/index.ts";
 import type { Day, Level } from "../types.ts";
 
 // The status file's eleven values. The field order is the file format.
@@ -16,15 +16,11 @@ export type Status = {
   restMin: number;
 };
 
-// The reader contract's ceiling for activeMin and streakMin (status file spec):
-// a reader treats a larger value as no data, so a longer streak is written as this.
-const MAX_MIN = 1500;
-
 // How far back `status` reads to find where the live streak began: as far as
 // the file can show it, and one gap more, so that a streak longer than that
-// still reaches past the ceiling and reads as MAX_MIN, not a few minutes under.
+// still reaches past the ceiling instead of reading a few minutes under it.
 export function streakFrom(now: Date): Date {
-  return new Date(now.getTime() - MAX_MIN * 60_000 - GAP_MS);
+  return new Date(now.getTime() - MAX_STREAK_MIN * 60_000 - GAP_MS);
 }
 
 // index and level are the day's `live` bucket, not the hour's: an hour's bucket
@@ -36,7 +32,7 @@ export function statusOf(day: Day, now: Date): Status {
   const hour = now.getHours();
   const index = day.live?.score?.index ?? null;
   const live = day.presence !== null && now.getTime() - Date.parse(day.presence.lastAt) <= GAP_MS;
-  const streakMin = live ? Math.min(MAX_MIN, Math.round((now.getTime() - Date.parse(day.presence!.streakStartAt)) / 60000)) : 0;
+  const streakMin = live ? Math.min(MAX_STREAK_MIN, Math.round((now.getTime() - Date.parse(day.presence!.streakStartAt)) / 60000)) : 0;
   return {
     schema: 1,
     asOf: day.asOf ?? now.toISOString(),

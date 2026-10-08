@@ -5,6 +5,9 @@ const LOOKBACK_MS = 3 * 60 * 60 * 1000;
 export const GAP_MS = 10 * 60 * 1000;
 const SLOT_MS = 5 * 60 * 1000;
 const LIVE_MS = 60 * 60 * 1000;
+// The reader contract's ceiling for activeMin and streakMin (status file spec):
+// a reader treats a larger value as no data, so a longer streak is written as this.
+export const MAX_STREAK_MIN = 1500;
 const LATE_HOURS = new Set([23, 0, 1, 2, 3, 4, 5]);
 
 // Not localeCompare: a result must not depend on the locale.
@@ -156,7 +159,7 @@ function foldLive(sorted: Event[], nowMs: number, sinceMs = -Infinity): Acc {
 function liveBucket(sorted: Event[], presenceTs: number[], presence: Day["presence"], nowMs: number, lateNight: boolean): LiveBucket {
   const lastMs = presence ? Date.parse(presence.lastAt) : null;
   const startMs = lastMs !== null && nowMs - lastMs <= GAP_MS ? Date.parse(presence!.streakStartAt) : null;
-  const streakMin = startMs === null ? 0 : Math.round((nowMs - startMs) / 60000);
+  const streakMin = startMs === null ? 0 : Math.min(MAX_STREAK_MIN, Math.round((nowMs - startMs) / 60000));
   const full = finish(foldLive(sorted, nowMs), lateNight, streakMin);
   if (full.score === null) return full;
   const f = fractionsOf(full);
