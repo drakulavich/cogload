@@ -67,7 +67,7 @@ Heating 80 this hour, at the cap: 16 decisions and 13 context switches, 32 promp
 This week: 1 rest taken, 1 skipped (last: "prod is down, fixing it").
 ```
 
-The first line names every part of the score at its cap, heaviest weight first, or, with none at its cap, the one closest to it: `Warming 45 this hour, mostly 3 sessions at once.` With no scored hour it says `Nothing scored this hour.` The second line counts the rests of the last seven days you took and the ones you skipped, and quotes the newest skip's reason; with no rest, it is left out. When `cogload` cannot start it prints the missing-`cogload` text below, and any other failure prints `cogload gave no reading.`
+The first line names every part of the score at its cap, heaviest weight first, or, with none at its cap, the one closest to it: `Warming 45 this hour, mostly 3 sessions at once.` With no scored hour it says `Nothing scored this hour.`, and with an index of 0, after twenty minutes away, `Calm 0 this hour: you have been away.` The second line counts the rests of the last seven days you took and the ones you skipped, and quotes the newest skip's reason; with no rest, it is left out. When `cogload` cannot start it prints the missing-`cogload` text below, and any other failure prints `cogload gave no reading.`
 
 The index, the day's peak and the active time stay in `cogload` in a terminal. The first session after install shows one toast, `Keep your head cold. The dot above the prompt shows how hot this hour runs.`
 

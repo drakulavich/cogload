@@ -60,6 +60,10 @@ After this change:
    to read `20 rests, 20 overrides`, which looked like two unrelated counts
    ([#174](https://github.com/drakulavich/cogload/issues/174)).
 5. With no scored live hour, the first line is `Nothing scored this hour.`
+   With a live index of 0, it is `Calm 0 this hour: you have been away.` and
+   names no part: since cogload 0.13.0 a break of 20 minutes cools every part
+   to 0, and the closest part would be a tie
+   ([#196](https://github.com/drakulavich/cogload/issues/196)).
 6. `/overrides` is gone. Overrides are kept seven days instead of fourteen.
 
 The 14-day count behind rule 2 is in the
@@ -117,7 +121,7 @@ removed:
 3. Nothing at its cap, parallel 18.8 of 25 and supervision 20 of 30 →
    `mostly 4 sessions at once` (share 0.75 beats 0.67).
 4. A share tie between pace and reading → pace.
-5. `live` null → `Nothing scored this hour.`
+5. `live` null → `Nothing scored this hour.`; index 0 → `Calm 0 this hour: you have been away.`
 6. Two rests in the window, one overridden within its ten minutes →
    `This week: 1 rest taken, 1 pushed through (last: "<reason>").`; two
    overrides → the newest reason; rests and no override → `N rests taken.`;

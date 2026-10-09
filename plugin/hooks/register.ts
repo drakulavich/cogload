@@ -121,6 +121,7 @@ const PHRASE: Record<Part, (l: Live) => string> = {
 
 const hourLine = (live: Live, score: NonNullable<Live['score']>): string => {
   const head = `${score.level} ${score.index} this hour`
+  if (score.index === 0) return `${head}: you have been away.`
   if (score.capped.length > 0) return `${head}, at the cap: ${score.capped.map(p => PHRASE[p](live)).join(', ')}.`
   return `${head}, mostly ${PHRASE[score.top](live)}.`
 }
