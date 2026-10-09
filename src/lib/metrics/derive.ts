@@ -1,10 +1,13 @@
-import { score } from "./score.ts";
-import type { Day, Event, EventKind, HourBucket, LiveBucket, Metrics, Totals, Window } from "../types.ts";
+import { fractionsOf, NORMS, score, scoreOf } from "./score.ts";
+import type { Day, Event, EventKind, HourBucket, LiveBucket, Metrics, Part, Totals, Window } from "../types.ts";
 
 const LOOKBACK_MS = 3 * 60 * 60 * 1000;
 export const GAP_MS = 10 * 60 * 1000;
 const SLOT_MS = 5 * 60 * 1000;
 const LIVE_MS = 60 * 60 * 1000;
+// The reader contract's ceiling for activeMin and streakMin (status file spec):
+// a reader treats a larger value as no data, so a longer streak is written as this.
+export const MAX_STREAK_MIN = 1500;
 const LATE_HOURS = new Set([23, 0, 1, 2, 3, 4, 5]);
 
 // Not localeCompare: a result must not depend on the locale.
@@ -83,11 +86,11 @@ function accumulate(a: Acc, e: Event, streakStart: number): void {
 
 // `lateNight` is the caller's: an hour's own label, or the hour of `now` for the
 // live bucket. A fresh accumulator is an empty hour and scores null.
-function finish(a: Acc, lateNight: boolean): LiveBucket {
+function finish(a: Acc, lateNight: boolean, streakMin = Math.round(a.maxStreakMs / 60000)): LiveBucket {
   const m = a.m;
   m.sessions = a.sessions.size;
   m.activeMin = a.slots.size * 5;
-  m.streakMin = Math.round(a.maxStreakMs / 60000);
+  m.streakMin = streakMin;
   m.decisions = m.interrupts + m.rejects + m.questions + m.plans + m.modeSwitches;
   m.lateNight = lateNight;
   return { ...m, score: score(m) };
@@ -134,10 +137,10 @@ function foldEvents(sorted: Event[], startMs: number): { acc: Map<string, Acc>; 
 // runs from the first event, so a streak older than the window is measured from
 // where it began. Events before the day's start count here, unlike in a bucket:
 // the window is a clock's hour, not a calendar's.
-function foldLive(sorted: Event[], nowMs: number): Acc {
+function foldLive(sorted: Event[], nowMs: number, sinceMs = -Infinity): Acc {
   const a = newAcc();
   const fromMs = nowMs - LIVE_MS;
-  const inWindow = (t: number): boolean => t > fromMs && t <= nowMs;
+  const inWindow = (t: number): boolean => t > fromMs && t >= sinceMs && t <= nowMs;
   let prevPresenceTs: number | null = null;
   let streakStart = 0;
   for (const e of sorted) {
@@ -150,6 +153,25 @@ function foldLive(sorted: Event[], nowMs: number): Acc {
     if (inWindow(e.ts)) accumulate(a, e, streakStart);
   }
   return a;
+}
+
+// statusOf reads this streakMin; a break before the streak cools the score.
+function liveBucket(sorted: Event[], presenceTs: number[], presence: Day["presence"], nowMs: number, lateNight: boolean): LiveBucket {
+  const lastMs = presence ? Date.parse(presence.lastAt) : null;
+  const startMs = lastMs !== null && nowMs - lastMs <= GAP_MS ? Date.parse(presence!.streakStartAt) : null;
+  const streakMin = startMs === null ? 0 : Math.min(MAX_STREAK_MIN, Math.round((nowMs - startMs) / 60000));
+  const full = finish(foldLive(sorted, nowMs), lateNight, streakMin);
+  if (full.score === null) return full;
+  const f = fractionsOf(full);
+  const after = startMs === null ? null : fractionsOf(finish(foldLive(sorted, nowMs, startMs), lateNight, streakMin));
+  const breakFrom = startMs === null ? lastMs : presenceTs.findLast((t) => t < startMs);
+  const w = breakFrom == null ? 0 : Math.max(0, 1 - ((startMs ?? nowMs) - breakFrom) / (NORMS.coolMin * 60_000));
+  const cooled = { ...f };
+  for (const p of Object.keys(f) as Part[]) {
+    const a = after?.[p] ?? 0;
+    cooled[p] = a + w * (f[p] - a);
+  }
+  return { ...full, score: scoreOf(cooled) };
 }
 
 function buildDay(date: string, acc: Map<string, Acc>): Day {
@@ -214,7 +236,8 @@ export function derive(events: Event[], w: Window): Day[] {
     const open = days.find((d) => d.date === today);
     if (open) {
       open.asOf = w.now.toISOString();
-      open.live = finish(foldLive(sorted, w.now.getTime()), LATE_HOURS.has(w.now.getHours()));
+      const presenceTs = read.filter((e) => PRESENCE.has(e.kind)).map((e) => e.ts);
+      open.live = liveBucket(sorted, presenceTs, open.presence, w.now.getTime(), LATE_HOURS.has(w.now.getHours()));
     }
   }
   return days;

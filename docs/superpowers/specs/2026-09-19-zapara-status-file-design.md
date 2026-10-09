@@ -66,7 +66,7 @@ overwrites the first. The directory is created on first use.
 Content: exactly one line of JSON, no trailing spaces, a newline at the end.
 
 ```json
-{"schema":1,"asOf":"2026-09-19T12:30:38.300Z","date":"2026-09-19","hour":15,"index":36,"level":"Warming","peak":41,"activeMin":555,"streakMin":166}
+{"schema":1,"asOf":"2026-09-19T12:30:38.300Z","date":"2026-09-19","hour":15,"index":36,"level":"Warming","peak":41,"activeMin":555,"streakMin":166,"restAt":"2026-09-19T10:24:38.300Z","restMin":10}
 ```
 
 | Field | Meaning |
@@ -80,6 +80,8 @@ Content: exactly one line of JSON, no trailing spaces, a newline at the end.
 | `peak` | The day's peak index so far, counting the sixty minutes ending at `asOf` as well as the day's calendar hours, so `index` is never above it; `null` when both are `null`. |
 | `activeMin` | Minutes of your presence in the day so far: the 5-minute slots covered by your actions and the gaps of at most 10 minutes between them; `0` on a day with no action of yours. |
 | `streakMin` | Minutes of your live presence streak as of `asOf`: from the streak's first human action to `asOf`, when your last action is no more than 10 minutes before `asOf`; `0` once you have been away longer. Not the hour's bucket. |
+| `restAt` | When the running streak reaches `NORMS.streakMin`: its first action plus 40 minutes, ISO 8601 UTC; `null` when `streakMin` is `0`. It stays the same for the whole streak, so it also names the streak. Added by `2026-10-08-cognitive-load-one-source-of-numbers-design.md`. |
+| `restMin` | How long a rest must be to end a streak: `GAP_MS` in minutes, `10`. |
 
 `hour` is the clock; `index` and `level` describe the sixty minutes ending at
 `asOf` (the day's `live` bucket, see `2026-09-22-zapara-live-index-design.md`);
@@ -92,7 +94,7 @@ an hour boundary and does not wait for your next action to grow. On a day with n
 file is still written, with the `null`s and zeros above, so a reader can tell
 "nothing yet today" from "cogload never ran".
 
-Privacy: the file holds these nine values and nothing else. No path, no
+Privacy: the file holds these eleven values and nothing else. No path, no
 project, no session count, no text, no token count: a status line has no use
 for them and the file may sit in a directory other tools read.
 
@@ -140,7 +142,8 @@ source.
   `0`..`23`; `index` and `peak` are `null` or integers `0`..`100`; `level` is
   `null` exactly when `index` is, else one of the four names; `activeMin` and
   `streakMin` are integers `0`..`1500`, the ceiling being a DST fall-back day
-  of 25 hours. Anything else, and a missing or
+  of 25 hours; `restAt` is `null` or an ISO 8601 instant; `restMin` is an
+  integer `1`..`60`. Anything else, and a missing or
   unreadable file, is treated as no data: the segment is not drawn, and the
   file counts as stale.
 - Draw `index`, the last sixty minutes' load, coloured by `level`; `null` draws nothing.

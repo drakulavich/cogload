@@ -50,6 +50,7 @@ sixty minutes that end at `asOf` instead of a calendar hour.
   status file: that one drops to 0 ten minutes after the last action, and the
   index would drop ten points with it in one step. The bucket rule lets the
   streak leave the index the way everything else does, by sliding out.
+  Extended by `2026-10-08-cognitive-load-one-source-of-numbers-design.md`: the live streak is the running one, and a break cools the index.
 - **Late night.** The hour of `asOf`, by the same set of hours as a bucket's
   label.
 - **Score.** `score()` as it is, weights and norms untouched; `null` when the

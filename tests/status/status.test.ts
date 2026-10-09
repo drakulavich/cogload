@@ -21,23 +21,24 @@ const t = transcript([
   prompt("2026-09-14T14:10:00.000Z", S[0]!), assistant("2026-09-14T14:12:00.000Z", S[0]!),
 ]);
 
-describe("status: today's load in nine fields", () => {
+describe("status: today's load in eleven fields", () => {
   test("the last sixty minutes, and the day's peak and active time", () => {
-    const now = new Date("2026-09-14T14:32:00.000Z");
+    const now = new Date("2026-09-14T14:25:00.000Z");
     const [day] = analyze([t], { to: "2026-09-14", days: 1, now });
     const current = day!.buckets[14]!, busiest = day!.buckets[13]!;
     const s = statusOf(day!, now);
     expect(s).toEqual({
-      schema: 1, asOf: "2026-09-14T14:32:00.000Z", date: "2026-09-14", hour: 14,
+      schema: 1, asOf: "2026-09-14T14:25:00.000Z", date: "2026-09-14", hour: 14,
       index: day!.live!.score!.index, level: day!.live!.score!.level,
-      peak: day!.peak, activeMin: day!.activeMin, streakMin: 0,
+      peak: day!.peak, activeMin: day!.activeMin, streakMin: 0, restAt: null, restMin: 10,
     });
-    // The window (13:32, 14:32] holds the tail of the busy hour and the quiet
-    // exchange: less than the peak, more than the quiet hour's own bucket.
+    // The window (13:25, 14:25] holds the tail of the busy hour and the quiet
+    // exchange, a quarter of it after a 15-minute break: less than the peak,
+    // more than the quiet hour's own bucket.
     expect(s.peak).toBe(busiest.score!.index);
     expect(s.index!).toBeLessThan(s.peak!);
     expect(s.index!).toBeGreaterThan(current.score!.index);
-    // 22 minutes since the 14:10 prompt, so the streak is over; the hour's own
+    // 15 minutes since the 14:10 prompt, so the streak is over; the hour's own
     // bucket agrees here, but the status answers about now, not about the hour.
     expect([current.streakMin, s.streakMin]).toEqual([0, 0]);
     expect(s.streakMin).toBeLessThan(busiest.streakMin);
@@ -53,12 +54,12 @@ describe("status: today's load in nine fields", () => {
   test("a day with no activity is all null and zero, and still has its date and time", () => {
     const now = new Date("2026-09-14T09:15:00.000Z");
     const [day] = analyze([], { to: "2026-09-14", days: 1, now });
-    expect(statusOf(day!, now)).toEqual({ schema: 1, asOf: "2026-09-14T09:15:00.000Z", date: "2026-09-14", hour: 9, index: null, level: null, peak: null, activeMin: 0, streakMin: 0 });
+    expect(statusOf(day!, now)).toEqual({ schema: 1, asOf: "2026-09-14T09:15:00.000Z", date: "2026-09-14", hour: 9, index: null, level: null, peak: null, activeMin: 0, streakMin: 0, restAt: null, restMin: 10 });
   });
   test("renderStatus is one line in the spec's field order with a newline", () => {
     const now = new Date("2026-09-14T09:15:00.000Z");
     const [day] = analyze([], { to: "2026-09-14", days: 1, now });
-    expect(renderStatus(statusOf(day!, now))).toBe('{"schema":1,"asOf":"2026-09-14T09:15:00.000Z","date":"2026-09-14","hour":9,"index":null,"level":null,"peak":null,"activeMin":0,"streakMin":0}\n');
+    expect(renderStatus(statusOf(day!, now))).toBe('{"schema":1,"asOf":"2026-09-14T09:15:00.000Z","date":"2026-09-14","hour":9,"index":null,"level":null,"peak":null,"activeMin":0,"streakMin":0,"restAt":null,"restMin":10}\n');
   });
   test("the peak counts the last sixty minutes too, so the index is never above it", () => {
     // Three sessions prompting every two minutes from 13:32 to 14:30: each
@@ -178,5 +179,32 @@ describe("status: the streak stays inside the reader contract", () => {
     const day = analyze([transcript(marathon)], { to: "2026-09-14", days: 1, now })[0]!;
     expect(day.presence!.lastAt).toBe("2026-09-14T23:45:00.000Z");
     expect(statusOf(day, now).streakMin).toBe(1500);
+  });
+});
+
+describe("status: when the running streak is due a rest", () => {
+  const A = "aaaaaaaa-1111-4111-8111-111111111111";
+  const run = (lastMin: number) =>
+    transcript(Array.from({ length: lastMin / 5 + 1 }, (_, i) => prompt(`2026-09-14T10:${String(i * 5).padStart(2, "0")}:00.000Z`, A)));
+  const statusAt = (lastMin: number, iso: string) => {
+    const now = new Date(iso);
+    return statusOf(analyze([run(lastMin)], { to: "2026-09-14", days: 1, now })[0]!, now);
+  };
+
+  test("25 minutes into a streak, restAt is its first action plus 40 minutes and restMin is 10", () => {
+    const s = statusAt(25, "2026-09-14T10:25:00.000Z");
+    expect([s.streakMin, s.restAt, s.restMin]).toEqual([25, "2026-09-14T10:40:00.000Z", 10]);
+  });
+
+  test("11 minutes away, restAt is null", () => {
+    const s = statusAt(25, "2026-09-14T10:36:00.000Z");
+    expect([s.streakMin, s.restAt, s.restMin]).toEqual([0, null, 10]);
+  });
+
+  test("two runs 5 minutes apart in one streak give the same restAt", () => {
+    const first = statusAt(25, "2026-09-14T10:25:00.000Z");
+    const second = statusAt(30, "2026-09-14T10:30:00.000Z");
+    expect(second.streakMin).toBe(first.streakMin + 5);
+    expect([first.restAt, second.restAt]).toEqual(["2026-09-14T10:40:00.000Z", "2026-09-14T10:40:00.000Z"]);
   });
 });

@@ -26,6 +26,7 @@ After this change:
    weight), heaviest weight first. When no part is at its cap, it names the
    one with the largest share of its weight: `Warming 45 this hour, mostly 3
    sessions at once.` A tie on share goes to the heavier weight.
+   Extended by `2026-10-08-cognitive-load-one-source-of-numbers-design.md`: the parts come from `live.score.capped` and `top`, and the streak is `live.streakMin`.
 3. One phrase per part, from the live hour of `cogload today --json`:
 
    | Part | Phrase |
