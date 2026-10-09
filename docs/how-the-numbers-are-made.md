@@ -180,8 +180,9 @@ A day that includes now is a snapshot: the run fixes `now` when it starts,
 records it as `asOf`, and counts nothing timestamped after it, even if Claude
 Code appends records while the run reads. The next run makes the next
 snapshot. That day also carries `live`, the bucket of the sixty minutes ending at
-`asOf`, built by the same rule as an hour bucket; it is what the status file's
-`index` scores. The tables end with `as of HH:MM, this hour is still running`.
+`asOf`, with an hour bucket's counts but two differences: its streak is the one
+running at `asOf`, and a break before that streak cools its score (section 7).
+It is what the status file's `index` scores. The tables end with `as of HH:MM, this hour is still running`.
 
 ## 7. Where the numbers go
 
@@ -201,16 +202,21 @@ are ranked against norms in `src/lib/card/card.ts` that order a picture and neve
 the index. The card spec has the rest.
 
 **The status file** (`cogload status`) writes today's current hour to
-`~/.claude/cogload/status.json` as one line of JSON with nine fields:
+`~/.claude/cogload/status.json` as one line of JSON with eleven fields:
 
 ```json
-{"schema":1,"asOf":"2026-09-19T12:30:38.300Z","date":"2026-09-19","hour":15,"index":36,"level":"Warming","peak":41,"activeMin":555,"streakMin":166}
+{"schema":1,"asOf":"2026-09-19T12:30:38.300Z","date":"2026-09-19","hour":15,"index":36,"level":"Warming","peak":41,"activeMin":555,"streakMin":166,"restAt":"2026-09-19T10:24:38.300Z","restMin":10}
 ```
 
 `hour` is the clock; `index` and `level` are the sixty minutes ending at
-`asOf`, `(asOf − 60 min, asOf]`, measured by the same rule as an hour bucket
-(same counts, same presence slots, the longest streak the window saw, late
-night by the hour of `asOf`) and scored by the same formula. A calendar hour
+`asOf`, `(asOf − 60 min, asOf]`, with an hour bucket's counts and presence
+slots, late night by the hour of `asOf`, and the same formula, except for two
+things. The streak part counts the streak running at `asOf`, the same minutes
+as `streakMin`, so it is 0 once you have been away. And a break cools the
+score: after a break longer than ten minutes, what you did before it counts
+at `1 − break / 20 min`, so ten minutes away keep about half of it and twenty
+keep none. While you are still away, the break so far counts, so the index
+falls during a rest. A calendar hour
 would not do: thirty seconds past the hour its bucket holds thirty seconds,
 and its counts climb until the hour ends, so a status line drawn from it
 would saw from nothing to the hour's number and back every hour. `peak` and
@@ -221,6 +227,9 @@ sit there, which is what a status line needs and what a bucket cannot give.
 For this one number `status` reads further back than the 3-hour look-back, to
 25 hours before `asOf`, so a streak that crosses midnight is not floored; a
 streak longer than that is written as `1500`, the ceiling the file promises.
+`restAt` is when the running streak reaches 40 minutes, its first action plus
+40 minutes, and `null` with no streak; it stays the same for the whole streak.
+`restMin` is how long a break must be to end a streak, `10`.
 A status line reads that file on every render and shows the index in the
 colour of its level, the time since your last ten-minute break, and the day's
 presence so far. When the file is older than the reader's threshold, it starts
@@ -240,6 +249,8 @@ contract.
   run that hour held, not the day's longest; the day's longest is on the card,
   and the one you are in right now is in the status file. A gap of more than
   ten minutes between two of your actions starts a new run.
+- **The index fell after a break.** A break of twenty minutes or more leaves
+  only what you did since; the hour table still shows the hour as it was.
 - **Fewer active minutes than the session felt.** Minutes count when you were
   present, not when an agent was working alone. The `sess` column still shows
   the agents.
