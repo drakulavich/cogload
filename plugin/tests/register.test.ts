@@ -876,6 +876,11 @@ describe('/cogload', () => {
     expect(await explain($, on, { stdout })).toBe('Warming 45 this hour, mostly 40k output tokens.')
   })
 
+  test('a score cooled to 0 names no part', async ($, on) => {
+    const stdout = today({ prompts: 16, contextSwitches: 15 }, { index: 0, level: 'Calm', top: 'supervision', parts: NO_PARTS })
+    expect(await explain($, on, { stdout })).toBe('Calm 0 this hour: you have been away.')
+  })
+
   test("quotes live's streak as cogload counts it", async ($, on) => {
     const presence = { lastAt: '2026-10-03T09:58:30.000Z', streakStartAt: '2026-10-03T09:11:30.000Z' }
     const stdout = today({ streakMin: 9 }, { capped: ['streak'] }).replace('"presence":null', `"presence":${JSON.stringify(presence)}`)
