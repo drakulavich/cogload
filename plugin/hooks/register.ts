@@ -295,7 +295,6 @@ export const register: Register = on => {
       return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
     }
     const isComposer = e.origin.kind === 'composer'
-    if (isComposer) await $.prompt.fill({ text: e.text, mode: 'replace' }).catch(() => {})
     if (skip !== null) return { drop: `${SHORT}${isComposer ? ' Your prompt is saved.' : ''}` }
     const phrase = await $.store.get('phrase')
     const n = typeof phrase === 'number' ? phrase : 0
