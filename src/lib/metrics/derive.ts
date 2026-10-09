@@ -1,5 +1,5 @@
-import { type Fractions, fractionsOf, NORMS, score, scoreOf } from "./score.ts";
-import type { Day, Event, EventKind, HourBucket, LiveBucket, Metrics, Totals, Window } from "../types.ts";
+import { fractionsOf, NORMS, score, scoreOf } from "./score.ts";
+import type { Day, Event, EventKind, HourBucket, LiveBucket, Metrics, Part, Totals, Window } from "../types.ts";
 
 const LOOKBACK_MS = 3 * 60 * 60 * 1000;
 export const GAP_MS = 10 * 60 * 1000;
@@ -155,7 +155,7 @@ function foldLive(sorted: Event[], nowMs: number, sinceMs = -Infinity): Acc {
   return a;
 }
 
-// The streak must stay statusOf's streakMin; a break before it cools the score.
+// statusOf reads this streakMin; a break before the streak cools the score.
 function liveBucket(sorted: Event[], presenceTs: number[], presence: Day["presence"], nowMs: number, lateNight: boolean): LiveBucket {
   const lastMs = presence ? Date.parse(presence.lastAt) : null;
   const startMs = lastMs !== null && nowMs - lastMs <= GAP_MS ? Date.parse(presence!.streakStartAt) : null;
@@ -166,10 +166,11 @@ function liveBucket(sorted: Event[], presenceTs: number[], presence: Day["presen
   const after = startMs === null ? null : fractionsOf(finish(foldLive(sorted, nowMs, startMs), lateNight, streakMin));
   const breakFrom = startMs === null ? lastMs : presenceTs.findLast((t) => t < startMs);
   const w = breakFrom == null ? 0 : Math.max(0, 1 - ((startMs ?? nowMs) - breakFrom) / (NORMS.coolMin * 60_000));
-  const cooled = Object.fromEntries(Object.entries(f).map(([p, v]) => {
-    const a = after?.[p as keyof Fractions] ?? 0;
-    return [p, a + w * (v - a)];
-  })) as Fractions;
+  const cooled = { ...f };
+  for (const p of Object.keys(f) as Part[]) {
+    const a = after?.[p] ?? 0;
+    cooled[p] = a + w * (f[p] - a);
+  }
   return { ...full, score: scoreOf(cooled) };
 }
 

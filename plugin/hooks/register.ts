@@ -41,7 +41,7 @@ type Live = {
   contextSwitches: number
   outputTokens: number
   streakMin: number
-  score: { index: number; level: Level; capped?: Part[]; top: Part } | null
+  score: { index: number; level: Level; capped: Part[]; top: Part } | null
 }
 
 const isInt = (v: unknown, min: number, max: number): v is number =>
@@ -119,9 +119,9 @@ const PHRASE: Record<Part, (l: Live) => string> = {
   late: () => 'late at night',
 }
 
-const hourLine = (live: Live, score: NonNullable<Live['score']>, capped: Part[]): string => {
+const hourLine = (live: Live, score: NonNullable<Live['score']>): string => {
   const head = `${score.level} ${score.index} this hour`
-  if (capped.length > 0) return `${head}, at the cap: ${capped.map(p => PHRASE[p](live)).join(', ')}.`
+  if (score.capped.length > 0) return `${head}, at the cap: ${score.capped.map(p => PHRASE[p](live)).join(', ')}.`
   return `${head}, mostly ${PHRASE[score.top](live)}.`
 }
 
@@ -270,9 +270,9 @@ export const register: Register = on => {
     } catch {}
     if (typeof day !== 'object' || day === null) return { text: NO_READING }
     const live = (day as Day).live
-    const capped = live?.score?.capped
-    if (live?.score && !Array.isArray(capped)) return { text: OLDER }
-    const hour = live?.score && capped ? hourLine(live, live.score, capped) : 'Nothing scored this hour.'
+    const score = live?.score
+    if (score && !Array.isArray(score.capped)) return { text: OLDER }
+    const hour = live && score ? hourLine(live, score) : 'Nothing scored this hour.'
     const week = await weekLine($, await $.clock.now())
     return { text: [hour, ...(week === null ? [] : [week])].join('\n') }
   })

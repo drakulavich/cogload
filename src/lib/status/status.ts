@@ -31,8 +31,7 @@ export function streakFrom(now: Date): Date {
 export function statusOf(day: Day, now: Date): Status {
   const hour = now.getHours();
   const index = day.live?.score?.index ?? null;
-  const live = day.presence !== null && now.getTime() - Date.parse(day.presence.lastAt) <= GAP_MS;
-  const streakMin = live ? Math.min(MAX_STREAK_MIN, Math.round((now.getTime() - Date.parse(day.presence!.streakStartAt)) / 60000)) : 0;
+  const streakMin = day.live?.streakMin ?? 0;
   return {
     schema: 1,
     asOf: day.asOf ?? now.toISOString(),
