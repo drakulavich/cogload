@@ -489,20 +489,9 @@ describe('rest', () => {
     })
   })
 
-  test('a composer prompt dropped by the rest goes back into the box', async ($, on) => {
-    const fills: unknown[] = []
-    engine(on, [{ stdout: line({ streakMin: 40 }) }])
-    on('prompt.fill', (_$, e) => {
-      fills.push({ text: e.text, mode: e.mode })
-      return { isFilled: true }
-    })
-    await start($)
-    await typed($, 'next task\nand more')
-    await clock.advance(0)
-    expect(fills).toEqual([{ text: 'next task\nand more', mode: 'replace' }])
-  })
-
+  // Claude Code puts a dropped prompt back in the box itself; a fill on top doubled it (2.1.295).
   for (const [what, prompt] of [
+    ['a composer prompt', ($: Engine) => typed($, 'next task\nand more')],
     ['a bridge prompt', ($: Engine) => typed($, 'next task', 'bridge')],
     ['an override', ($: Engine) => typed($, 'override: prod is down')],
   ] as const) {
@@ -690,7 +679,7 @@ describe('override', () => {
   })
 
   for (const prompt of ['override: ok\nfix it', 'override:', 'override: prod down', 'fix it\noverride: no']) {
-    test(`${JSON.stringify(prompt)} asks for a longer reason, goes back into the box and keeps the rest`, async ($, on) => {
+    test(`${JSON.stringify(prompt)} asks for a longer reason, fills nothing and keeps the rest`, async ($, on) => {
       const fills: string[] = []
       engine(on, [{ stdout: line({ streakMin: 40 }) }])
       on('prompt.fill', (_$, e) => {
@@ -700,7 +689,7 @@ describe('override', () => {
       await start($)
       expect(await typed($, prompt)).toEqual({ drop: `${SHORT} Your prompt is saved.` })
       await clock.advance(0)
-      expect(fills).toEqual([prompt])
+      expect(fills).toEqual([])
       expect(await typed($, 'next', 'bridge')).toEqual(DROP(NOW + REST_MS, { kind: 'bridge' }))
     })
   }
