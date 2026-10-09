@@ -8,6 +8,18 @@
 
 <p align="center"><b>How hard was today?</b> cogload reads the transcripts Claude Code already writes on your machine and scores every hour 0–100 from parallel sessions, prompt pace, agent supervision, model output, streak length and late-night work. Nothing leaves the machine, no message text is kept.</p>
 
+## See your last two weeks
+
+One command draws your last 14 days from the transcripts already on your disk, with nothing installed but [Bun](https://bun.sh) 1.4.2 or newer:
+
+```bash
+bunx @drakulavich/cogload@latest card
+```
+
+<p align="center"><img src="https://raw.githubusercontent.com/drakulavich/cogload/main/assets/card.webp" alt="cogload card: The Marathoner, longest streak 7h53m, 68% of hours calm" width="800"></p>
+
+No Bun yet: `curl -fsSL https://bun.sh/install | bash` first. macOS draws the card with WebKit; elsewhere it needs an installed Chromium browser.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/drakulavich/cogload/main/assets/plugin.webp" alt="The cognitive-load plugin in Claude Code: a rest holds a prompt, a skip lifts it, /cogload names what drives the hour" width="800">
 </p>
@@ -68,8 +80,6 @@ Levels: calm 0–29, warming 30–59, heating 60–84, fried 85–100.
 cogload card                    # writes cogload-card.png to ~/Downloads
 cogload card --out card.webp    # WebP instead; --out card.html writes the page itself
 ```
-
-<p align="center"><img src="https://raw.githubusercontent.com/drakulavich/cogload/main/assets/card.webp" alt="cogload card: The Marathoner, longest streak 7h53m, 68% of hours calm" width="800"></p>
 
 macOS draws it with WebKit; elsewhere it needs an installed Chromium browser, or write `--out card.html` and open the page in any browser.
 
