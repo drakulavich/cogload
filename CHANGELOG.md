@@ -5,6 +5,26 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-09
+
+### Added
+- `status` writes `restAt`, when the running streak reaches 40 minutes, and
+  `restMin`, how long a rest must be to end it. (#192)
+- Each score names the parts at their cap (`capped`) and the one closest to
+  it (`top`). (#192)
+
+### Changed
+- The live index counts the streak running now and cools after a break:
+  10 minutes away keep about half of the load from before, 20 minutes keep
+  none. (#192)
+- The `cognitive-load` plugin 0.10.0 takes every number from cogload, so the
+  band, `/cogload` and the rest no longer disagree. It needs cogload 0.13.0
+  and says so once if an older one is installed. (#192)
+
+### Fixed
+- Right after a rest, `/cogload` no longer says a short streak is at the
+  cap. (#187)
+
 ## [0.12.3] - 2026-10-07
 
 ### Changed
