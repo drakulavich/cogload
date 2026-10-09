@@ -60,6 +60,8 @@ The `cognitive-load` plugin draws the level of the last hour above the Claude Co
 ● Heating · rest at 14:52
 ```
 
+The level cools after a break: ten minutes away keep about half of the load from before it, twenty minutes keep none, so the band reads lower after a rest.
+
 When the band turns Heating and you want to know why, type `/cogload`. It runs `cogload today --json` and names what drives the last sixty minutes in counts:
 
 ```
