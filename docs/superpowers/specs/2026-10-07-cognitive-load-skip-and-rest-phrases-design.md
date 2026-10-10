@@ -17,9 +17,11 @@ word to reach for when tired.
 After this change:
 
 1. A held prompt is dropped with
-   `<phrase> 7 min left, your prompt is saved. To go on: "skip: <reason>".`
-   From Remote Control (`bridge`) the middle reads `7 min left.` with no
-   saved sentence. The minutes are `Math.ceil((until - now) / 60_000)`, as
+   `<phrase> 7 min left. Your prompt is back in the box: to send it, add
+   "skip: <reason>" as its last line.` A `skip:` sent alone lifts the rest
+   but sends nothing, so the hint points at the box, where Claude Code put the
+   prompt back. From Remote Control (`bridge`), which gets no prompt back,
+   it is `<phrase> 7 min left. To go on: "skip: <reason>".` The minutes are `Math.ceil((until - now) / 60_000)`, as
    the band counts them.
 2. `<phrase>` is the next of these, in order, wrapping after the last:
    1. `Stand up and stretch.`
@@ -39,7 +41,8 @@ After this change:
    or more, the line removed and the rest sent. `override:` keeps working the
    same way and is mentioned nowhere.
 4. A shorter reason, or none, gets `A skip needs a reason of three words or
-   more.`, and a typed prompt goes back into the box, as today.
+   more.`, and a typed prompt goes back into the box, with `Your prompt is
+   back in the box.`
 5. The one-time hint and its `taught` flag go: every prompt held without a
    `skip:` or `override:` line carries the way out. A too-short skip gets
    only the reply in 4, with no phrase: it already names the way out. A stored `taught` is left alone and no longer read.
@@ -83,8 +86,9 @@ README.md, docs/reference.md        skip, the phrases, the store's keys
 
 Unit, `claude plugin test plugin`, each case failing without its behaviour:
 
-1. Two typed prompts during a rest → `Stand up and stretch. 10 min left,
-   your prompt is saved. To go on: "skip: <reason>".`, then the same with
+1. Two typed prompts during a rest → `Stand up and stretch. 10 min left.
+   Your prompt is back in the box: to send it, add "skip: <reason>" as its
+   last line.`, then the same with
    `Water, then a window.`
 2. Nine held prompts → the ninth carries `Stand up and stretch.` again.
 3. A held bridge prompt → `<phrase> 10 min left. To go on: "skip: <reason>".`
@@ -94,7 +98,7 @@ Unit, `claude plugin test plugin`, each case failing without its behaviour:
    lifted.`
 6. `override: prod is down now` → the rest lifts, as today.
 7. `skip: no` → `A skip needs a reason of three words or more. Your prompt
-   is saved.`
+   is back in the box.`
 8. A rest taken and a rest skipped → `/cogload` prints `This week: 1 rest
    taken, 1 skipped (last: "prod is down now").`
 

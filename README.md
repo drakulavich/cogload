@@ -98,7 +98,7 @@ Heating 80 this hour, at the cap: 16 decisions and 13 context switches, 32 promp
 This week: 1 rest taken, 1 skipped (last: "prod is down, fixing it").
 ```
 
-It also makes you rest. After 40 minutes of work without a ten-minute gap, or in a Fried hour, it holds your prompts for ten minutes. Each held prompt gets the next short idea for the break, the minutes left and the way out: `Stand up and stretch. 7 min left, your prompt is saved. To go on: "skip: <reason>".` A `skip: <reason>` line at the start or the end of the prompt, the reason three words or more, lifts the rest.
+It also makes you rest. After 40 minutes of work without a ten-minute gap, or in a Fried hour, it holds your prompts for ten minutes. Each held prompt gets the next short idea for the break, the minutes left and the way out: `Stand up and stretch. 7 min left. Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.` A `skip: <reason>` line at the start or the end of the prompt, the reason three words or more, lifts the rest.
 
 ## Privacy
 

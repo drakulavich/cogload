@@ -26,6 +26,7 @@ const PHRASES = [
   'The code will wait.',
 ]
 const SHORT = 'A skip needs a reason of three words or more.'
+const BACK = 'Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.'
 const WELCOME = 'Keep your head cold. The dot above the prompt shows how hot this hour runs.'
 const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload"
 const NO_READING = 'cogload gave no reading.'
@@ -295,12 +296,12 @@ export const register: Register = on => {
       return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
     }
     const isComposer = e.origin.kind === 'composer'
-    if (skip !== null) return { drop: `${SHORT}${isComposer ? ' Your prompt is saved.' : ''}` }
+    if (skip !== null) return { drop: `${SHORT}${isComposer ? ' Your prompt is back in the box.' : ''}` }
     const phrase = await $.store.get('phrase')
     const n = typeof phrase === 'number' ? phrase : 0
     await $.store.set('phrase', (n + 1) % PHRASES.length)
-    const left = `${Math.ceil((until - now) / 60_000)} min left${isComposer ? ', your prompt is saved' : ''}`
-    return { drop: `${PHRASES[n % PHRASES.length]} ${left}. To go on: "skip: <reason>".` }
+    const left = `${Math.ceil((until - now) / 60_000)} min left`
+    return { drop: `${PHRASES[n % PHRASES.length]} ${left}. ${isComposer ? BACK : 'To go on: "skip: <reason>".'}` }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
