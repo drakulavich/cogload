@@ -1,8 +1,9 @@
 {
   "name": "cognitive-load",
-  "version": "0.11.0",
+  "displayName": "Cognitive Load",
+  "version": "0.11.1",
   "description": "A fuse for your head: it shows the heat, warns you, then trips before you burn out.",
-  "author": { "name": "Anton Yakutovich" },
+  "author": { "name": "Anton Yakutovich", "url": "https://github.com/drakulavich" },
   "homepage": "https://github.com/drakulavich/cogload",
   "license": "MIT",
   "types": "./types/index.d.ts"
