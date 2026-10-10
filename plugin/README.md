@@ -56,4 +56,4 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
   writes to disk.
 
 [How the numbers are made](https://github.com/drakulavich/cogload/blob/main/docs/how-the-numbers-are-made.md)
-explains the score. MIT licensed.
+explains the score. [Privacy policy](https://github.com/drakulavich/cogload/blob/main/PRIVACY.md). MIT licensed.
