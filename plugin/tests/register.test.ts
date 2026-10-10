@@ -390,9 +390,10 @@ const PHRASES = [
   'The code will wait.',
 ]
 const DROP = (until: number, { kind = 'composer', n = 0 }: { kind?: 'composer' | 'bridge'; n?: number } = {}) => ({
-  drop: `${PHRASES[n]} ${Math.ceil((until - clock.now()) / 60_000)} min left${kind === 'composer' ? ', your prompt is saved' : ''}. To go on: "skip: <reason>".`,
+  drop: `${PHRASES[n]} ${Math.ceil((until - clock.now()) / 60_000)} min left. ${kind === 'composer' ? BACK : 'To go on: "skip: <reason>".'}`,
 })
 const SHORT = 'A skip needs a reason of three words or more.'
+const BACK = 'Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.'
 const typed = ($: Engine, text: string, kind: 'composer' | 'bridge' = 'composer') =>
   $.prompt.submit({ text, wait: false, origin: { kind } })
 
@@ -466,11 +467,11 @@ describe('rest', () => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
     expect(await typed($, 'next task')).toEqual({
-      drop: 'Stand up and stretch. 10 min left, your prompt is saved. To go on: "skip: <reason>".',
+      drop: `Stand up and stretch. 10 min left. ${BACK}`,
     })
     await clock.advance(3 * 60_000)
     expect(await typed($, 'next task')).toEqual({
-      drop: 'Water, then a window. 7 min left, your prompt is saved. To go on: "skip: <reason>".',
+      drop: `Water, then a window. 7 min left. ${BACK}`,
     })
   })
 
@@ -687,7 +688,7 @@ describe('override', () => {
         return { isFilled: true }
       })
       await start($)
-      expect(await typed($, prompt)).toEqual({ drop: `${SHORT} Your prompt is saved.` })
+      expect(await typed($, prompt)).toEqual({ drop: `${SHORT} Your prompt is back in the box.` })
       await clock.advance(0)
       expect(fills).toEqual([])
       expect(await typed($, 'next', 'bridge')).toEqual(DROP(NOW + REST_MS, { kind: 'bridge' }))
@@ -752,7 +753,7 @@ describe('override', () => {
   test('a short skip asks for a longer reason', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
-    expect(await typed($, 'skip: no')).toEqual({ drop: 'A skip needs a reason of three words or more. Your prompt is saved.' })
+    expect(await typed($, 'skip: no')).toEqual({ drop: 'A skip needs a reason of three words or more. Your prompt is back in the box.' })
   })
 
   for (const prompt of ['Override: prod is down', 'OVERRIDE: prod is down']) {
