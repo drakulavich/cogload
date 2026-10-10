@@ -21,7 +21,7 @@ After this change:
    as the last line. When both qualify, the first line's reason is kept and
    both lines are removed.
 2. The override line (or both, as above) is removed and the other lines are sent; when nothing
-   is left, the prompt is dropped with `Rest lifted.`, as today.
+   is left, the line goes to Claude with the lifted note (forced-rest spec).
 3. A reason of fewer than three words on either line gets
    `An override needs a reason of three words or more.`, as today.
 4. An `override:` line anywhere else does nothing: the prompt is held like

@@ -396,6 +396,8 @@ const SHORT = 'A skip needs a reason of three words or more.'
 const BACK = 'Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.'
 const PAST = (until: number) =>
   `The person is on a rest until ${hhmm(until)}. This prompt came from their phone through Remote Control, which the rest lets through. Begin your reply with one short line saying it went past the rest, then answer as usual.`
+const LIFTED =
+  'The person just lifted their rest with this skip line, and nothing else was sent. Reply with one short line saying the rest is lifted.'
 const typed = ($: Engine, text: string, kind: 'composer' | 'bridge' = 'composer') =>
   $.prompt.submit({ text, wait: false, origin: { kind } })
 
@@ -622,7 +624,7 @@ describe('rest at', () => {
   test('after an override lifts the rest, the streak', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
-    expect(await typed($, 'override: prod is down, fixing it')).toEqual({ drop: 'Rest lifted.' })
+    expect(await typed($, 'override: prod is down, fixing it')).toEqual({ text: 'override: prod is down, fixing it', context: [LIFTED] })
     expect(await band($)).toBe('● Heating · streak 40m')
   })
 
@@ -709,10 +711,10 @@ describe('override', () => {
     expect(fills).toEqual([])
   })
 
-  test('an override alone lifts the rest and sends nothing', async ($, on) => {
+  test('an override alone lifts the rest and goes to Claude as a note, so the box stays empty', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
-    expect(await typed($, 'override: prod is down')).toEqual({ drop: 'Rest lifted.' })
+    expect(await typed($, 'override: prod is down')).toEqual({ text: 'override: prod is down', context: [LIFTED] })
     expect(await typed($, 'next')).toEqual({ text: 'next' })
   })
 
@@ -740,7 +742,7 @@ describe('override', () => {
 
   for (const [prompt, sent] of [
     ['fix it\nskip: prod is down now', { text: 'fix it' }],
-    ['Skip: prod is down now', { drop: 'Rest lifted.' }],
+    ['Skip: prod is down now', { text: 'Skip: prod is down now', context: [LIFTED] }],
   ] as const) {
     test(`${JSON.stringify(prompt)} lifts the rest and keeps the reason`, async ($, on) => {
       const store: Record<string, unknown> = {}
@@ -761,7 +763,7 @@ describe('override', () => {
     test(`${JSON.stringify(prompt)}, as a phone keyboard types it, lifts the rest`, async ($, on) => {
       engine(on, [{ stdout: line({ streakMin: 40 }) }])
       await start($)
-      expect(await typed($, prompt)).toEqual({ drop: 'Rest lifted.' })
+      expect(await typed($, prompt)).toEqual({ text: prompt, context: [LIFTED] })
       expect(await typed($, 'next')).toEqual({ text: 'next' })
     })
   }
