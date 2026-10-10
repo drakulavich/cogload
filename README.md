@@ -102,7 +102,7 @@ It also makes you rest. After 40 minutes of work without a ten-minute gap, or in
 
 ## Privacy
 
-cogload reads `~/.claude/projects` on your machine and sends nothing anywhere. It keeps, writes and prints no message text, prompt length, file path or session title: what survives from a transcript is timestamps, session ids, event kinds and token counts. The plugin keeps one piece of text, the reason you give for a skip. [The reference](docs/reference.md#privacy) lists every file cogload and the plugin write.
+cogload reads `~/.claude/projects` on your machine and sends nothing anywhere. It keeps, writes and prints no message text, prompt length, file path or session title: what survives from a transcript is timestamps, session ids, event kinds and token counts. The plugin writes one piece of text to disk, the reason you give for a skip, and holds a prompt it delays in memory until the rest is over. [The reference](docs/reference.md#privacy) lists every file cogload and the plugin write, and [PRIVACY.md](PRIVACY.md) is the privacy policy.
 
 ## More
 
