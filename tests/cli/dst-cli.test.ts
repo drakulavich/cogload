@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { prompt, writeTree } from "../helpers/transcript.ts";
+import { assistantText, prompt, writeTree } from "../helpers/transcript.ts";
 
 const CLI = join(import.meta.dir, "../../src/cli/index.ts");
 const A = "aaaaaaaa-1111-4111-8111-111111111111";
@@ -16,7 +16,10 @@ beforeAll(async () => {
   home = await mkdtemp(join(tmpdir(), "cogload-dst-home-"));
   const start = Date.parse("2025-10-25T23:30:00.000Z");
   const at = (i: number) => new Date(start + i * 600_000).toISOString();
-  await writeTree(root, [{ path: "-Users-me-proj/a.jsonl", lines: Array.from({ length: 19 }, (_, i) => prompt(at(i), A)), mtime: at(18) }]);
+  await writeTree(root, [{ path: "-Users-me-proj/a.jsonl", lines: [
+    ...Array.from({ length: 19 }, (_, i) => prompt(at(i), A)),
+    assistantText("2025-10-26T01:30:00.000Z", A, 100_000, "req_dst_reading"),
+  ], mtime: at(18) }]);
 });
 afterAll(async () => {
   await rm(root, { recursive: true, force: true });
@@ -34,6 +37,8 @@ describe("the night the clocks go back", () => {
     expect(d.buckets[2].activeMin).toBe(120);
     // 12 prompts in two real hours: pace 15*(6/20) = 4.5, not 15*(12/20) = 9.
     expect(d.buckets[2].score.parts.pace).toBe(4.5);
+    // 100k output tokens in two real hours: reading 10*(50k/80k) = 6.25.
+    expect(d.buckets[2].score.parts.reading).toBe(6.3);
     expect(d.buckets[3].score.parts.pace).toBe(3);
   });
 });
