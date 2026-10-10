@@ -1183,3 +1183,96 @@ describe('cogload in ~/.bun/bin', () => {
     })
   }
 })
+
+describe('held prompts come back after a bare skip', () => {
+  const setup = (on: On, store: Record<string, unknown> = {}, logs: string[] = [], toasts: string[] = []) => {
+    const fills: { text: string; mode?: string }[] = []
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], logs, toasts, store)
+    on('prompt.fill', (_$, e) => {
+      fills.push({ text: e.text, mode: e.mode })
+      return { isFilled: true }
+    })
+    return fills
+  }
+  const skip = async ($: Engine) => {
+    const entered = await typed($, 'skip: prod is down now')
+    await clock.advance(0)
+    return entered
+  }
+
+  test('two held prompts fill the box, oldest first, after the skip enters', async ($, on) => {
+    const fills = setup(on)
+    await start($)
+    await typed($, 'fix the bug')
+    await typed($, 'add a test')
+    expect(await skip($)).toEqual({ text: 'skip: prod is down now', context: [LIFTED] })
+    expect(fills).toEqual([{ text: 'fix the bug\n\nadd a test', mode: 'replace' }])
+  })
+
+  test('a held prompt contained in a later one is left out', async ($, on) => {
+    const fills = setup(on)
+    await start($)
+    await typed($, 'fix the bug')
+    await typed($, 'fix the bug and the retry')
+    await skip($)
+    expect(fills).toEqual([{ text: 'fix the bug and the retry', mode: 'replace' }])
+  })
+
+  test('a skip line with other text sends only that text and forgets what was held', async ($, on) => {
+    const store: Record<string, unknown> = {}
+    const fills = setup(on, store)
+    await start($)
+    await typed($, 'fix the bug')
+    expect(await typed($, 'add a test\nskip: prod is down now')).toEqual({ text: 'add a test' })
+    store.restUntil = clock.now() + REST_MS
+    await skip($)
+    expect(fills).toEqual([])
+  })
+
+  test('a rest that ends on its own forgets what it held at the next prompt', async ($, on) => {
+    const store: Record<string, unknown> = {}
+    const fills = setup(on, store)
+    await start($)
+    await typed($, 'fix the bug')
+    await clock.advance(REST_MS + 1000)
+    expect(await typed($, 'next')).toEqual({ text: 'next' })
+    store.restUntil = clock.now() + REST_MS
+    await skip($)
+    expect(fills).toEqual([])
+  })
+
+  test('a prompt dropped for a short skip is not kept', async ($, on) => {
+    const fills = setup(on)
+    await start($)
+    await typed($, 'skip: no')
+    await skip($)
+    expect(fills).toEqual([])
+  })
+
+  test('a phone prompt passes and is not kept', async ($, on) => {
+    const fills = setup(on)
+    await start($)
+    await typed($, 'from the phone', 'bridge')
+    await skip($)
+    expect(fills).toEqual([])
+  })
+
+  test('held text reaches no store, toast, band, /cogload or log', async ($, on) => {
+    const store: Record<string, unknown> = {}
+    const logs: string[] = []
+    const toasts: string[] = []
+    const telemetry: string[] = []
+    setup(on, store, logs, toasts)
+    on('telemetry.log', (_$, e) => {
+      telemetry.push(JSON.stringify(e))
+      return { value: undefined }
+    })
+    await start($)
+    await typed($, 'zebra-7731 secret')
+    await typed($, 'zebra-7731 secret, more')
+    const seen = [JSON.stringify(store), ...toasts, await band($), (await $.command.run({ command: 'cogload' })).text, ...logs, ...telemetry]
+    await skip($)
+    seen.push(JSON.stringify(store), ...toasts, await band($), ...logs, ...telemetry)
+    expect(seen.filter(s => s.includes('zebra-7731'))).toEqual([])
+  })
+})
