@@ -86,7 +86,7 @@ Unit, `claude plugin test plugin`, each case failing without its behaviour:
 6. `skip: no` during a rest, then a bare skip → no fill.
 7. A bridge prompt during a rest → it passes and is not kept.
 8. After cases 1 to 7, no held prompt's text is in `$.store`, in a toast,
-   in the band or in `/cogload`'s output.
+   in the band, in `/cogload`'s output, or in `$.ui.log` or `$.telemetry.log`.
 
 PTY, the `scratchpad/et2` harness (box logger): held, held, box cleared,
 bare skip → the box log shows both prompts once, then empty after Enter.
