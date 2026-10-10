@@ -20,6 +20,10 @@ confuses you, add one line under Surprises. The design is in
 - **CHANGELOG at release only.** A PR leaves `CHANGELOG.md` alone and puts
   its user-facing line in the PR body; the release PR collects them. PRs that
   each added a line under `### Fixed` conflicted in turn (#160 to #163).
+- **A plugin store key keeps its type.** Every session shares the store, and
+  one started before an update still runs the old code. 0.10.0 wrote a string
+  to `spent`, which 0.9.x kept as a number, so each restarted the other's rest
+  every 30 s and `skip:` stopped working. A new format gets a new key.
 
 ## Surprises
 
