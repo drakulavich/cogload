@@ -1,10 +1,14 @@
 {
   "name": "cognitive-load",
   "displayName": "Cognitive Load",
-  "version": "0.11.2",
+  "version": "0.11.3",
   "description": "A fuse for your head: it shows the heat, warns you, then trips before you burn out.",
   "author": { "name": "Anton Yakutovich", "url": "https://github.com/drakulavich" },
   "homepage": "https://github.com/drakulavich/cogload",
+  "repository": "https://github.com/drakulavich/cogload",
+  "supportUrl": "https://github.com/drakulavich/cogload/issues",
+  "privacyPolicyUrl": "https://github.com/drakulavich/cogload/blob/main/PRIVACY.md",
+  "documentationUrl": "https://github.com/drakulavich/cogload/blob/main/docs/how-the-numbers-are-made.md",
   "license": "MIT",
   "types": "./types/index.d.ts"
 }
