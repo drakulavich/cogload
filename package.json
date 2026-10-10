@@ -9,7 +9,7 @@
   "bugs": "https://github.com/drakulavich/cogload/issues",
   "keywords": ["claude-code", "cognitive-load", "developer-experience", "cli", "bun"],
   "type": "module",
-  "bin": { "cogload": "src/cli/index.ts", "zapara": "src/cli/zapara.ts" },
+  "bin": { "cogload": "src/cli/index.ts" },
   "files": ["src/", "assets/fonts/", "assets/characters.webp", "CHANGELOG.md", "!src/**/*.test.ts"],
   "publishConfig": { "access": "public" },
   "engines": { "bun": ">=1.4.2" },

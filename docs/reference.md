@@ -215,7 +215,7 @@ No build step and no runtime dependency: Bun runs `src/cli/index.ts` from the pa
 
 `cogload` lands in Bun's global bin directory, `~/.bun/bin` unless `BUN_INSTALL_BIN` says otherwise; `bun pm bin -g` prints the one in force. Bun's own installer puts that directory on your PATH; a Homebrew Bun does not, so add it yourself.
 
-Coming from zapara, run `bun remove -g @drakulavich/zapara` first: both packages claim the `zapara` command. cogload keeps that command until 1.0.0, and it prints one line on stderr saying it is now cogload. cogload starts over in `~/.claude/cogload/`, rebuilding its cache with one full scan; `~/.claude/zapara/` can be deleted once nothing runs zapara.
+Coming from zapara, run `bun remove -g @drakulavich/zapara`; the `zapara` command is gone, so call `cogload`. cogload starts over in `~/.claude/cogload/`, rebuilding its cache with one full scan; `~/.claude/zapara/` can be deleted once nothing runs zapara.
 
 ## Where it comes from
 

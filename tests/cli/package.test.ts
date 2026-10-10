@@ -30,10 +30,10 @@ test("the source, the card's fonts and sheet, and the licences ship in the tarba
   );
 });
 
-test("both bins ship: cogload and the zapara alias", async () => {
+test("one bin ships: cogload, without the zapara alias (#113)", async () => {
   const { name, bin } = JSON.parse(await Bun.file(join(import.meta.dir, "../../package.json")).text());
   expect(name).toBe("@drakulavich/cogload");
-  expect(bin).toEqual({ cogload: "src/cli/index.ts", zapara: "src/cli/zapara.ts" });
+  expect(bin).toEqual({ cogload: "src/cli/index.ts" });
   expect(paths).toEqual(expect.arrayContaining(Object.values(bin)));
 });
 
