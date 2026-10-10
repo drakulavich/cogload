@@ -35,6 +35,7 @@ What the author sees:
    while the count is above 0. The last line counts too
    (`2026-10-06-cognitive-load-override-last-line-design.md`). The line is
    `skip: <reason>` now, `override:` kept as a synonym (`2026-10-07-cognitive-load-skip-and-rest-phrases-design.md`).
+   A skip sent alone brings the held prompts back into the box (`2026-10-10-cognitive-load-held-prompts-back-design.md`).
 6. `/overrides` prints the overrides of the last 14 days, newest first:
    `Thu 03 Oct 14:25  prod is down, fixing it`, or
    `No overrides in 14 days.`

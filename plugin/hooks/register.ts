@@ -5,6 +5,7 @@ import type { Level, Status } from '../types'
 
 const status = atom({ plugin: 'cognitive-load', key: 'status' } as const, null)
 const lastToast = atom({ plugin: 'cognitive-load', key: 'lastToast' } as const, 0)
+const held = atom({ plugin: 'cognitive-load', key: 'held' } as const, [] as string[])
 
 const LEVELS = ['Calm', 'Warming', 'Heating', 'Fried'] as const
 const COLOR: Record<Level, string> = { Calm: 'success', Warming: 'warning', Heating: '#ff8700', Fried: 'red' }
@@ -125,6 +126,9 @@ const PHRASE: Record<Part, (l: Live) => string> = {
   streak: l => `a ${formatMinutes(l.streakMin)} streak`,
   late: () => 'late at night',
 }
+
+const joinHeld = (list: string[]): string =>
+  list.filter((p, i) => !list.slice(i + 1).some(q => q.includes(p))).join('\n\n')
 
 const hourLine = (live: Live, score: NonNullable<Live['score']>): string => {
   const head = `${score.level} ${score.index} this hour`
@@ -289,7 +293,10 @@ export const register: Register = on => {
     if (!HELD.includes(e.origin.kind)) return next(e)
     const now = await $.clock.now()
     const until = await restUntil($, now)
-    if (until === null) return next(e)
+    if (until === null) {
+      await update($, held, () => [])
+      return next(e)
+    }
     const lines = e.text.trimEnd().split('\n')
     const first = SKIP.exec(lines[0] ?? '')
     const last = lines.length > 1 ? SKIP.exec(lines.at(-1) ?? '') : null
@@ -299,13 +306,19 @@ export const register: Register = on => {
       await $.store.delete('restUntil')
       await $.store.set('overrides', [...(await overridesSince($, now - WEEK_MS)), { at: now, reason }])
       const text = lines.slice(first ? 1 : 0, last ? -1 : undefined).join('\n').trim()
-      return text === '' ? next({ ...e, context: [...(e.context ?? []), LIFTED] }) : next({ ...e, text })
+      const back = joinHeld(await read($, held))
+      await update($, held, () => [])
+      if (text !== '') return next({ ...e, text })
+      // The submit empties the box after this hook returns, so the fill waits for it.
+      if (back !== '') $.clock.after(0, () => void $.prompt.fill({ text: back, mode: 'replace' }))
+      return next({ ...e, context: [...(e.context ?? []), LIFTED] })
     }
     if (e.origin.kind === 'bridge') return next({ ...e, context: [...(e.context ?? []), past(until)] })
     if (skip !== null) return { drop: `${SHORT} Your prompt is back in the box.` }
     const phrase = await $.store.get('phrase')
     const n = typeof phrase === 'number' ? phrase : 0
     await $.store.set('phrase', (n + 1) % PHRASES.length)
+    await update($, held, list => [...list, e.text])
     const left = `${Math.ceil((until - now) / 60_000)} min left`
     return { drop: `${PHRASES[n % PHRASES.length]} ${left}. ${BACK}` }
   })

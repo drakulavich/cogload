@@ -111,7 +111,8 @@ Unit, `claude plugin test plugin`, each case failing without its behaviour:
   `phrase` is a number.
 - Ask first: phrases chosen at random, more or other phrases, dropping
   `override:`.
-- Never: send the skip line to Claude.
+- Never: send the skip line to Claude. (Since #207 a skip sent alone goes to
+  Claude with a note; `2026-10-10-cognitive-load-held-prompts-back-design.md` brings the held prompts back.)
 
 ## Definition of Done
 

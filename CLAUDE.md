@@ -11,7 +11,9 @@ confuses you, add one line under Surprises. The design is in
 
 - **Privacy.** No message text, prompt length, file path or title is kept,
   written or printed, and that includes an error message that echoes a flag's
-  value (#3 printed the `--projects` path). Changing this needs the spec first.
+  value (#3 printed the `--projects` path). One exception: the plugin keeps a
+  held prompt's text in `$.state` until the rest is lifted or the next prompt
+  after it ends (#208). Changing this needs the spec first.
 - **A flag lands with its behavior.** #3 parsed `--explain` before it did
   anything. A value flag rejects a value that starts with `-`.
 - **A test asserts what differs with and without the behavior it pins** (#69).
