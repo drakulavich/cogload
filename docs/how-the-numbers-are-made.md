@@ -73,7 +73,9 @@ Time is local. Every event belongs to the bucket named by its local date and
 hour, so a day is 24 buckets `00`..`23`. On a DST fall-back day two wall-clock
 hours share one label and merge; on a spring-forward day one label stays empty.
 A merged bucket can therefore hold up to 120 active minutes, and such a day up
-to 1500.
+to 1500. Its counts stay as they happened, but its score takes the rates
+(prompts, reports, decisions, context switches, output tokens) per real hour,
+halved, so a steady pace does not read as double that night.
 
 All events from all files are sorted by time, then session id, then position,
 before anything is derived. "Consecutive" below means consecutive in that

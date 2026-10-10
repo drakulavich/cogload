@@ -86,15 +86,23 @@ function accumulate(a: Acc, e: Event, streakStart: number): void {
 
 // `lateNight` is the caller's: an hour's own label, or the hour of `now` for the
 // live bucket. A fresh accumulator is an empty hour and scores null.
-function finish(a: Acc, lateNight: boolean, streakMin = Math.round(a.maxStreakMs / 60000)): LiveBucket {
+// `hours` (2 for the hour clocks repeat) divides the score's rates, never the counts.
+function finish(a: Acc, lateNight: boolean, streakMin = Math.round(a.maxStreakMs / 60000), hours = 1): LiveBucket {
   const m = a.m;
   m.sessions = a.sessions.size;
   m.activeMin = a.slots.size * 5;
   m.streakMin = streakMin;
   m.decisions = m.interrupts + m.rejects + m.questions + m.plans + m.modeSwitches;
   m.lateNight = lateNight;
-  return { ...m, score: score(m) };
+  const perHour = hours === 1 ? m : { ...m, prompts: m.prompts / hours, reports: m.reports / hours, outputTokens: m.outputTokens / hours, decisions: m.decisions / hours, contextSwitches: m.contextSwitches / hours };
+  return { ...m, score: score(perHour) };
 }
+
+// At least 1: a skipped hour (clocks going forward) has no length and no events.
+const hourLength = (date: string, hour: number): number => {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  return Math.max(1, (new Date(y, m - 1, d, hour + 1).getTime() - new Date(y, m - 1, d, hour).getTime()) / 3_600_000);
+};
 
 // The 24 hour buckets, keyed "date|hour". Events before startMs are look-back:
 // they move the streak but enter no bucket, though a span from one into the
@@ -181,7 +189,7 @@ function buildDay(date: string, acc: Map<string, Acc>): Day {
   for (let hour = 0; hour < 24; hour++) {
     const a = acc.get(`${date}|${hour}`);
     if (a?.lastPresence) lastPresence = a.lastPresence;
-    buckets.push({ ...finish(a ?? newAcc(), LATE_HOURS.has(hour)), hour });
+    buckets.push({ ...finish(a ?? newAcc(), LATE_HOURS.has(hour), undefined, hourLength(date, hour)), hour });
   }
   const scored = buckets.filter((b) => b.score !== null);
   const totals: Totals = buckets.reduce((t, b) => ({
