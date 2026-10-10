@@ -55,5 +55,23 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
   reason of each skip for seven days. The skip reason is the only text it
   writes to disk.
 
+## Programs, hooks and what leaves the plugin
+
+- **Programs.** It runs two commands, both from the cogload you installed:
+  `cogload status` and `cogload today --json`. The program is `cogload` on
+  Claude Code's `PATH`, or `~/.bun/bin/cogload` when the `PATH` has none,
+  which is why the command is not one fixed string. It runs nothing else.
+- **Hooks.** `session.start` and `turn.complete` refresh the reading;
+  `ui.render` draws the band above the prompt; `command.run` answers only
+  `/cogload`; `prompt.submit` sees the prompts you type or send from your
+  phone, to hold them during a rest, find a `skip:` line and add the notes
+  below. Prompts from other plugins, notifications or scheduled tasks pass
+  untouched.
+- **What leaves it.** Nothing goes over the network. The only text it adds to
+  your conversation with Claude is a visible note on a phone prompt during a
+  rest, saying it went past the rest, and a note on a `skip:` sent alone,
+  asking Claude to say in one line that the rest is lifted. Everything else
+  stays on your screen: the band, toasts and `/cogload`'s answer.
+
 [How the numbers are made](https://github.com/drakulavich/cogload/blob/main/docs/how-the-numbers-are-made.md)
-explains the score. [Privacy policy](https://github.com/drakulavich/cogload/blob/main/PRIVACY.md). MIT licensed.
+explains the score. [Privacy policy](https://github.com/drakulavich/cogload/blob/main/PRIVACY.md). MIT licensed. The icon is 🤯 from [Noto Emoji](https://github.com/googlefonts/noto-emoji), under the [Apache License 2.0](https://github.com/googlefonts/noto-emoji/blob/main/LICENSE).
