@@ -41,7 +41,8 @@ After this change:
    or more, the line removed and the rest sent. `override:` keeps working the
    same way and is mentioned nowhere.
 4. A shorter reason, or none, gets `A skip needs a reason of three words or
-   more.`, and a typed prompt goes back into the box, as today.
+   more.`, and a typed prompt goes back into the box, with `Your prompt is
+   back in the box.`
 5. The one-time hint and its `taught` flag go: every prompt held without a
    `skip:` or `override:` line carries the way out. A too-short skip gets
    only the reply in 4, with no phrase: it already names the way out. A stored `taught` is left alone and no longer read.
@@ -97,7 +98,7 @@ Unit, `claude plugin test plugin`, each case failing without its behaviour:
    lifted.`
 6. `override: prod is down now` → the rest lifts, as today.
 7. `skip: no` → `A skip needs a reason of three words or more. Your prompt
-   is saved.`
+   is back in the box.`
 8. A rest taken and a rest skipped → `/cogload` prints `This week: 1 rest
    taken, 1 skipped (last: "prod is down now").`
 

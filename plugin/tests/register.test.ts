@@ -463,7 +463,7 @@ describe('rest', () => {
     expect(await band($)).toBe(`● Fried · rest until ${hhmm(NOW + REST_MS)} (10 min)`)
   })
 
-  test('each held composer prompt gets the next phrase, the minutes left, that it is saved and the way out', async ($, on) => {
+  test('each held composer prompt gets the next phrase, the minutes left, that it is back in the box and the way out', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
     expect(await typed($, 'next task')).toEqual({
