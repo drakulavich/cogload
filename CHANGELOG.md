@@ -5,6 +5,26 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-10
+
+### Added
+- After a `skip:` sent alone, the prompts the rest held come back into the
+  box. (#208)
+
+### Changed
+- A held prompt's hint says it is back in the box and to add
+  `skip: <reason>` as its last line. (#204)
+- During a rest, a prompt from your phone goes through, and Claude's reply
+  begins by saying it went past the rest; typed prompts are still held. (#205)
+
+### Fixed
+- After twenty minutes away, `/cogload` says you have been away instead of
+  naming a part of a zero score. (#196)
+- During a rest, a held prompt goes back into the box once instead of
+  doubling on every Enter. (#201)
+- A `skip:` sent alone no longer comes back into the box after it lifts the
+  rest. (#206)
+
 ## [0.13.0] - 2026-10-09
 
 ### Added
