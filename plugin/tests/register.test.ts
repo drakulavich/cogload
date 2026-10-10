@@ -79,7 +79,7 @@ const engine = (
     delete store[e.key]
     return { value: undefined }
   })
-  on('prompt.submit', (_$, e) => ({ text: e.text }))
+  on('prompt.submit', (_$, e) => (e.context ? { text: e.text, context: e.context } : { text: e.text }))
   on('command.register', (_$, e) => {
     commands.push(e.name)
     return { value: { command: e.name } }
@@ -389,11 +389,13 @@ const PHRASES = [
   'Breathe out slower than you breathe in.',
   'The code will wait.',
 ]
-const DROP = (until: number, { kind = 'composer', n = 0 }: { kind?: 'composer' | 'bridge'; n?: number } = {}) => ({
-  drop: `${PHRASES[n]} ${Math.ceil((until - clock.now()) / 60_000)} min left. ${kind === 'composer' ? BACK : 'To go on: "skip: <reason>".'}`,
+const DROP = (until: number, { n = 0 }: { n?: number } = {}) => ({
+  drop: `${PHRASES[n]} ${Math.ceil((until - clock.now()) / 60_000)} min left. ${BACK}`,
 })
 const SHORT = 'A skip needs a reason of three words or more.'
 const BACK = 'Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.'
+const PAST = (until: number) =>
+  `The person is on a rest until ${hhmm(until)}. This prompt came from their phone through Remote Control, which the rest lets through. Begin your reply with one short line saying it went past the rest, then answer as usual.`
 const typed = ($: Engine, text: string, kind: 'composer' | 'bridge' = 'composer') =>
   $.prompt.submit({ text, wait: false, origin: { kind } })
 
@@ -482,12 +484,11 @@ describe('rest', () => {
     expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
   })
 
-  test('a held bridge prompt says nothing about saving', async ($, on) => {
+  test('a bridge prompt goes past the rest with a note for Claude', async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     await start($)
-    expect(await typed($, 'next task', 'bridge')).toEqual({
-      drop: 'Stand up and stretch. 10 min left. To go on: "skip: <reason>".',
-    })
+    expect(await typed($, 'next task', 'bridge')).toEqual({ text: 'next task', context: [PAST(NOW + REST_MS)] })
+    expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
   })
 
   // Claude Code puts a dropped prompt back in the box itself; a fill on top doubled it (2.1.295).
@@ -691,11 +692,11 @@ describe('override', () => {
       expect(await typed($, prompt)).toEqual({ drop: `${SHORT} Your prompt is back in the box.` })
       await clock.advance(0)
       expect(fills).toEqual([])
-      expect(await typed($, 'next', 'bridge')).toEqual(DROP(NOW + REST_MS, { kind: 'bridge' }))
+      expect(await typed($, 'next')).toEqual(DROP(NOW + REST_MS))
     })
   }
 
-  test('a short override from a bridge asks for a longer reason without saving', async ($, on) => {
+  test('a short override from a bridge goes past the rest', async ($, on) => {
     const fills: string[] = []
     engine(on, [{ stdout: line({ streakMin: 40 }) }])
     on('prompt.fill', (_$, e) => {
@@ -703,7 +704,7 @@ describe('override', () => {
       return { isFilled: true }
     })
     await start($)
-    expect(await typed($, 'override: ok\nfix it', 'bridge')).toEqual({ drop: SHORT })
+    expect(await typed($, 'override: ok\nfix it', 'bridge')).toEqual({ text: 'override: ok\nfix it', context: [PAST(NOW + REST_MS)] })
     await clock.advance(0)
     expect(fills).toEqual([])
   })
