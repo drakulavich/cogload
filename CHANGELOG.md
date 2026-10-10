@@ -5,6 +5,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-10
+
+### Removed
+- The `zapara` command. Call `cogload`. (#113)
+
 ## [0.13.1] - 2026-10-10
 
 ### Added
