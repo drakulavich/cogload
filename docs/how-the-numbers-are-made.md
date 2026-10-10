@@ -251,6 +251,10 @@ contract.
   ten minutes between two of your actions starts a new run.
 - **The index fell after a break.** A break of twenty minutes or more leaves
   only what you did since; the hour table still shows the hour as it was.
+- **Hour 2 runs hot on the night the clocks go back.** Both runs of that hour
+  share one bucket (section 3), so it holds two hours of prompts and up to 120
+  active minutes, and its pace and index read high. The status file and the
+  plugin use the last sixty real minutes and are not affected.
 - **Fewer active minutes than the session felt.** Minutes count when you were
   present, not when an agent was working alone. The `sess` column still shows
   the agents.
