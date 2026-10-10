@@ -29,8 +29,9 @@ What the author sees:
    cogload's gap (`GAP_MS`), so the streak is over and the next starts at 0.
 5. A prompt whose first line is `override: <reason>`, the reason at least
    three words, lifts the hold for the rest of this streak. The first line is
-   removed and the rest is sent; when nothing is left, the prompt is dropped
-   with the reason `Rest lifted.` The band then shows `overrides this week: 2`
+   removed and the rest is sent; when nothing is left, the line itself goes to
+   Claude with a note to reply in one line that the rest is lifted (a drop
+   would come back into the box, #206). The band then shows `overrides this week: 2`
    while the count is above 0. The last line counts too
    (`2026-10-06-cognitive-load-override-last-line-design.md`). The line is
    `skip: <reason>` now, `override:` kept as a synonym (`2026-10-07-cognitive-load-skip-and-rest-phrases-design.md`).
@@ -148,8 +149,8 @@ case asserts what differs with and without the behaviour it pins (CLAUDE.md):
 5. At `until` + 1 s a `composer` prompt passes.
 6. `override: prod is down` + a second line → the second line is sent,
    the next prompt passes, `/overrides` lists `prod is down`;
-   `override: ok` → dropped; `override: prod is down` alone → dropped with
-   `Rest lifted.`, and the next prompt passes.
+   `override: ok` → dropped; `override: prod is down` alone → sent with the
+   lifted note, and the next prompt passes.
 7. After a rest, the same streak at 55 min → no new rest; a new streak at
    40 → a new rest.
 8. Band: `rest until 14:32` at 120 and 40 columns; none for Calm without a

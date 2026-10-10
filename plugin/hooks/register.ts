@@ -114,6 +114,9 @@ const clockTime = (ms: number): string => new Date(ms).toTimeString().slice(0, 5
 const past = (until: number): string =>
   `The person is on a rest until ${clockTime(until)}. This prompt came from their phone through Remote Control, which the rest lets through. Begin your reply with one short line saying it went past the rest, then answer as usual.`
 
+const LIFTED =
+  'The person just lifted their rest with this skip line, and nothing else was sent. Reply with one short line saying the rest is lifted.'
+
 const PHRASE: Record<Part, (l: Live) => string> = {
   parallel: l => `${l.sessions} sessions at once`,
   pace: l => `${l.prompts} prompts`,
@@ -296,7 +299,7 @@ export const register: Register = on => {
       await $.store.delete('restUntil')
       await $.store.set('overrides', [...(await overridesSince($, now - WEEK_MS)), { at: now, reason }])
       const text = lines.slice(first ? 1 : 0, last ? -1 : undefined).join('\n').trim()
-      return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
+      return text === '' ? next({ ...e, context: [...(e.context ?? []), LIFTED] }) : next({ ...e, text })
     }
     if (e.origin.kind === 'bridge') return next({ ...e, context: [...(e.context ?? []), past(until)] })
     if (skip !== null) return { drop: `${SHORT} Your prompt is back in the box.` }
