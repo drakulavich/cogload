@@ -140,8 +140,9 @@ case asserts what differs with and without the behaviour it pins (CLAUDE.md):
 1. `streakMin` 40 → `rest.until` ten minutes ahead, one toast; 39 and
    Warming → none.
 2. Fried with `streakMin` 5 → a rest.
-3. During a rest, `composer` and `bridge` prompts are dropped with the time.
-   A `composer` prompt goes back into the box; a `bridge` prompt does not.
+3. During a rest, `composer` prompts are dropped with the time and go back
+   into the box. A `bridge` prompt passes with a note (the skip-and-phrases
+   spec, 2026-10-07).
 4. During a rest, `peer`, `task-notification`, `scheduled-trigger` and a
    plugin's own prompt pass.
 5. At `until` + 1 s a `composer` prompt passes.

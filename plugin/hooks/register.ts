@@ -111,6 +111,9 @@ const formatMinutes = (min: number): string =>
 
 const clockTime = (ms: number): string => new Date(ms).toTimeString().slice(0, 5)
 
+const past = (until: number): string =>
+  `The person is on a rest until ${clockTime(until)}. This prompt came from their phone through Remote Control, which the rest lets through. Begin your reply with one short line saying it went past the rest, then answer as usual.`
+
 const PHRASE: Record<Part, (l: Live) => string> = {
   parallel: l => `${l.sessions} sessions at once`,
   pace: l => `${l.prompts} prompts`,
@@ -295,13 +298,13 @@ export const register: Register = on => {
       const text = lines.slice(first ? 1 : 0, last ? -1 : undefined).join('\n').trim()
       return text === '' ? { drop: 'Rest lifted.' } : next({ ...e, text })
     }
-    const isComposer = e.origin.kind === 'composer'
-    if (skip !== null) return { drop: `${SHORT}${isComposer ? ' Your prompt is back in the box.' : ''}` }
+    if (e.origin.kind === 'bridge') return next({ ...e, context: [...(e.context ?? []), past(until)] })
+    if (skip !== null) return { drop: `${SHORT} Your prompt is back in the box.` }
     const phrase = await $.store.get('phrase')
     const n = typeof phrase === 'number' ? phrase : 0
     await $.store.set('phrase', (n + 1) % PHRASES.length)
     const left = `${Math.ceil((until - now) / 60_000)} min left`
-    return { drop: `${PHRASES[n % PHRASES.length]} ${left}. ${isComposer ? BACK : 'To go on: "skip: <reason>".'}` }
+    return { drop: `${PHRASES[n % PHRASES.length]} ${left}. ${BACK}` }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {

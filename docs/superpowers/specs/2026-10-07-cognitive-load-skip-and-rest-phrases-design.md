@@ -20,8 +20,10 @@ After this change:
    `<phrase> 7 min left. Your prompt is back in the box: to send it, add
    "skip: <reason>" as its last line.` A `skip:` sent alone lifts the rest
    but sends nothing, so the hint points at the box, where Claude Code put the
-   prompt back. From Remote Control (`bridge`), which gets no prompt back,
-   it is `<phrase> 7 min left. To go on: "skip: <reason>".` The minutes are `Math.ceil((until - now) / 60_000)`, as
+   prompt back. A Remote Control (`bridge`) prompt is not held: it goes
+   through with a note in its context that makes Claude begin its reply by
+   saying it went past the rest. A held phone prompt came back nowhere and
+   looked lost. The minutes are `Math.ceil((until - now) / 60_000)`, as
    the band counts them.
 2. `<phrase>` is the next of these, in order, wrapping after the last:
    1. `Stand up and stretch.`
@@ -91,7 +93,8 @@ Unit, `claude plugin test plugin`, each case failing without its behaviour:
    last line.`, then the same with
    `Water, then a window.`
 2. Nine held prompts → the ninth carries `Stand up and stretch.` again.
-3. A held bridge prompt → `<phrase> 10 min left. To go on: "skip: <reason>".`
+3. A bridge prompt during a rest → it enters, its context carrying the
+   past-the-rest note; the next typed prompt is still held.
 4. Three minutes into a rest → `7 min left`.
 5. `fix it\nskip: prod is down now` → the rest lifts, `fix it` is sent, the
    reason is stored; `Skip: prod is down now` alone → dropped with `Rest
