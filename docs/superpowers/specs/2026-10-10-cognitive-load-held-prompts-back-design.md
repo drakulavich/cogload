@@ -30,7 +30,7 @@ After this change:
 4. `held` lives as long as the session's process. A restart loses it.
    `/reload-plugins` keeps it (`$.state` belongs to the host).
 5. The Privacy rule in `CLAUDE.md` gains one exception: a held prompt's text,
-   in `$.state` for the length of a rest. This spec is the record of that
+   in `$.state` until the rest is lifted or the first prompt after it ends. This spec is the record of that
    change.
 
 Not in scope: keeping held text in `$.store` or across a restart, other
@@ -85,7 +85,8 @@ Unit, `claude plugin test plugin`, each case failing without its behaviour:
    skip → no fill.
 6. `skip: no` during a rest, then a bare skip → no fill.
 7. A bridge prompt during a rest → it passes and is not kept.
-8. `$.store` holds no prompt text after cases 1 to 7.
+8. After cases 1 to 7, no held prompt's text is in `$.store`, in a toast,
+   in the band or in `/cogload`'s output.
 
 PTY, the `scratchpad/et2` harness (box logger): held, held, box cleared,
 bare skip → the box log shows both prompts once, then empty after Enter.
