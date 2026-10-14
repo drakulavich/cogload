@@ -204,7 +204,7 @@ bun link
 `bun link` registers the clone's `bin` entry, so `cogload` runs this checkout; without it, `bun src/cli/index.ts` does the same thing.
 
 ```bash
-bun run check    # tsc --noEmit, then the test suite under TZ=UTC
+bun run check    # bun --check (types), Biome and Knip, then the test suite under TZ=UTC
 ```
 
 Tests are fixture-driven: they build or load transcripts in the real Claude Code format and assert the statistics that come out of the public seams, `analyze()`, `report()` and the CLI itself. No test imports the parser, the deriver or the scanner, so refactoring internals never touches a test. The rules every change follows are in [CLAUDE.md](../CLAUDE.md), the design is in [docs/superpowers/specs/2026-09-17-zapara-design.md](superpowers/specs/2026-09-17-zapara-design.md), and every change is recorded in [CHANGELOG.md](../CHANGELOG.md).

@@ -17,14 +17,13 @@
     "dev": "bun run src/cli/index.ts",
     "stats": "bun scripts/signal-stats.ts",
     "test": "TZ=UTC bun test ./tests",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun --check",
     "lint": "biome ci && knip --include files,exports,types",
     "check": "bun run typecheck && bun run lint && bun run test"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
     "@types/bun": "^1.4.0",
-    "knip": "^6.38.0",
-    "typescript": "^7.0.2"
+    "knip": "^6.38.0"
   }
 }
