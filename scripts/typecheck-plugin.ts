@@ -6,4 +6,4 @@ if (!existsSync("plugin/tsconfig.json")) {
   process.exit(0);
 }
 const run = Bun.spawnSync(["bun", "--check"], { cwd: "plugin", stdout: "inherit", stderr: "inherit" });
-process.exit(run.exitCode);
+process.exit(run.exitCode ?? 1);
