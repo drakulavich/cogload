@@ -301,7 +301,7 @@ export const register: Register = on => {
     const first = SKIP.exec(lines[0] ?? '')
     const last = lines.length > 1 ? SKIP.exec(lines.at(-1) ?? '') : null
     const skip = first ?? last
-    const reason = skip?.[1].trim() ?? ''
+    const reason = skip?.[1]?.trim() ?? ''
     if (reason.split(/\s+/).length >= 3) {
       await $.store.delete('restUntil')
       await $.store.set('overrides', [...(await overridesSince($, now - WEEK_MS)), { at: now, reason }])
