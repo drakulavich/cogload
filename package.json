@@ -17,7 +17,7 @@
     "dev": "bun run src/cli/index.ts",
     "stats": "bun scripts/signal-stats.ts",
     "test": "TZ=UTC bun test ./tests",
-    "typecheck": "bun --check",
+    "typecheck": "bun --check && bun scripts/typecheck-plugin.ts",
     "lint": "biome ci && knip --include files,exports,types",
     "check": "bun run typecheck && bun run lint && bun run test"
   },

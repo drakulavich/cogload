@@ -398,6 +398,11 @@ const PAST = (until: number) =>
   `The person is on a rest until ${hhmm(until)}. This prompt came from their phone through Remote Control, which the rest lets through. Begin your reply with one short line saying it went past the rest, then answer as usual.`
 const LIFTED =
   'The person just lifted their rest with this skip line, and nothing else was sent. Reply with one short line saying the rest is lifted.'
+const cogload = async ($: Engine) => {
+  const { text } = await $.command.run({ command: 'cogload', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } })
+  if (text === undefined) throw new Error('/cogload gave no text')
+  return text
+}
 const typed = ($: Engine, text: string, kind: 'composer' | 'bridge' = 'composer') =>
   $.prompt.submit({ text, wait: false, origin: { kind } })
 
@@ -836,7 +841,7 @@ const explain = async ($: Engine, on: On, answer: Run, store: Record<string, unk
   engine(on, [{ stdout: line() }], [], [], { welcomed: true, ...store })
   todayRuns = [answer]
   await start($)
-  return (await $.command.run({ command: 'cogload' })).text
+  return await cogload($)
 }
 
 describe('/cogload', () => {
@@ -1139,7 +1144,7 @@ describe('cogload in ~/.bun/bin', () => {
     todayRuns = ['not found']
     binRuns = [{ stdout: today({ sessions: 5 }, { capped: ['parallel'] }) }]
     await start($)
-    const text = (await $.command.run({ command: 'cogload' })).text
+    const text = await cogload($)
     expectNoHome([text, ...logs, ...toasts])
     expect(text).toBe('Heating 80 this hour, at the cap: 5 sessions at once.\nThis week: 1 rest taken.')
     expect(calls).toEqual([STATUS, TODAY, [BIN, 'today', '--json']])
@@ -1154,7 +1159,7 @@ describe('cogload in ~/.bun/bin', () => {
       const toasts: string[] = []
       engine(on, ['not found'], logs, toasts, { welcomed: true }, env)
       await start($)
-      const text = (await $.command.run({ command: 'cogload' })).text
+      const text = await cogload($)
       expectNoHome([text, ...logs, ...toasts])
       expect(calls).toEqual(tried)
       expect(toasts).toEqual([MISSING])
@@ -1270,7 +1275,7 @@ describe('held prompts come back after a bare skip', () => {
     await start($)
     await typed($, 'zebra-7731 secret')
     await typed($, 'zebra-7731 secret, more')
-    const seen = [JSON.stringify(store), ...toasts, await band($), (await $.command.run({ command: 'cogload' })).text, ...logs, ...telemetry]
+    const seen = [JSON.stringify(store), ...toasts, await band($), await cogload($), ...logs, ...telemetry]
     await skip($)
     seen.push(JSON.stringify(store), ...toasts, await band($), ...logs, ...telemetry)
     expect(seen.filter(s => s.includes('zebra-7731'))).toEqual([])
