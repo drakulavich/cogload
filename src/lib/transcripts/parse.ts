@@ -13,7 +13,10 @@ const AGENT_MARKERS = [
   "<cross-session-message",
   "<task-notification>",
   "[Cross-session",
+  "<ci-monitor-event>",
 ];
+// Echoes of a command the human typed: the command itself is the prompt.
+const OUTPUT_MARKERS = ["<bash-stdout>", "<local-command-stdout>"];
 
 type Rec = Record<string, unknown>;
 const isObj = (v: unknown): v is Rec => typeof v === "object" && v !== null;
@@ -107,8 +110,8 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
       const head = firstText(content);
       if (head === null) continue;
       if (head.startsWith(INTERRUPT_PREFIX)) events.push({ ts, sessionId, kind: "interrupt" });
-      else if (rec.isMeta !== true) {
-        if (AGENT_MARKERS.some((marker) => head.startsWith(marker))) events.push({ ts, sessionId, kind: "report" });
+      else if (rec.isMeta !== true && rec.isCompactSummary !== true && !OUTPUT_MARKERS.some((marker) => head.startsWith(marker))) {
+        if (rec.promptSource === "system" || AGENT_MARKERS.some((marker) => head.startsWith(marker))) events.push({ ts, sessionId, kind: "report" });
         else events.push({ ts, sessionId, kind: "prompt" });
       }
     } else {
