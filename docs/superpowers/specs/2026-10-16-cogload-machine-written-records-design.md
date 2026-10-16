@@ -125,7 +125,7 @@ The existing tests in `agents.test.ts` stay green unchanged.
 - `docs/how-the-numbers-are-made.md` and the zapara design's Events table
   name the four rules.
 
-## Open Questions
+## Decisions
 
-- Command output: no event (this spec) or `report`? The spec picks no event,
-  because the person typed the command and is reading their own result.
+- Command output gets no event, not a `report` (the author, 2026-10-16): the
+  person typed the command and is reading their own result.
