@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { analyze } from "../../src/lib/metrics/index.ts";
-import { assistantText, assistantTokensLiteral, assistantToolUseOnly, crossSession, prompt, taskNotification, teammate, transcript } from "../helpers/transcript.ts";
+import { assistantText, assistantTokensLiteral, assistantToolUseOnly, bashInput, bashStdout, compactSummary, crossSession, monitorEvent, pluginMessage, prompt, slashCommand, slashStdout, taskNotification, teammate, transcript } from "../helpers/transcript.ts";
 
 const S = "11111111-1111-4111-8111-111111111111";
 const W = { to: "2026-09-14", days: 1 };
@@ -58,6 +58,53 @@ describe("every marker form is a report and never a prompt", () => {
       expect(b.prompts).toBe(0);
     });
   }
+});
+
+describe("records Claude Code writes itself are not prompts (#221)", () => {
+  const T = "22222222-2222-4222-8222-222222222222";
+
+  test("a person who typed once and left has one prompt and no streak", () => {
+    const day = analyze([transcript([
+      prompt(at("10:00"), S),
+      compactSummary(at("10:09"), S),
+      pluginMessage(at("10:18"), S),
+      bashStdout(at("10:27"), S),
+      slashStdout(at("10:36"), S),
+      monitorEvent(at("10:45"), S),
+    ])], W)[0]!;
+    const b = day.buckets[10]!;
+    expect(b.prompts).toBe(1);
+    expect(b.reports).toBe(2);
+    expect(b.streakMin).toBe(0);
+    expect(day.presence).toEqual({ lastAt: at("10:00"), streakStartAt: at("10:00") });
+  });
+
+  test("a typed ! command is one prompt, its output nothing", () => {
+    const b = analyze([transcript([bashInput(at("13:00"), S), bashStdout(at("13:00"), S)])], W)[0]!.buckets[13]!;
+    expect(b.prompts).toBe(1);
+    expect(b.reports).toBe(0);
+  });
+
+  test("a typed slash command is one prompt, its output nothing", () => {
+    const b = analyze([transcript([slashCommand(at("13:00"), S), slashStdout(at("13:00"), S)])], W)[0]!.buckets[13]!;
+    expect(b.prompts).toBe(1);
+    expect(b.reports).toBe(0);
+  });
+
+  test("a plugin message in another session is no context switch", () => {
+    const b = analyze([
+      transcript([prompt(at("13:00"), S), prompt(at("13:02"), S)], "p/a.jsonl"),
+      transcript([pluginMessage(at("13:01"), T)], "p/b.jsonl"),
+    ], W)[0]!.buckets[13]!;
+    expect(b.prompts).toBe(2);
+    expect(b.contextSwitches).toBe(0);
+  });
+
+  test("an interrupt marker wins over promptSource system", () => {
+    const b = analyze([transcript([pluginMessage(at("13:00"), S, "[Request interrupted by user]")])], W)[0]!.buckets[13]!;
+    expect(b.interrupts).toBe(1);
+    expect(b.reports).toBe(0);
+  });
 });
 
 describe("output tokens are summed once per requestId per file", () => {

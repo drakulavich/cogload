@@ -100,6 +100,25 @@ export const crossSession = (ts: string, sid: string, bracket = false) =>
 export const taskNotification = (ts: string, sid: string) =>
   base(ts, sid, { type: "user", message: { role: "user", content: `<task-notification>placeholder report</task-notification>` } });
 
+// User records Claude Code writes itself (#221). A typed `!` or slash command is
+// a prompt; the record after it holding the command's output is not.
+const userText = (ts: string, sid: string, content: string, extra: Record<string, unknown> = {}) =>
+  base(ts, sid, { type: "user", ...extra, message: { role: "user", content } });
+
+export const compactSummary = (ts: string, sid: string) =>
+  userText(ts, sid, "This session is being continued from a previous conversation. placeholder summary", { isCompactSummary: true, isVisibleInTranscriptOnly: true });
+
+export const pluginMessage = (ts: string, sid: string, text = "placeholder plugin notice") =>
+  userText(ts, sid, text, { promptSource: "system", turnOrigin: "system", origin: { kind: "plugin", name: "watchtower" } });
+
+export const bashInput = (ts: string, sid: string) => userText(ts, sid, "<bash-input>placeholder command</bash-input>");
+export const bashStdout = (ts: string, sid: string) =>
+  userText(ts, sid, "<bash-stdout>placeholder output</bash-stdout><bash-stderr></bash-stderr>", { turnOrigin: "human" });
+export const slashCommand = (ts: string, sid: string) =>
+  userText(ts, sid, "<command-name>/placeholder</command-name>\n<command-message>placeholder</command-message>\n<command-args></command-args>");
+export const slashStdout = (ts: string, sid: string) => userText(ts, sid, "<local-command-stdout>placeholder output</local-command-stdout>");
+export const monitorEvent = (ts: string, sid: string) => userText(ts, sid, "<ci-monitor-event>placeholder event</ci-monitor-event>");
+
 export const sidechain = (ts: string, sid: string) =>
   base(ts, sid, { type: "user", isSidechain: true, agentId: "aa395d63485bb2c77", message: { role: "user", content: "placeholder subagent prompt" } });
 

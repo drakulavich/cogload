@@ -91,7 +91,8 @@ const OUTPUT_MARKERS = ["<bash-stdout>", "<local-command-stdout>"];
 ## Testing Strategy
 
 `bun test`, through `analyze()` or the CLI with fixtures in the real
-transcript format (`CLAUDE.md`). Each case fails on main:
+transcript format (`CLAUDE.md`). Cases 1 to 4 fail on main; case 5 pins
+the order of the checks:
 
 1. The #221 fixture (one typed prompt at 10:00, then a compact summary, a
    plugin message, a `!` output, a slash-command output and a monitor event
@@ -117,7 +118,8 @@ The existing tests in `agents.test.ts` stay green unchanged.
 
 ## Definition of Done
 
-- Cases 1 to 5 pass and each fails on main 4a97fda.
+- Cases 1 to 5 pass; 1 to 4 fail on main 4a97fda, and 5 fails when the
+  `promptSource` check runs before the interrupt marker.
 - `bun run check` passes.
 - `bun run dev 2026-10-13 --json` on the #221 fixture prints `prompts: 1`.
 - The PR body gives `bun run stats --days 30` before and after for pace and
