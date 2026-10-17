@@ -16,13 +16,16 @@ export function analyzeEvents(events: Event[], w: Window): Day[] {
   return derive(dropCopies(events), w);
 }
 
-// A background session copies its history, uuids kept, under a new session id (#222).
+// A background session copies its history under a new session id, times kept
+// to the millisecond (#222); the original never carries `bg`.
 function dropCopies(events: Event[]): Event[] {
-  const owner = new Map<string, string>();
-  return events.filter((e) => {
-    if (e.uuid === undefined) return true;
-    const sid = owner.get(e.uuid);
-    if (sid === undefined) owner.set(e.uuid, e.sessionId);
-    return sid === undefined || sid === e.sessionId;
-  });
+  const copies = new Map<number, Event[]>();
+  for (const e of events) if (e.bg) copies.set(e.ts, [...(copies.get(e.ts) ?? []), e]);
+  if (copies.size === 0) return events;
+  const dropped = new Set<Event>();
+  for (const e of events) {
+    if (e.bg) continue;
+    for (const c of copies.get(e.ts) ?? []) if (c.kind === e.kind && c.sessionId !== e.sessionId) dropped.add(c);
+  }
+  return events.filter((e) => !dropped.has(e));
 }

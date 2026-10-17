@@ -94,8 +94,8 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
     const ts = Date.parse(str(rec.timestamp) ?? "");
     if (Number.isNaN(ts)) continue;
     lastTs = ts;
-    const uuid = str(rec.uuid) ?? undefined;
-    events.push({ ts, sessionId, uuid, kind: "activity" });
+    const first = events.length;
+    events.push({ ts, sessionId, kind: "activity" });
     for (; pendingModeChanges > 0; pendingModeChanges--) events.push({ ts, sessionId, kind: "mode_change" });
 
     const content = isObj(rec.message) ? rec.message.content : undefined;
@@ -104,23 +104,22 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
       for (const b of blocks) {
         if (!isObj(b) || b.type !== "tool_result") continue;
         const t = firstText(b.content);
-        if (t !== null && t.startsWith(REJECT_PREFIX)) events.push({ ts, sessionId, uuid, kind: "reject" });
+        if (t !== null && t.startsWith(REJECT_PREFIX)) events.push({ ts, sessionId, kind: "reject" });
         const toolUseId = str(b.tool_use_id);
-        if (toolUseId !== null && askedIds.has(toolUseId)) events.push({ ts, sessionId, uuid, kind: "answer" });
+        if (toolUseId !== null && askedIds.has(toolUseId)) events.push({ ts, sessionId, kind: "answer" });
       }
       const head = firstText(content);
-      if (head === null) continue;
-      if (head.startsWith(INTERRUPT_PREFIX)) events.push({ ts, sessionId, uuid, kind: "interrupt" });
-      else if (rec.isMeta !== true && rec.isCompactSummary !== true && !OUTPUT_MARKERS.some((marker) => head.startsWith(marker))) {
-        if (rec.promptSource === "system" || AGENT_MARKERS.some((marker) => head.startsWith(marker))) events.push({ ts, sessionId, uuid, kind: "report" });
-        else events.push({ ts, sessionId, uuid, kind: "prompt" });
+      if (head?.startsWith(INTERRUPT_PREFIX)) events.push({ ts, sessionId, kind: "interrupt" });
+      else if (head !== null && rec.isMeta !== true && rec.isCompactSummary !== true && !OUTPUT_MARKERS.some((marker) => head.startsWith(marker))) {
+        if (rec.promptSource === "system" || AGENT_MARKERS.some((marker) => head.startsWith(marker))) events.push({ ts, sessionId, kind: "report" });
+        else events.push({ ts, sessionId, kind: "prompt" });
       }
     } else {
       const blocks = Array.isArray(content) ? content : [];
       for (const b of blocks) {
         if (!isObj(b) || b.type !== "tool_use") continue;
         if (b.name !== QUESTION_TOOL && b.name !== PLAN_TOOL) continue;
-        events.push({ ts, sessionId, uuid, kind: b.name === QUESTION_TOOL ? "question" : "plan_review" });
+        events.push({ ts, sessionId, kind: b.name === QUESTION_TOOL ? "question" : "plan_review" });
         const id = str(b.id);
         if (id !== null) askedIds.add(id);
       }
@@ -134,9 +133,10 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
       const hasText = blocks.some((b) => isObj(b) && b.type === "text");
       if (requestId !== null && tokens !== null && hasText && !seenRequestIds.has(requestId)) {
         seenRequestIds.add(requestId);
-        events.push({ ts, sessionId, uuid, kind: "output", tokens });
+        events.push({ ts, sessionId, kind: "output", tokens });
       }
     }
+    if (rec.sessionKind === "bg") for (let i = first; i < events.length; i++) if (events[i]!.kind !== "mode_change") events[i]!.bg = true;
   }
   return events;
 }
