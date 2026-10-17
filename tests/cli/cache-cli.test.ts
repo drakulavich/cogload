@@ -197,6 +197,15 @@ describe("the transcript cache", () => {
     expect(hitsOf(run3.err)).toEqual({ hits: 3, misses: 0 });
   });
 
+  test("a row holding an event shape the encoder never writes is a miss", async () => {
+    const { home, projects } = await setup();
+    await spawn(home, projects);
+    sql(home, `UPDATE transcript SET events = CAST('{"sessions":["${A}"],"events":[[1,"prompt",0,null]]}' AS BLOB)`);
+    const run2 = await spawn(home, projects, "--verbose");
+    expect(hitsOf(run2.err)).toEqual({ hits: 0, misses: 3 });
+    expect(run2.out).toBe((await uncached(projects)).out);
+  });
+
   test("a row from another parser is a miss", async () => {
     const { home, projects } = await setup();
     await spawn(home, projects);

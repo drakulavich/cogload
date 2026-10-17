@@ -63,7 +63,7 @@ function decode(blob: Uint8Array): Event[] | null {
         if (bg !== 1) return null;
         e.bg = true;
       }
-      if (r.length >= 4 && tokens !== null) {
+      if (r.length === 4 || (r.length === 5 && tokens !== null)) {
         if (kind !== "output" || typeof tokens !== "number") return null;
         e.tokens = tokens;
       }
