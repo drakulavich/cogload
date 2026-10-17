@@ -94,6 +94,7 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
     const ts = Date.parse(str(rec.timestamp) ?? "");
     if (Number.isNaN(ts)) continue;
     lastTs = ts;
+    const first = events.length;
     events.push({ ts, sessionId, kind: "activity" });
     for (; pendingModeChanges > 0; pendingModeChanges--) events.push({ ts, sessionId, kind: "mode_change" });
 
@@ -108,9 +109,8 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
         if (toolUseId !== null && askedIds.has(toolUseId)) events.push({ ts, sessionId, kind: "answer" });
       }
       const head = firstText(content);
-      if (head === null) continue;
-      if (head.startsWith(INTERRUPT_PREFIX)) events.push({ ts, sessionId, kind: "interrupt" });
-      else if (rec.isMeta !== true && rec.isCompactSummary !== true && !OUTPUT_MARKERS.some((marker) => head.startsWith(marker))) {
+      if (head?.startsWith(INTERRUPT_PREFIX)) events.push({ ts, sessionId, kind: "interrupt" });
+      else if (head !== null && rec.isMeta !== true && rec.isCompactSummary !== true && !OUTPUT_MARKERS.some((marker) => head.startsWith(marker))) {
         if (rec.promptSource === "system" || AGENT_MARKERS.some((marker) => head.startsWith(marker))) events.push({ ts, sessionId, kind: "report" });
         else events.push({ ts, sessionId, kind: "prompt" });
       }
@@ -136,6 +136,7 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
         events.push({ ts, sessionId, kind: "output", tokens });
       }
     }
+    if (rec.sessionKind === "bg") for (let i = first; i < events.length; i++) if (events[i]!.kind !== "mode_change") events[i]!.bg = true;
   }
   return events;
 }

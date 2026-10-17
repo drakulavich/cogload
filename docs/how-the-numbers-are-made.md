@@ -50,7 +50,11 @@ minutes.
 skipped, never fatal, and a sidechain record (`isSidechain: true`) is ignored for
 every kind. A record becomes zero or more events. Message text is
 compared against a few fixed markers and discarded: an event carries a time, a
-session id, a kind and, for output, a token count.
+session id, a kind and, for output, a token count. A session moved to the
+background starts a new transcript with its history copied into it under the new
+session id, each copied record marked `sessionKind: "bg"` and keeping its time.
+The copy counts once: an event from a `bg` record is dropped when another
+session has an event of the same kind at the same millisecond.
 
 | Event | What it is in the transcript |
 |---|---|
