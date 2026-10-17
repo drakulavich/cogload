@@ -33,8 +33,9 @@ After this change:
 2. Before the events are derived, an event whose `uuid` an earlier event
    used under a different session id is dropped. "Earlier" is input order,
    which is path order in both `analyze()` and `report()`, so a cached run
-   and a `--no-cache` run keep the same copy. A `uuid` repeated within one
-   session is left alone, as today.
+   and a `--no-cache` run keep the same copy. The first session to use a
+   `uuid` keeps every event with it, a repeat within that session included,
+   as today; every other session's events with it are dropped.
 3. The cache stores the `uuid` with each event. The parser fingerprint
    already covers `parse.ts` and `types.ts`, so rows written by 0.14.x miss
    and are parsed again; the table and `user_version` stay.
