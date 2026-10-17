@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { appendFile, chmod, cp, mkdir, mkdtemp, readFile, rename, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assistant, prompt, writeTree } from "../helpers/transcript.ts";
+import { assistant, copiedTo, prompt, writeTree } from "../helpers/transcript.ts";
 
 const CLI = join(import.meta.dir, "../../src/cli/index.ts");
 const A = "aaaaaaaa-1111-4111-8111-111111111111";
@@ -79,6 +79,22 @@ describe("the transcript cache", () => {
     expect(hitsOf(run2.err)).toEqual({ hits: 3, misses: 0 });
     expect(lineOf(run2.err, "read")).toMatch(/^read\s+0 files, /);
     expect(lineOf(off.err, "cache")).toBe("cache   off");
+  });
+
+  test("a history copied under another session counts once from the cache as without it (#222)", async () => {
+    const projects = await temp("proj");
+    const lines = [prompt("2026-09-14T10:00:00.000Z", A), assistant("2026-09-14T10:05:00.000Z", A), prompt("2026-09-14T10:30:00.000Z", A)];
+    await writeTree(projects, [
+      { path: `${DIR}/x.jsonl`, lines, mtime: "2026-09-14T10:30:00.000Z" },
+      { path: `${DIR}/y.jsonl`, lines: copiedTo(lines, B), mtime: "2026-09-14T10:30:00.000Z" },
+    ]);
+    const home = await temp("home");
+    const run1 = await spawn(home, projects);
+    const run2 = await spawn(home, projects, "--verbose");
+    expect(hitsOf(run2.err)).toEqual({ hits: 2, misses: 0 });
+    expect(bucket(run2.out, "2026-09-14", 10).prompts).toBe(2);
+    expect(run2.out).toBe(run1.out);
+    expect(run2.out).toBe((await uncached(projects)).out);
   });
 
   test("a prompt appended inside the window is counted, and its file is the one miss", async () => {

@@ -41,7 +41,7 @@ function encode(events: Event[]): Uint8Array {
   const rows = events.map((e) => {
     let i = index.get(e.sessionId);
     if (i === undefined) { i = sessions.length; index.set(e.sessionId, i); sessions.push(e.sessionId); }
-    return e.tokens === undefined ? [e.ts, e.kind, i] : [e.ts, e.kind, i, e.tokens];
+    return [e.ts, e.kind, i, e.uuid ?? null, ...(e.tokens === undefined ? [] : [e.tokens])];
   });
   return new TextEncoder().encode(JSON.stringify({ sessions, events: rows }));
 }
@@ -54,11 +54,13 @@ function decode(blob: Uint8Array): Event[] | null {
     if (!Array.isArray(sessions) || !sessions.every((s) => typeof s === "string") || !Array.isArray(events)) return null;
     const out: Event[] = [];
     for (const r of events) {
-      if (!Array.isArray(r) || r.length < 3 || r.length > 4) return null;
-      const [ts, kind, i, tokens] = r as unknown[];
+      if (!Array.isArray(r) || r.length < 4 || r.length > 5) return null;
+      const [ts, kind, i, uuid, tokens] = r as unknown[];
       if (typeof ts !== "number" || typeof kind !== "string" || !Object.hasOwn(KINDS, kind) || typeof i !== "number" || sessions[i] === undefined) return null;
+      if (uuid !== null && typeof uuid !== "string") return null;
       const e: Event = { ts, sessionId: sessions[i] as string, kind: kind as EventKind };
-      if (r.length === 4) {
+      if (uuid !== null) e.uuid = uuid;
+      if (r.length === 5) {
         if (kind !== "output" || typeof tokens !== "number") return null;
         e.tokens = tokens;
       }

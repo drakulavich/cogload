@@ -44,8 +44,9 @@ After this change:
 A `uuid` is not message text, a path or a title, so the Privacy rule does
 not change; it is kept in the cache next to the session ids already there.
 
-Cost: the cache grows by one `uuid` per record. It is 3.6 MB on the author's
-machine now; the PR states the size after one run.
+Cost: the cache grows by one `uuid` per event. On 90 days of the author's
+transcripts it goes from 5.1 MB to 11.7 MB; a run on a warm cache takes
+7 ms instead of 5 ms to look up, about 110 ms in all either way.
 
 Not in scope: telling the original from the copy. Path order may keep the
 copy, which is the same history under the other session id. Where the
