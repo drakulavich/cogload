@@ -135,6 +135,18 @@ type Drift = {
   events: number;
   eventsByKind: Record<EventKind, number>;
   eventsPerRecordWithType: number;
+  shapes: Shape[];
+};
+
+// A user record with text, by the fields the parser decides on. Values come from
+// someone else's JSONL: capped and JSON-encoded. The text gives only its first
+// character's class, so nothing typed is printed.
+type Shape = { origin: string | null; promptSource: string | null; isMeta: boolean | null; start: "tag" | "bracket" | "plain"; records: number; events: Partial<Record<EventKind, number>> };
+const field = (v: unknown): string | null => (v === undefined || v === null ? null : JSON.stringify(v).slice(0, 40));
+const firstText = (c: unknown): string | null => {
+  if (typeof c === "string") return c;
+  if (Array.isArray(c)) for (const b of c) if (typeof b === "object" && b !== null && b.type === "text" && typeof b.text === "string") return b.text;
+  return null;
 };
 
 // Re-reads every transcript the report would read (same scan rules: .jsonl, no
@@ -155,6 +167,7 @@ async function computeDrift(projects: string, to: string, days: number): Promise
   const typeCounts = new Map<string, number>();
   const eventsByKind = Object.fromEntries(EVENT_KINDS.map((k) => [k, 0])) as Record<EventKind, number>;
   let events = 0;
+  const shapes = new Map<string, Shape>();
   const inWindow = (ts: number): boolean => !Number.isNaN(ts) && ts >= cutoffMs && ts < endMs;
 
   for (const { path } of entries) {
@@ -174,6 +187,20 @@ async function computeDrift(projects: string, to: string, days: number): Promise
       if (!inWindow(ts)) continue;
       recordsWithType++;
       typeCounts.set(type, (typeCounts.get(type) ?? 0) + 1);
+      const r = rec as Record<string, unknown>;
+      if (type !== "user" || r.isSidechain === true || String(r.entrypoint).startsWith("sdk-")) continue;
+      const head = firstText((r.message as { content?: unknown } | undefined)?.content);
+      if (head === null) continue;
+      const origin = field((r.origin as { kind?: unknown } | undefined)?.kind);
+      const promptSource = field(r.promptSource);
+      const isMeta = typeof r.isMeta === "boolean" ? r.isMeta : null;
+      const start = head.startsWith("<") ? "tag" : head.startsWith("[") ? "bracket" : "plain";
+      const key = JSON.stringify([origin, promptSource, isMeta, start]);
+      let s = shapes.get(key);
+      if (!s) { s = { origin, promptSource, isMeta, start, records: 0, events: {} }; shapes.set(key, s); }
+      s.records++;
+      // One line alone: enough for prompt, report and interrupt, the kinds a text decides.
+      for (const e of parseTranscript(line)) if (e.kind !== "activity") s.events[e.kind] = (s.events[e.kind] ?? 0) + 1;
     }
 
     for (const e of parseTranscript(text)) {
@@ -188,7 +215,11 @@ async function computeDrift(projects: string, to: string, days: number): Promise
     .slice(0, 6)
     .map(([type, count]) => ({ type, count }));
 
-  return { files: entries.length, lines, recordsWithType, topTypes, events, eventsByKind, eventsPerRecordWithType: recordsWithType === 0 ? 0 : events / recordsWithType };
+  return {
+    files: entries.length, lines, recordsWithType, topTypes, events, eventsByKind,
+    eventsPerRecordWithType: recordsWithType === 0 ? 0 : events / recordsWithType,
+    shapes: [...shapes.values()].sort((a, b) => b.records - a.records),
+  };
 }
 
 function renderDrift(d: Drift): string {
@@ -202,6 +233,12 @@ function renderDrift(d: Drift): string {
     `records with type: ${d.recordsWithType}, events: ${d.events} (${byKind})`,
     `top types: ${topTypes}`,
     `events per record with type: ${d.eventsPerRecordWithType.toFixed(2)}`,
+    "",
+    "user records by shape: records, origin.kind, promptSource, isMeta, text start → events",
+    ...d.shapes.map((s) => {
+      const ev = Object.entries(s.events).map(([k, n]) => `${k} ${n}`).join(", ") || "none";
+      return `  ${s.records}  ${s.origin ?? "-"} ${s.promptSource ?? "-"} ${s.isMeta ?? "-"} ${s.start} → ${ev}`;
+    }),
   ].join("\n");
 }
 
@@ -236,6 +273,7 @@ async function main(): Promise<number> {
           events: drift.events,
           eventsByKind: drift.eventsByKind,
           eventsPerRecordWithType: drift.eventsPerRecordWithType,
+          shapes: drift.shapes,
         },
       }),
     );
