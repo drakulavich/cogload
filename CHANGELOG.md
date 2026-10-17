@@ -5,6 +5,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-10-17
+
+### Fixed
+- Messages from your other Claude Code sessions count as agent reports
+  again. Since Claude Code 2.1.280 they had dropped out of the index and the
+  card. (#226)
+
 ## [0.14.1] - 2026-10-17
 
 ### Fixed
