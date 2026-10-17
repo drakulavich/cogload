@@ -119,6 +119,11 @@ export const slashCommand = (ts: string, sid: string) =>
 export const slashStdout = (ts: string, sid: string) => userText(ts, sid, "<local-command-stdout>placeholder output</local-command-stdout>");
 export const monitorEvent = (ts: string, sid: string) => userText(ts, sid, "<ci-monitor-event>placeholder event</ci-monitor-event>");
 
+// A session moved to the background: Claude Code copies its records, uuid and
+// timestamp kept, into a new transcript under the new session id (#222).
+export const copiedTo = (lines: string[], sid: string) =>
+  lines.map((l) => JSON.stringify({ ...JSON.parse(l), sessionId: sid, sessionKind: "bg" }));
+
 export const sidechain = (ts: string, sid: string) =>
   base(ts, sid, { type: "user", isSidechain: true, agentId: "aa395d63485bb2c77", message: { role: "user", content: "placeholder subagent prompt" } });
 

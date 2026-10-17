@@ -61,6 +61,9 @@ The parser turns records into a flat list of events. Each event has `ts`
 ignored for every kind (defensive; the scan already skips subagent files). So
 are records whose `entrypoint` starts with `sdk-` (`sdk-cli`, `sdk-ts`): a
 script ran `claude -p` or the Agent SDK, and no human sat in that session.
+An event from a `sessionKind: "bg"` record is dropped when another session has
+an event of the same kind at the same millisecond: a background session's copied
+history (`2026-10-17-cogload-copied-history-design.md`).
 
 | kind | rule |
 |---|---|
