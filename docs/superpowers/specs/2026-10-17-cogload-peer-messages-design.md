@@ -133,8 +133,9 @@ form stays a report.
 - `docs/how-the-numbers-are-made.md` and the zapara design's Events table
   name the peer rule.
 
-## Open Questions
+## Decisions
 
-- Does Claude Code show a peer message to the person? The records say only
-  that it is `isMeta`. This spec assumes the person reads it, as they read a
-  tagged one; if not, the change is the builder alone.
+- A peer message is something the person reads, so it is a `report`, though
+  its record is `isMeta`. Claude Code shows the receiving session a
+  `Message from` row once Claude has read the message, expandable with
+  `Ctrl+O`. Source: https://code.claude.com/docs/en/whats-new/2026-w32
