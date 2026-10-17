@@ -59,7 +59,7 @@ session has an event of the same kind at the same millisecond.
 | Event | What it is in the transcript |
 |---|---|
 | `prompt` | A `user` record, not `isMeta`, whose text (a string, or the first text block, which a pasted image can push behind an `image` block) is neither an interrupt marker nor an agent-message marker. Something the human typed. A compact summary (`isCompactSummary: true`) and the output of a `!` or slash command (`<bash-stdout>`, `<local-command-stdout>`) are not prompts: Claude Code wrote them, and the command itself already counted. |
-| `report` | A `user` record, not `isMeta`, whose text (a string, or the first text block) starts with an agent-message marker such as `<teammate-message`, `<task-notification>` or `<ci-monitor-event>`, or carrying `promptSource: "system"`, as a plugin's message between turns does. Something the human reads and reacts to, but did not type. |
+| `report` | A `user` record, not `isMeta`, whose text (a string, or the first text block) starts with an agent-message marker such as `<teammate-message`, `<task-notification>` or `<ci-monitor-event>`, or carrying `promptSource: "system"`, as a plugin's message between turns does, or with `origin.kind: "peer"`, a message from another session, which Claude Code 2.1.280 and later write `isMeta` and without a marker (#226). Something the human reads and reacts to, but did not type. |
 | `output` | An `assistant` record with a text block and `usage.output_tokens`, counted once per `requestId` within a file. Model output the human reads. |
 | `interrupt` | A `user` text block starting with `[Request interrupted by user`. |
 | `reject` | A `tool_result` saying the user did not want to proceed with that tool use. |

@@ -111,7 +111,13 @@ export const compactSummary = (ts: string, sid: string) =>
 export const pluginMessage = (ts: string, sid: string, text = "placeholder plugin notice") =>
   userText(ts, sid, text, { promptSource: "system", turnOrigin: "system", origin: { kind: "plugin", name: "watchtower" } });
 
-export const bashInput = (ts: string, sid: string) => userText(ts, sid, "<bash-input>placeholder command</bash-input>");
+// A message from another session as Claude Code 2.1.280+ writes it (#226): no
+// marker in the text, `isMeta` set.
+export const peer = (ts: string, sid: string) =>
+  userText(ts, sid, "placeholder report", { isMeta: true, promptSource: "system", turnOrigin: "peer",
+    origin: { kind: "peer", from: "placeholder", name: "placeholder", body: "placeholder report", senderTaskId: "placeholder", handback: false } });
+
+export const bashInput =(ts: string, sid: string) => userText(ts, sid, "<bash-input>placeholder command</bash-input>");
 export const bashStdout = (ts: string, sid: string) =>
   userText(ts, sid, "<bash-stdout>placeholder output</bash-stdout><bash-stderr></bash-stderr>", { turnOrigin: "human" });
 export const slashCommand = (ts: string, sid: string) =>

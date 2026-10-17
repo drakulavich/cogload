@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { analyze } from "../../src/lib/metrics/index.ts";
-import { assistantText, assistantTokensLiteral, assistantToolUseOnly, bashInput, bashStdout, compactSummary, crossSession, monitorEvent, pluginMessage, prompt, slashCommand, slashStdout, taskNotification, teammate, transcript } from "../helpers/transcript.ts";
+import { assistantText, assistantTokensLiteral, assistantToolUseOnly, bashInput, bashStdout, compactSummary, crossSession, meta, monitorEvent, peer, pluginMessage, prompt, slashCommand, slashStdout, taskNotification, teammate, transcript } from "../helpers/transcript.ts";
 
 const S = "11111111-1111-4111-8111-111111111111";
 const W = { to: "2026-09-14", days: 1 };
@@ -104,6 +104,20 @@ describe("records Claude Code writes itself are not prompts (#221)", () => {
     const b = analyze([transcript([pluginMessage(at("13:00"), S, "[Request interrupted by user]")])], W)[0]!.buckets[13]!;
     expect(b.interrupts).toBe(1);
     expect(b.reports).toBe(0);
+  });
+});
+
+describe("a message from another session in the 2.1.280+ shape is a report (#226)", () => {
+  test("a peer message between two prompts is one report", () => {
+    const b = analyze([transcript([prompt(at("10:00"), S), peer(at("10:05"), S), prompt(at("10:10"), S)])], W)[0]!.buckets[10]!;
+    expect(b.reports).toBe(1);
+    expect(b.prompts).toBe(2);
+  });
+
+  test("a system reminder in the same place is still nothing", () => {
+    const b = analyze([transcript([prompt(at("10:00"), S), meta(at("10:05"), S), prompt(at("10:10"), S)])], W)[0]!.buckets[10]!;
+    expect(b.reports).toBe(0);
+    expect(b.prompts).toBe(2);
   });
 });
 

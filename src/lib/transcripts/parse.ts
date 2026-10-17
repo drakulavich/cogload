@@ -109,9 +109,11 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
         if (toolUseId !== null && askedIds.has(toolUseId)) events.push({ ts, sessionId, kind: "answer" });
       }
       const head = firstText(content);
+      // Claude Code 2.1.280+ marks a message from another session `isMeta` (#226).
+      const peer = isObj(rec.origin) && rec.origin.kind === "peer";
       if (head?.startsWith(INTERRUPT_PREFIX)) events.push({ ts, sessionId, kind: "interrupt" });
-      else if (head !== null && rec.isMeta !== true && rec.isCompactSummary !== true && !OUTPUT_MARKERS.some((marker) => head.startsWith(marker))) {
-        if (rec.promptSource === "system" || AGENT_MARKERS.some((marker) => head.startsWith(marker))) events.push({ ts, sessionId, kind: "report" });
+      else if (head !== null && (rec.isMeta !== true || peer) && rec.isCompactSummary !== true && !OUTPUT_MARKERS.some((marker) => head.startsWith(marker))) {
+        if (peer || rec.promptSource === "system" || AGENT_MARKERS.some((marker) => head.startsWith(marker))) events.push({ ts, sessionId, kind: "report" });
         else events.push({ ts, sessionId, kind: "prompt" });
       }
     } else {
