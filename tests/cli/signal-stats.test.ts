@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assistantText, prompt, teammate, writeTree } from "../helpers/transcript.ts";
+import { assistantText, meta, pluginMessage, prompt, teammate, writeTree } from "../helpers/transcript.ts";
 
 const SCRIPT = join(import.meta.dir, "../../scripts/signal-stats.ts");
 const A = "aaaaaaaa-1111-4111-8111-111111111111";
@@ -107,6 +107,39 @@ describe("signal-stats", () => {
         prompt: 6, report: 3, output: 1, interrupt: 0, reject: 0, answer: 0, question: 0, plan_review: 0, mode_change: 0, activity: 10,
       });
       expect(data.drift.eventsPerRecordWithType).toBe(2);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // #226: a record shape the parser drops still counts as `activity`, so only a
+  // per-shape view shows a new shape that yields nothing.
+  test("groups user records by shape and shows the events each shape yields, never the text", async () => {
+    const root = await mkdtemp(join(tmpdir(), "cogload-stats-shapes-"));
+    try {
+      await writeTree(root, [{
+        path: "-Users-me-proj/a.jsonl",
+        lines: [
+          prompt("2026-09-15T09:00:00.000Z", A),
+          prompt("2026-09-15T09:01:00.000Z", A),
+          teammate("2026-09-15T09:02:00.000Z", A, true),
+          meta("2026-09-15T09:03:00.000Z", A),
+          pluginMessage("2026-09-15T09:04:00.000Z", A),
+        ],
+        mtime: "2026-09-15T09:04:00.000Z",
+      }]);
+      const r = await run("--projects", root, "--to", "2026-09-15", "--days", "1");
+      expect(r.code).toBe(0);
+      expect(r.out).not.toContain("placeholder");
+      expect(r.out).toContain("user records by shape: records, origin.kind, promptSource, isMeta, text start → events");
+      expect(r.out).toContain("2  - - - plain → prompt 2");
+      expect(r.out).toContain("1  - - - tag → report 1");
+      expect(r.out).toContain("1  - - true tag → none");
+      expect(r.out).toContain(`1  "plugin" "system" - plain → report 1`);
+
+      const j = await run("--projects", root, "--to", "2026-09-15", "--days", "1", "--json");
+      const data = JSON.parse(j.out) as { drift: { shapes: unknown } };
+      expect(data.drift.shapes).toContainEqual({ origin: null, promptSource: null, isMeta: true, start: "tag", records: 1, events: {} });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
