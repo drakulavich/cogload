@@ -5,12 +5,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-## [0.14.1] - 2026-10-16
+## [0.14.1] - 2026-10-17
 
 ### Fixed
 - Compact summaries, plugin messages, `!` and slash-command output and
   monitor events no longer count as typed prompts, so they cannot extend the
   streak or start a rest. (#221)
+- A session moved to the background no longer counts its copied history a
+  second time. (#222)
 
 ## [0.14.0] - 2026-10-10
 
