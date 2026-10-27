@@ -12,7 +12,12 @@ const plain = (text: string): Segment => ({ text, strong: false });
 
 // Names and mottos are spelled out here on purpose: the test pins the page against
 // the spec's copy, not against whatever src/lib/card/card.ts exports.
-const NAMES: Record<Character, string> = { conductor: "The Conductor", supervisor: "The Supervisor", marathoner: "The Marathoner", nightOwl: "The Night Owl" };
+const NAMES: Record<Character, string> = {
+  conductor: "The Conductor",
+  supervisor: "The Supervisor",
+  marathoner: "The Marathoner",
+  nightOwl: "The Night Owl",
+};
 const MOTTOS: Record<Character, string> = {
   conductor: "You run agents like an orchestra.",
   supervisor: "Nothing ships without your eyes on it.",
@@ -23,7 +28,13 @@ const MOTTOS: Record<Character, string> = {
 const SENTENCES: Record<Character, Segment[]> = {
   conductor: [strong("999B+ sessions"), plain(" at once, "), strong("999B+ context switches"), plain(" in one hour.")],
   supervisor: [strong("999B+ agent reports"), plain(" and "), strong("999B+ tokens"), plain(" of output read.")],
-  marathoner: [plain("Longest streak "), strong("999h+"), plain(" without a break, "), strong("100%"), plain(" of your hours calm.")],
+  marathoner: [
+    plain("Longest streak "),
+    strong("999h+"),
+    plain(" without a break, "),
+    strong("100%"),
+    plain(" of your hours calm."),
+  ],
   nightOwl: [strong("100%"), plain(" of your hours "), strong("late at night"), plain(".")],
 };
 const longest = (character: Character): CardData => ({
@@ -58,43 +69,64 @@ const MEASURE = `(() => {
     footerGap: source.getBoundingClientRect().left - repo.getBoundingClientRect().right,
   };
 })()`;
-type Measure = { statCount: number; sentenceLines: number; panelOverflow: number; nameOverflow: number; rowOverflow: number; legendOverflow: number; valueOverflows: number[]; footerGap: number };
+type Measure = {
+  statCount: number;
+  sentenceLines: number;
+  panelOverflow: number;
+  nameOverflow: number;
+  rowOverflow: number;
+  legendOverflow: number;
+  valueOverflows: number[];
+  footerGap: number;
+};
 
 describe("the longest values fit the layout", () => {
   for (const character of ["conductor", "supervisor", "marathoner", "nightOwl"] as const) {
-    test.skipIf(webviewMissing !== null)(character, async () => {
-      const view = await openPage(cardHtml(longest(character), assets), 2400, 1260);
-      try {
-        const m = await view.evaluate<Measure>(MEASURE);
-        expect(m.statCount).toBe(3);
-        expect(m.sentenceLines).toBeLessThanOrEqual(3);
-        expect(m.panelOverflow).toBeLessThanOrEqual(0);
-        expect(m.nameOverflow).toBeLessThanOrEqual(0);
-        expect(m.rowOverflow).toBeLessThanOrEqual(0);
-        expect(m.legendOverflow).toBeLessThanOrEqual(0);
-        for (const o of m.valueOverflows) expect(o).toBeLessThanOrEqual(0);
-        expect(m.footerGap).toBeGreaterThan(0);
-      } finally {
-        view.close();
-      }
-    }, WEBVIEW_TEST_TIMEOUT);
+    test.skipIf(webviewMissing !== null)(
+      character,
+      async () => {
+        const view = await openPage(cardHtml(longest(character), assets), 2400, 1260);
+        try {
+          const m = await view.evaluate<Measure>(MEASURE);
+          expect(m.statCount).toBe(3);
+          expect(m.sentenceLines).toBeLessThanOrEqual(3);
+          expect(m.panelOverflow).toBeLessThanOrEqual(0);
+          expect(m.nameOverflow).toBeLessThanOrEqual(0);
+          expect(m.rowOverflow).toBeLessThanOrEqual(0);
+          expect(m.legendOverflow).toBeLessThanOrEqual(0);
+          for (const o of m.valueOverflows) expect(o).toBeLessThanOrEqual(0);
+          expect(m.footerGap).toBeGreaterThan(0);
+        } finally {
+          view.close();
+        }
+      },
+      WEBVIEW_TEST_TIMEOUT,
+    );
   }
 
-  test.skipIf(webviewMissing !== null)("one- and two-panel rows fit the same layout", async () => {
-    for (const count of [1, 2]) {
-      const base = longest("conductor");
-      const view = await openPage(cardHtml({ ...base, highlights: base.highlights.slice(0, count) }, assets), 2400, 1260);
-      try {
-        const m = await view.evaluate<Measure>(MEASURE);
-        expect(m.statCount).toBe(count);
-        expect(m.panelOverflow).toBeLessThanOrEqual(0);
-        expect(m.rowOverflow).toBeLessThanOrEqual(0);
-        for (const o of m.valueOverflows) expect(o).toBeLessThanOrEqual(0);
-      } finally {
-        view.close();
+  test.skipIf(webviewMissing !== null)(
+    "one- and two-panel rows fit the same layout",
+    async () => {
+      for (const count of [1, 2]) {
+        const base = longest("conductor");
+        const view = await openPage(
+          cardHtml({ ...base, highlights: base.highlights.slice(0, count) }, assets),
+          2400,
+          1260,
+        );
+        try {
+          const m = await view.evaluate<Measure>(MEASURE);
+          expect(m.statCount).toBe(count);
+          expect(m.panelOverflow).toBeLessThanOrEqual(0);
+          expect(m.rowOverflow).toBeLessThanOrEqual(0);
+          for (const o of m.valueOverflows) expect(o).toBeLessThanOrEqual(0);
+        } finally {
+          view.close();
+        }
       }
-    }
-  }, WEBVIEW_TEST_TIMEOUT);
+    },
+    WEBVIEW_TEST_TIMEOUT,
+  );
 });
 
 describe("renderCard", () => {
@@ -104,65 +136,104 @@ describe("renderCard", () => {
       const html = cardHtml(longest("conductor"), assets);
       await renderCard(html, join(dir, "c.html"));
       expect(await readFile(join(dir, "c.html"), "utf8")).toBe(html);
-    } finally { await rm(dir, { recursive: true, force: true }); }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
-  test.skipIf(webviewMissing !== null)("writes a 2400x1260 PNG and a 2400x1260 WebP", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
-    try {
-      const html = cardHtml(longest("supervisor"), assets);
-      await renderCard(html, join(dir, "c.png"), WEBVIEW_STEP_TIMEOUT);
-      await renderCard(html, join(dir, "c.webp"), WEBVIEW_STEP_TIMEOUT);
-      const png = await readFile(join(dir, "c.png"));
-      const webp = await readFile(join(dir, "c.webp"));
-      expect(await new Bun.Image(png).metadata()).toMatchObject({ width: 2400, height: 1260, format: "png" });
-      expect(await new Bun.Image(webp).metadata()).toMatchObject({ width: 2400, height: 1260, format: "webp" });
-      expect(png.length).toBeGreaterThan(20_000);
-      expect(webp.length).toBeGreaterThan(20_000);
-    } finally { await rm(dir, { recursive: true, force: true }); }
-  }, WEBVIEW_TEST_TIMEOUT);
+  test.skipIf(webviewMissing !== null)(
+    "writes a 2400x1260 PNG and a 2400x1260 WebP",
+    async () => {
+      const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
+      try {
+        const html = cardHtml(longest("supervisor"), assets);
+        await renderCard(html, join(dir, "c.png"), WEBVIEW_STEP_TIMEOUT);
+        await renderCard(html, join(dir, "c.webp"), WEBVIEW_STEP_TIMEOUT);
+        const png = await readFile(join(dir, "c.png"));
+        const webp = await readFile(join(dir, "c.webp"));
+        expect(await new Bun.Image(png).metadata()).toMatchObject({ width: 2400, height: 1260, format: "png" });
+        expect(await new Bun.Image(webp).metadata()).toMatchObject({ width: 2400, height: 1260, format: "webp" });
+        expect(png.length).toBeGreaterThan(20_000);
+        expect(webp.length).toBeGreaterThan(20_000);
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    },
+    WEBVIEW_TEST_TIMEOUT,
+  );
 
   // A page laid out at 1200x630 with zoom 2, as cardHtml is, fills the whole picture
   // at any screen density: each quadrant's colour lands in its own quarter.
-  test.skipIf(webviewMissing !== null)("the whole 1200x630 page fills the 2400x1260 picture", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
-    const quad = (left: number, top: number, color: string) => `<div style="position:absolute;left:${left}px;top:${top}px;width:600px;height:315px;background:${color}"></div>`;
-    const html = `<!doctype html><html><head><style>html{zoom:2}html,body{margin:0}</style></head><body>${quad(0, 0, "#f00")}${quad(600, 0, "#0f0")}${quad(0, 315, "#00f")}${quad(600, 315, "#ff0")}</body></html>`;
-    try {
-      await renderCard(html, join(dir, "q.png"), WEBVIEW_STEP_TIMEOUT);
-      const png = (await readFile(join(dir, "q.png"))).toString("base64");
-      const view = await openPage(`<canvas width=2400 height=1260></canvas><img id=i src="data:image/png;base64,${png}">`, 100, 100);
+  test.skipIf(webviewMissing !== null)(
+    "the whole 1200x630 page fills the 2400x1260 picture",
+    async () => {
+      const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
+      const quad = (left: number, top: number, color: string) =>
+        `<div style="position:absolute;left:${left}px;top:${top}px;width:600px;height:315px;background:${color}"></div>`;
+      const html = `<!doctype html><html><head><style>html{zoom:2}html,body{margin:0}</style></head><body>${quad(0, 0, "#f00")}${quad(600, 0, "#0f0")}${quad(0, 315, "#00f")}${quad(600, 315, "#ff0")}</body></html>`;
       try {
-        const colors = await view.evaluate<string[]>(`(() => {
+        await renderCard(html, join(dir, "q.png"), WEBVIEW_STEP_TIMEOUT);
+        const png = (await readFile(join(dir, "q.png"))).toString("base64");
+        const view = await openPage(
+          `<canvas width=2400 height=1260></canvas><img id=i src="data:image/png;base64,${png}">`,
+          100,
+          100,
+        );
+        try {
+          const colors = await view.evaluate<string[]>(`(() => {
           const c = document.querySelector("canvas").getContext("2d");
           c.drawImage(document.getElementById("i"), 0, 0);
           return [[600, 315], [1800, 315], [600, 945], [1800, 945]].map(([x, y]) =>
             Array.from(c.getImageData(x, y, 1, 1).data.slice(0, 3)).map((v) => (v > 127 ? "1" : "0")).join(""));
         })()`);
-        expect(colors).toEqual(["100", "010", "001", "110"]);
-      } finally { view.close(); }
-    } finally { await rm(dir, { recursive: true, force: true }); }
-  }, WEBVIEW_TEST_TIMEOUT);
+          expect(colors).toEqual(["100", "010", "001", "110"]);
+        } finally {
+          view.close();
+        }
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    },
+    WEBVIEW_TEST_TIMEOUT,
+  );
 
   // No page reliably hangs (a broken <img> or @font-face settles on WebKit), so a
   // 1 ms budget, which no render meets, is what reaches the deadline.
-  test.skipIf(webviewMissing !== null)("a render past its budget fails with its own line and writes nothing", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
-    try {
-      await expect(renderCard(cardHtml(longest("conductor"), assets), join(dir, "c.png"), 1)).rejects.toThrow(/^render timed out$/);
-      expect(await readdir(dir)).toEqual([]);
-    } finally { await rm(dir, { recursive: true, force: true }); }
-  }, WEBVIEW_TEST_TIMEOUT);
+  test.skipIf(webviewMissing !== null)(
+    "a render past its budget fails with its own line and writes nothing",
+    async () => {
+      const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
+      try {
+        await expect(renderCard(cardHtml(longest("conductor"), assets), join(dir, "c.png"), 1)).rejects.toThrow(
+          /^render timed out$/,
+        );
+        expect(await readdir(dir)).toEqual([]);
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    },
+    WEBVIEW_TEST_TIMEOUT,
+  );
 
   // A view left open keeps its process alive, so the exit is what shows the close.
-  test.skipIf(webviewMissing !== null)("a render past its budget closes its view, so the process can exit", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
-    try {
-      const child = Bun.spawn(["bun", join(import.meta.dir, "../helpers/render-timeout.ts"), join(dir, "c.png")], { stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC" } });
-      const code = await Promise.race([child.exited, Bun.sleep(5_000).then(() => null)]);
-      if (code === null) child.kill();
-      expect(code).toBe(0);
-      expect(await new Response(child.stdout).text()).toBe("render timed out\n");
-    } finally { await rm(dir, { recursive: true, force: true }); }
-  }, WEBVIEW_TEST_TIMEOUT);
+  test.skipIf(webviewMissing !== null)(
+    "a render past its budget closes its view, so the process can exit",
+    async () => {
+      const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
+      try {
+        const child = Bun.spawn(["bun", join(import.meta.dir, "../helpers/render-timeout.ts"), join(dir, "c.png")], {
+          stdout: "pipe",
+          stderr: "pipe",
+          env: { ...process.env, TZ: "UTC" },
+        });
+        const code = await Promise.race([child.exited, Bun.sleep(5_000).then(() => null)]);
+        if (code === null) child.kill();
+        expect(code).toBe(0);
+        expect(await new Response(child.stdout).text()).toBe("render timed out\n");
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    },
+    WEBVIEW_TEST_TIMEOUT,
+  );
 });

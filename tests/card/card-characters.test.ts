@@ -158,7 +158,10 @@ describe("zero highlights", () => {
 
   test("a Night Owl with a streak keeps it as the second highlight", () => {
     const c = cardOf(nightOwl);
-    expect(c.highlights.map((h) => `${h.value} ${h.caption}`)).toEqual(["100% of hours late at night", "5m longest streak"]);
+    expect(c.highlights.map((h) => `${h.value} ${h.caption}`)).toEqual([
+      "100% of hours late at night",
+      "5m longest streak",
+    ]);
   });
 
   test("a lone single-prompt hour still has its one panel: the character's own number", () => {
@@ -193,12 +196,21 @@ describe("one figure per fact", () => {
   // Three hours on three days, each an unbroken run of 40 minutes or more, so the
   // streak makes it the Marathoner: a calm hour of one session; a warming hour of
   // two; a heating hour of three sessions and 30 agent reports. Calm is 1 of 3.
-  const a: string[] = [], b: string[] = [], c: string[] = [], d: string[] = [];
+  const a: string[] = [],
+    b: string[] = [],
+    c: string[] = [],
+    d: string[] = [];
   for (let i = 0; i < 12; i++) a.push(prompt(at(9, i * 5, 14), sid("a")));
   for (let i = 0; i < 20; i++) (i % 4 === 0 ? b : a).push(prompt(at(9, i * 3, 15), sid(i % 4 === 0 ? "b" : "a")));
   for (let i = 0; i < 20; i++) [a, c, d][i % 3]!.push(prompt(at(9, i * 3, 16), sid("acd"[i % 3]!)));
   for (let r = 0; r < 30; r++) a.push(teammate(at(9, 30, 16, r * 1000), sid("a")));
-  const card = cardData(analyze([transcript(a, "p/a.jsonl"), transcript(b, "p/b.jsonl"), transcript(c, "p/c.jsonl"), transcript(d, "p/d.jsonl")], { to: "2026-09-16", days: 3 }), { days: 3 })!;
+  const card = cardData(
+    analyze(
+      [transcript(a, "p/a.jsonl"), transcript(b, "p/b.jsonl"), transcript(c, "p/c.jsonl"), transcript(d, "p/d.jsonl")],
+      { to: "2026-09-16", days: 3 },
+    ),
+    { days: 3 },
+  )!;
 
   test("the sentence's calm share is the legend's, 34% for one hour in three", () => {
     expect(card.character).toBe("marathoner");
@@ -215,8 +227,13 @@ describe("spectrum rounding", () => {
     // the fried hour takes its 1 from calm. Its peak reads Fried on the same card.
     const lines: string[] = [];
     let n = 0;
-    for (let day = 7; day <= 19 && n < 200; day++) for (let h = 6; h <= 21 && n < 200; h++, n++) lines.push(prompt(at(h, 0, day), sid("a")));
-    for (let i = 0; i < 30; i++) lines.push(prompt(at(10, i * 2, 20), sid("bcdef"[i % 5]!)), assistantText(at(10, i * 2, 20, 5000), sid("bcdef"[i % 5]!), 3000, nextRequestId()));
+    for (let day = 7; day <= 19 && n < 200; day++)
+      for (let h = 6; h <= 21 && n < 200; h++, n++) lines.push(prompt(at(h, 0, day), sid("a")));
+    for (let i = 0; i < 30; i++)
+      lines.push(
+        prompt(at(10, i * 2, 20), sid("bcdef"[i % 5]!)),
+        assistantText(at(10, i * 2, 20, 5000), sid("bcdef"[i % 5]!), 3000, nextRequestId()),
+      );
     for (let r = 0; r < 40; r++) lines.push(teammate(at(10, 30, 20, r * 1000), sid("b")));
     const c = cardData(analyze([transcript(lines)], { to: "2026-09-20", days: 14 }), { days: 14 })!;
     expect(c.peak.level).toBe("Fried");

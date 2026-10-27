@@ -3,7 +3,15 @@ import type { Level, Metrics, Part, Parts, Score } from "../types.ts";
 // Calibration lives here and nowhere else. Integer points of 100, so 0.5 sums
 // stay exact; norms are the p90 of two weeks on two machines (see CHANGELOG).
 export const WEIGHTS = { parallel: 25, pace: 15, supervision: 30, reading: 10, streak: 10, late: 10 } as const;
-export const NORMS = { parallelSpan: 4, pacePerHour: 20, supervisionPerHour: 45, decisionWeight: 3, readingTokens: 80_000, streakMin: 40, coolMin: 20 } as const;
+export const NORMS = {
+  parallelSpan: 4,
+  pacePerHour: 20,
+  supervisionPerHour: 45,
+  decisionWeight: 3,
+  readingTokens: 80_000,
+  streakMin: 40,
+  coolMin: 20,
+} as const;
 const LEVELS: readonly { max: number; level: Level }[] = [
   { max: 29, level: "Calm" },
   { max: 59, level: "Warming" },
@@ -62,8 +70,6 @@ export function scoreOf(fractions: Fractions): Score {
     late: Math.round(raw.late * 10) / 10,
   };
   // Rounded once from the raw points, so parts' rounding can never tip it across a boundary.
-  const index = Math.round(
-    raw.parallel + raw.pace + raw.supervision + raw.reading + raw.streak + raw.late,
-  );
+  const index = Math.round(raw.parallel + raw.pace + raw.supervision + raw.reading + raw.streak + raw.late);
   return { index, level: levelOf(index), parts, capped, top };
 }

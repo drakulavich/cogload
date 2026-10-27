@@ -28,7 +28,11 @@ export async function writeStatus(line: string, env: NodeJS.ProcessEnv): Promise
     if ((await mkdir(dir, { recursive: true, mode: 0o700 })) !== undefined) await chmod(dir, 0o700);
     const handle = await open(tmp, "wx", 0o600);
     created = true;
-    try { await handle.writeFile(line); } finally { await handle.close(); }
+    try {
+      await handle.writeFile(line);
+    } finally {
+      await handle.close();
+    }
     await chmod(tmp, 0o600);
     await rename(tmp, join(dir, "status.json"));
   } catch {

@@ -6,7 +6,8 @@ import type { Day, HourBucket, Level, Score } from "../types.ts";
 
 export type Character = "conductor" | "supervisor" | "marathoner" | "nightOwl";
 export type Segment = { text: string; strong: boolean };
-type HighlightKey = "peakSessions" | "contextSwitches" | "longestStreak" | "reportsRead" | "tokensRead" | "interrupts" | "lateShare";
+type HighlightKey =
+  "peakSessions" | "contextSwitches" | "longestStreak" | "reportsRead" | "tokensRead" | "interrupts" | "lateShare";
 type Highlight = { key: HighlightKey; value: string; caption: string };
 type Spectrum = { calm: number; warming: number; heating: number; fried: number };
 export type CardData = {
@@ -24,7 +25,10 @@ export type CardData = {
 // Tie order: the first of equal shares wins.
 const CHARACTERS: readonly Character[] = ["conductor", "supervisor", "marathoner", "nightOwl"];
 const NAMES: Record<Character, string> = {
-  conductor: "The Conductor", supervisor: "The Supervisor", marathoner: "The Marathoner", nightOwl: "The Night Owl",
+  conductor: "The Conductor",
+  supervisor: "The Supervisor",
+  marathoner: "The Marathoner",
+  nightOwl: "The Night Owl",
 };
 const MOTTOS: Record<Character, string> = {
   conductor: "You run agents like an orchestra.",
@@ -41,7 +45,15 @@ const OWNED: Record<Character, [HighlightKey, HighlightKey]> = {
   marathoner: ["longestStreak", "interrupts"],
   nightOwl: ["lateShare", "longestStreak"],
 };
-const POOL: readonly HighlightKey[] = ["peakSessions", "contextSwitches", "longestStreak", "reportsRead", "tokensRead", "interrupts", "lateShare"];
+const POOL: readonly HighlightKey[] = [
+  "peakSessions",
+  "contextSwitches",
+  "longestStreak",
+  "reportsRead",
+  "tokensRead",
+  "interrupts",
+  "lateShare",
+];
 // [for the value "1", for any other]
 const CAPTIONS: Record<HighlightKey, [string, string]> = {
   peakSessions: ["session at once", "sessions at once"],
@@ -103,7 +115,8 @@ export function cardData(days: Day[], w: { days: number }): CardData | null {
   // component competes fairly with a 40-point one.
   const shares: Record<Character, number> = {
     conductor: sum((b) => b.score.parts.parallel + b.score.parts.pace) / ((WEIGHTS.parallel + WEIGHTS.pace) * n),
-    supervisor: sum((b) => b.score.parts.supervision + b.score.parts.reading) / ((WEIGHTS.supervision + WEIGHTS.reading) * n),
+    supervisor:
+      sum((b) => b.score.parts.supervision + b.score.parts.reading) / ((WEIGHTS.supervision + WEIGHTS.reading) * n),
     marathoner: sum((b) => b.score.parts.streak) / (WEIGHTS.streak * n),
     nightOwl: sum((b) => b.score.parts.late) / (WEIGHTS.late * n),
   };
@@ -121,9 +134,25 @@ export function cardData(days: Day[], w: { days: number }): CardData | null {
   const spectrum = spectrumOf([count("Calm"), count("Warming"), count("Heating"), count("Fried")], n);
 
   const sentences: Record<Character, Segment[]> = {
-    conductor: [strong(plural(maxSessions, "session")), plain(" at once, "), strong(plural(maxSwitches, "context switch", "context switches")), plain(" in one hour.")],
-    supervisor: [strong(plural(reports, "agent report")), plain(" and "), strong(plural(tokens, "token", "tokens", formatTokens)), plain(" of output read.")],
-    marathoner: [plain("Longest streak "), strong(formatStreak(maxStreak)), plain(" without a break, "), strong(`${spectrum.calm}%`), plain(" of your hours calm.")],
+    conductor: [
+      strong(plural(maxSessions, "session")),
+      plain(" at once, "),
+      strong(plural(maxSwitches, "context switch", "context switches")),
+      plain(" in one hour."),
+    ],
+    supervisor: [
+      strong(plural(reports, "agent report")),
+      plain(" and "),
+      strong(plural(tokens, "token", "tokens", formatTokens)),
+      plain(" of output read."),
+    ],
+    marathoner: [
+      plain("Longest streak "),
+      strong(formatStreak(maxStreak)),
+      plain(" without a break, "),
+      strong(`${spectrum.calm}%`),
+      plain(" of your hours calm."),
+    ],
     nightOwl: [strong(`${late}%`), plain(" of your hours "), strong("late at night"), plain(".")],
   };
 
@@ -156,7 +185,11 @@ export function cardData(days: Day[], w: { days: number }): CardData | null {
   // character's own number and always shows, so the row is never empty.
   const [first, second] = owned;
   const keys = [first, ...[second, third].filter((k) => norms[k] > 0)];
-  const highlights = keys.map((key) => ({ key, value: values[key], caption: CAPTIONS[key][values[key] === "1" ? 0 : 1] }));
+  const highlights = keys.map((key) => ({
+    key,
+    value: values[key],
+    caption: CAPTIONS[key][values[key] === "1" ? 0 : 1],
+  }));
 
   return {
     days: w.days,

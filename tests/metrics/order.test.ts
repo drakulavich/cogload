@@ -6,10 +6,16 @@ const sid = (n: number) => `${n}${n}${n}${n}${n}${n}${n}${n}-1111-4111-8111-1111
 const W = { to: "2026-09-14", days: 1 };
 
 describe("order independence", () => {
-  const files = [1, 2, 3].map((n) => transcript(
-    [prompt(`2026-09-14T13:0${n}:00.000Z`, sid(n)), assistant(`2026-09-14T13:1${n}:00.000Z`, sid(n)), prompt(`2026-09-14T13:2${n}:00.000Z`, sid(n))],
-    `p/${n}.jsonl`,
-  ));
+  const files = [1, 2, 3].map((n) =>
+    transcript(
+      [
+        prompt(`2026-09-14T13:0${n}:00.000Z`, sid(n)),
+        assistant(`2026-09-14T13:1${n}:00.000Z`, sid(n)),
+        prompt(`2026-09-14T13:2${n}:00.000Z`, sid(n)),
+      ],
+      `p/${n}.jsonl`,
+    ),
+  );
 
   test("the same transcripts in any order give the same report", () => {
     const a = analyze(files, W);
@@ -21,7 +27,11 @@ describe("order independence", () => {
   });
 
   test("events out of chronological order inside one file are sorted", () => {
-    const shuffled = transcript([prompt("2026-09-14T13:20:00.000Z", sid(1)), prompt("2026-09-14T13:00:00.000Z", sid(1)), prompt("2026-09-14T13:10:00.000Z", sid(1))]);
+    const shuffled = transcript([
+      prompt("2026-09-14T13:20:00.000Z", sid(1)),
+      prompt("2026-09-14T13:00:00.000Z", sid(1)),
+      prompt("2026-09-14T13:10:00.000Z", sid(1)),
+    ]);
     const b = analyze([shuffled], W)[0]!.buckets[13]!;
     // sorted: 13:00, 13:10 (gap 10, not > GAP_MS, continues), 13:20 (gap 10, continues).
     // The whole run is one streak from 13:00 to 13:20, so its length is 20.

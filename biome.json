@@ -6,12 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": [
-      "src/**",
-      "tests/**",
-      "scripts/**",
-      "plugin/**"
-    ]
+    "includes": ["src/**", "tests/**", "scripts/**", "plugin/**"]
   },
   "formatter": {
     "enabled": false
@@ -34,21 +29,11 @@
   },
   "overrides": [
     {
-      "includes": [
-        "src/**/*.ts",
-        "!src/lib/card/image.io.ts"
-      ],
-      "plugins": [
-        "./lint/no-bun-spawn.grit"
-      ]
+      "includes": ["src/**/*.ts", "!src/lib/card/image.io.ts"],
+      "plugins": ["./lint/no-bun-spawn.grit"]
     },
     {
-      "includes": [
-        "src/lib/**/*.ts",
-        "!src/lib/**/*.io.ts",
-        "src/cli/args.ts",
-        "src/cli/timing.ts"
-      ],
+      "includes": ["src/lib/**/*.ts", "!src/lib/**/*.io.ts", "src/cli/args.ts", "src/cli/timing.ts"],
       "linter": {
         "rules": {
           "correctness": {
@@ -70,9 +55,7 @@
       }
     },
     {
-      "includes": [
-        "src/lib/**/*.ts"
-      ],
+      "includes": ["src/lib/**/*.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -81,16 +64,11 @@
               "options": {
                 "patterns": [
                   {
-                    "group": [
-                      "../*/*.ts",
-                      "!../*/index.ts"
-                    ],
+                    "group": ["../*/*.ts", "!../*/index.ts"],
                     "message": "Another feature is reached through its index.ts. Export what you need from src/lib/<feature>/index.ts; files of one feature import each other directly."
                   },
                   {
-                    "group": [
-                      "**/cli/**"
-                    ],
+                    "group": ["**/cli/**"],
                     "message": "The library never depends on the CLI. Move the shared piece into src/lib."
                   }
                 ]
@@ -101,10 +79,7 @@
       }
     },
     {
-      "includes": [
-        "src/lib/**/*.ts",
-        "!src/lib/**/*.io.ts"
-      ],
+      "includes": ["src/lib/**/*.ts", "!src/lib/**/*.io.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -113,23 +88,15 @@
               "options": {
                 "patterns": [
                   {
-                    "group": [
-                      "../*/*.ts",
-                      "!../*/index.ts"
-                    ],
+                    "group": ["../*/*.ts", "!../*/index.ts"],
                     "message": "Another feature is reached through its index.ts. Export what you need from src/lib/<feature>/index.ts; files of one feature import each other directly."
                   },
                   {
-                    "group": [
-                      "**/cli/**"
-                    ],
+                    "group": ["**/cli/**"],
                     "message": "The library never depends on the CLI. Move the shared piece into src/lib."
                   },
                   {
-                    "group": [
-                      "bun",
-                      "bun:*"
-                    ],
+                    "group": ["bun", "bun:*"],
                     "message": "Pure code takes data as arguments. Move this into a *.io.ts file of the feature, or into src/cli/commands.io.ts."
                   }
                 ]
@@ -140,9 +107,7 @@
       }
     },
     {
-      "includes": [
-        "src/cli/**/*.ts"
-      ],
+      "includes": ["src/cli/**/*.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -151,10 +116,7 @@
               "options": {
                 "patterns": [
                   {
-                    "group": [
-                      "../lib/*/*.ts",
-                      "!../lib/*/index.ts"
-                    ],
+                    "group": ["../lib/*/*.ts", "!../lib/*/index.ts"],
                     "message": "The CLI imports a feature through src/lib/<feature>/index.ts. Export what it needs from there."
                   }
                 ]
@@ -165,10 +127,7 @@
       }
     },
     {
-      "includes": [
-        "src/cli/args.ts",
-        "src/cli/timing.ts"
-      ],
+      "includes": ["src/cli/args.ts", "src/cli/timing.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -177,17 +136,11 @@
               "options": {
                 "patterns": [
                   {
-                    "group": [
-                      "../lib/*/*.ts",
-                      "!../lib/*/index.ts"
-                    ],
+                    "group": ["../lib/*/*.ts", "!../lib/*/index.ts"],
                     "message": "The CLI imports a feature through src/lib/<feature>/index.ts. Export what it needs from there."
                   },
                   {
-                    "group": [
-                      "bun",
-                      "bun:*"
-                    ],
+                    "group": ["bun", "bun:*"],
                     "message": "Pure code takes data as arguments. Move this into a *.io.ts file of the feature, or into src/cli/commands.io.ts."
                   }
                 ]
@@ -198,10 +151,7 @@
       }
     },
     {
-      "includes": [
-        "tests/**/*.ts",
-        "scripts/**/*.ts"
-      ],
+      "includes": ["tests/**/*.ts", "scripts/**/*.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -210,10 +160,7 @@
               "options": {
                 "patterns": [
                   {
-                    "group": [
-                      "**/src/lib/*/*.ts",
-                      "!**/src/lib/*/index.ts"
-                    ],
+                    "group": ["**/src/lib/*/*.ts", "!**/src/lib/*/index.ts"],
                     "message": "Tests and scripts use a feature through its index.ts like any caller, so moving a file inside a feature never touches them."
                   }
                 ]

@@ -3,37 +3,57 @@ import { score, levelOf } from "../../src/lib/metrics/index.ts";
 import type { Level, Metrics } from "../../src/lib/types.ts";
 
 const base: Metrics = {
-  sessions: 1, prompts: 0, reports: 0, outputTokens: 0, interrupts: 0, rejects: 0, questions: 0, plans: 0, modeSwitches: 0,
-  decisions: 0, contextSwitches: 0, activeMin: 5, streakMin: 0, lateNight: false,
+  sessions: 1,
+  prompts: 0,
+  reports: 0,
+  outputTokens: 0,
+  interrupts: 0,
+  rejects: 0,
+  questions: 0,
+  plans: 0,
+  modeSwitches: 0,
+  decisions: 0,
+  contextSwitches: 0,
+  activeMin: 5,
+  streakMin: 0,
+  lateNight: false,
 };
 const m = (over: Partial<Metrics>): Metrics => ({ ...base, ...over });
 
 describe("score", () => {
   test.each<[string, Partial<Metrics>, number]>([
     ["idle single session", {}, 0],
-    ["3 sessions = half of parallel weight", { sessions: 3 }, 13],                    // 25*(2/4) = 12.5 → 13
-    ["5 sessions caps parallel", { sessions: 5 }, 25],                                // 25*(4/4) = 25
-    ["9 sessions still capped", { sessions: 9 }, 25],                                 // clamp(8/4) = 1 → 25
-    ["10 prompts = half pace", { prompts: 10 }, 8],                                   // 15*(10/20) = 7.5 → 8
-    ["20 prompts caps pace", { prompts: 20 }, 15],                                    // 15*(20/20) = 15
-    ["40 prompts still capped", { prompts: 40 }, 15],                                 // clamp(40/20) = 1 → 15
-    ["5 decisions = a third of supervision", { decisions: 5 }, 10],                   // 30*(3*5/45) = 10
-    ["15 decisions cap supervision alone", { decisions: 15 }, 30],                    // 30*(45/45) = 30
-    ["30 decisions still capped", { decisions: 30 }, 30],                             // clamp(90/45) = 1 → 30
-    ["45 reports cap supervision alone", { reports: 45 }, 30],                        // 30*(45/45) = 30
-    ["9 reports = a fifth of supervision", { reports: 9 }, 6],                        // 30*(9/45) = 6
-    ["45 context switches cap supervision alone", { contextSwitches: 45 }, 30],       // 30*(45/45) = 30
+    ["3 sessions = half of parallel weight", { sessions: 3 }, 13], // 25*(2/4) = 12.5 → 13
+    ["5 sessions caps parallel", { sessions: 5 }, 25], // 25*(4/4) = 25
+    ["9 sessions still capped", { sessions: 9 }, 25], // clamp(8/4) = 1 → 25
+    ["10 prompts = half pace", { prompts: 10 }, 8], // 15*(10/20) = 7.5 → 8
+    ["20 prompts caps pace", { prompts: 20 }, 15], // 15*(20/20) = 15
+    ["40 prompts still capped", { prompts: 40 }, 15], // clamp(40/20) = 1 → 15
+    ["5 decisions = a third of supervision", { decisions: 5 }, 10], // 30*(3*5/45) = 10
+    ["15 decisions cap supervision alone", { decisions: 15 }, 30], // 30*(45/45) = 30
+    ["30 decisions still capped", { decisions: 30 }, 30], // clamp(90/45) = 1 → 30
+    ["45 reports cap supervision alone", { reports: 45 }, 30], // 30*(45/45) = 30
+    ["9 reports = a fifth of supervision", { reports: 9 }, 6], // 30*(9/45) = 6
+    ["45 context switches cap supervision alone", { contextSwitches: 45 }, 30], // 30*(45/45) = 30
     ["decisions, reports and switches share one norm", { decisions: 5, reports: 15, contextSwitches: 15 }, 30], // (15+15+15)/45 = 1 → 30
-    ["40 000 output tokens = half reading", { outputTokens: 40_000 }, 5],             // 10*(40000/80000) = 5
-    ["80 000 output tokens cap reading", { outputTokens: 80_000 }, 10],               // 10*(80000/80000) = 10
-    ["200 000 output tokens still capped", { outputTokens: 200_000 }, 10],            // clamp(200000/80000) = 1 → 10
-    ["20 min streak = half", { streakMin: 20 }, 5],                                   // 10*(20/40) = 5
-    ["40 min streak caps", { streakMin: 40 }, 10],                                    // 10*(40/40) = 10
-    ["late night alone", { lateNight: true }, 10],                                    // 10*1 = 10
+    ["40 000 output tokens = half reading", { outputTokens: 40_000 }, 5], // 10*(40000/80000) = 5
+    ["80 000 output tokens cap reading", { outputTokens: 80_000 }, 10], // 10*(80000/80000) = 10
+    ["200 000 output tokens still capped", { outputTokens: 200_000 }, 10], // clamp(200000/80000) = 1 → 10
+    ["20 min streak = half", { streakMin: 20 }, 5], // 10*(20/40) = 5
+    ["40 min streak caps", { streakMin: 40 }, 10], // 10*(40/40) = 10
+    ["late night alone", { lateNight: true }, 10], // 10*1 = 10
     // 25 + 15 + 30 + 10 + 10 + 10 = 100
-    ["everything at cap", { sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40, lateNight: true }, 100],
+    [
+      "everything at cap",
+      { sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40, lateNight: true },
+      100,
+    ],
     // The same without the late-night flag: 25 + 15 + 30 + 10 + 10 = 90, the daytime maximum.
-    ["everything at cap but the hour", { sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40 }, 90],
+    [
+      "everything at cap but the hour",
+      { sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40 },
+      90,
+    ],
     // Integer weights keep this exact in floating point: 12.5 + 5 = 17.5, and
     // Math.round takes a mathematical half upwards, so the index is 18, not 17.
     ["an exact half-point sum rounds up", { sessions: 3, streakMin: 20 }, 18],
@@ -45,7 +65,18 @@ describe("score", () => {
     // parallel 25*(2/4) = 12.5, pace 15*(10/20) = 7.5,
     // supervision 30*(3*3 + 6 + 12)/45 = 30*(27/45) = 18, reading 10*(40000/80000) = 5,
     // streak 10*(20/40) = 5, late 10 → 58 exactly.
-    const s = score(m({ sessions: 3, prompts: 10, decisions: 3, reports: 6, contextSwitches: 12, outputTokens: 40_000, streakMin: 20, lateNight: true }));
+    const s = score(
+      m({
+        sessions: 3,
+        prompts: 10,
+        decisions: 3,
+        reports: 6,
+        contextSwitches: 12,
+        outputTokens: 40_000,
+        streakMin: 20,
+        lateNight: true,
+      }),
+    );
     expect(s).not.toBeNull();
     expect(s!.parts).toEqual({ parallel: 12.5, pace: 7.5, supervision: 18, reading: 5, streak: 5, late: 10 });
     expect(Math.round(Object.values(s!.parts).reduce((a, b) => a + b, 0))).toBe(s!.index);
@@ -81,7 +112,11 @@ describe("score", () => {
   });
 
   test("capped breaks a tie in weight by the order of the weights", () => {
-    expect(score(m({ lateNight: true, outputTokens: 80_000, streakMin: 40 }))?.capped).toEqual(["reading", "streak", "late"]);
+    expect(score(m({ lateNight: true, outputTokens: 80_000, streakMin: 40 }))?.capped).toEqual([
+      "reading",
+      "streak",
+      "late",
+    ]);
   });
 
   test("top is the part closest to its weight when nothing is capped", () => {
@@ -106,8 +141,16 @@ describe("score", () => {
     expect(score(m({ sessions: 0, activeMin: 0 }))).toBeNull();
   });
 
-  test.each<[number, Level]>([[0, "Calm"], [29, "Calm"], [30, "Warming"], [59, "Warming"], [60, "Heating"], [84, "Heating"], [85, "Fried"], [100, "Fried"]])(
-    "level of %i is %s", (index, level) => expect(levelOf(index)).toBe(level));
+  test.each<[number, Level]>([
+    [0, "Calm"],
+    [29, "Calm"],
+    [30, "Warming"],
+    [59, "Warming"],
+    [60, "Heating"],
+    [84, "Heating"],
+    [85, "Fried"],
+    [100, "Fried"],
+  ])("level of %i is %s", (index, level) => expect(levelOf(index)).toBe(level));
 
   test("level is attached to the score", () => {
     expect(score(m({ sessions: 5, prompts: 20 }))?.level).toBe("Warming"); // 25 + 15 = 40
@@ -116,6 +159,8 @@ describe("score", () => {
   test("the daytime maximum of 90 is already Fried", () => {
     // Without the late-night flag the index tops out at 90, which is inside the
     // 85-100 Fried band: a full daytime hour is not merely Heating.
-    expect(score(m({ sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40 }))?.level).toBe("Fried");
+    expect(score(m({ sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40 }))?.level).toBe(
+      "Fried",
+    );
   });
 });

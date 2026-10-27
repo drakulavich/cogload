@@ -4,15 +4,36 @@
   "description": "Keep your head cold. A thermometer for your Claude Code days: every hour scored 0 to 100 from the transcripts already on your disk. Nothing leaves your machine.",
   "license": "MIT",
   "author": "Anton Yakutovich",
-  "repository": { "type": "git", "url": "git+https://github.com/drakulavich/cogload.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drakulavich/cogload.git"
+  },
   "homepage": "https://github.com/drakulavich/cogload#readme",
   "bugs": "https://github.com/drakulavich/cogload/issues",
-  "keywords": ["claude-code", "cognitive-load", "developer-experience", "cli", "bun"],
+  "keywords": [
+    "claude-code",
+    "cognitive-load",
+    "developer-experience",
+    "cli",
+    "bun"
+  ],
   "type": "module",
-  "bin": { "cogload": "src/cli/index.ts" },
-  "files": ["src/", "assets/fonts/", "assets/characters.webp", "CHANGELOG.md", "!src/**/*.test.ts"],
-  "publishConfig": { "access": "public" },
-  "engines": { "bun": ">=1.4.4" },
+  "bin": {
+    "cogload": "src/cli/index.ts"
+  },
+  "files": [
+    "src/",
+    "assets/fonts/",
+    "assets/characters.webp",
+    "CHANGELOG.md",
+    "!src/**/*.test.ts"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "bun": ">=1.4.4"
+  },
   "scripts": {
     "dev": "bun run src/cli/index.ts",
     "stats": "bun scripts/signal-stats.ts",

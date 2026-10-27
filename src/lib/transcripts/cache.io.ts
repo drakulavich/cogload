@@ -21,17 +21,35 @@ const TAIL_BYTES = 4096;
 const READERS = 16;
 const KEEP_MS = 90 * 86_400_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const KINDS: Record<EventKind, true> = { prompt: true, report: true, output: true, interrupt: true, reject: true, answer: true, question: true, plan_review: true, mode_change: true, activity: true };
+const KINDS: Record<EventKind, true> = {
+  prompt: true,
+  report: true,
+  output: true,
+  interrupt: true,
+  reject: true,
+  answer: true,
+  question: true,
+  plan_review: true,
+  mode_change: true,
+  activity: true,
+};
 
 export function tailHash(bytes: Uint8Array): Uint8Array {
-  return createHash("sha256").update(bytes.subarray(Math.max(0, bytes.length - TAIL_BYTES))).digest();
+  return createHash("sha256")
+    .update(bytes.subarray(Math.max(0, bytes.length - TAIL_BYTES)))
+    .digest();
 }
 
 function fingerprint(): Uint8Array {
   const h = createHash("sha256");
   h.update(readFileSync(new URL("./parse.ts", import.meta.url)));
   h.update(readFileSync(new URL("../types.ts", import.meta.url)));
-  h.update(String((JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8")) as { version?: unknown }).version));
+  h.update(
+    String(
+      (JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8")) as { version?: unknown })
+        .version,
+    ),
+  );
   return h.digest();
 }
 
@@ -40,7 +58,11 @@ function encode(events: Event[]): Uint8Array {
   const index = new Map<string, number>();
   const rows = events.map((e) => {
     let i = index.get(e.sessionId);
-    if (i === undefined) { i = sessions.length; index.set(e.sessionId, i); sessions.push(e.sessionId); }
+    if (i === undefined) {
+      i = sessions.length;
+      index.set(e.sessionId, i);
+      sessions.push(e.sessionId);
+    }
     if (e.bg) return [e.ts, e.kind, i, e.tokens ?? null, 1];
     return e.tokens === undefined ? [e.ts, e.kind, i] : [e.ts, e.kind, i, e.tokens];
   });
@@ -52,12 +74,20 @@ function decode(blob: Uint8Array): Event[] | null {
     const d: unknown = JSON.parse(new TextDecoder().decode(blob));
     if (typeof d !== "object" || d === null) return null;
     const { sessions, events } = d as { sessions?: unknown; events?: unknown };
-    if (!Array.isArray(sessions) || !sessions.every((s) => typeof s === "string") || !Array.isArray(events)) return null;
+    if (!Array.isArray(sessions) || !sessions.every((s) => typeof s === "string") || !Array.isArray(events))
+      return null;
     const out: Event[] = [];
     for (const r of events) {
       if (!Array.isArray(r) || r.length < 3 || r.length > 5) return null;
       const [ts, kind, i, tokens, bg] = r as unknown[];
-      if (typeof ts !== "number" || typeof kind !== "string" || !Object.hasOwn(KINDS, kind) || typeof i !== "number" || sessions[i] === undefined) return null;
+      if (
+        typeof ts !== "number" ||
+        typeof kind !== "string" ||
+        !Object.hasOwn(KINDS, kind) ||
+        typeof i !== "number" ||
+        sessions[i] === undefined
+      )
+        return null;
       const e: Event = { ts, sessionId: sessions[i] as string, kind: kind as EventKind };
       if (r.length === 5) {
         if (bg !== 1) return null;
@@ -95,7 +125,15 @@ async function readTail(path: string, size: number): Promise<Uint8Array | null> 
 
 const equal = (a: Uint8Array, b: Uint8Array): boolean => a.length === b.length && a.every((x, i) => x === b[i]);
 
-type Row = { dev: number; ino: number; size: number; mtime_ms: number; tail: Uint8Array; from_ms: number; events: Uint8Array };
+type Row = {
+  dev: number;
+  ino: number;
+  size: number;
+  mtime_ms: number;
+  tail: Uint8Array;
+  from_ms: number;
+  events: Uint8Array;
+};
 
 class Foreign extends Error {}
 
@@ -131,7 +169,9 @@ function connect(path: string): Database {
     }).immediate();
     return db;
   } catch (e) {
-    try { db.close(); } catch {}
+    try {
+      db.close();
+    } catch {}
     throw e;
   }
 }
@@ -172,9 +212,18 @@ export function openCache(env: NodeJS.ProcessEnv): TranscriptCache | null {
   }
 }
 
-const remove = (path: string): void => { for (const f of [path, `${path}-wal`, `${path}-shm`]) rmSync(f, { force: true }); };
+const remove = (path: string): void => {
+  for (const f of [path, `${path}-wal`, `${path}-shm`]) rmSync(f, { force: true });
+};
 
-const fileId = (path: string): string | null => { try { const s = statSync(path); return `${s.dev}:${s.ino}`; } catch { return null; } };
+const fileId = (path: string): string | null => {
+  try {
+    const s = statSync(path);
+    return `${s.dev}:${s.ino}`;
+  } catch {
+    return null;
+  }
+};
 
 // A file found corrupt only once it is queried (the header was fine) is
 // replaced like one that fails to open, once; this run then misses every file.
@@ -188,14 +237,18 @@ function cacheOn(db: Database, parser: Uint8Array, path: string): TranscriptCach
       const found = new Map<string, Event[]>();
       try {
         const keyed = entries.filter((e) => e.ino !== 0);
-        const rows = db.query<Row, [Uint8Array, string]>(
-          `SELECT dev, ino, size, mtime_ms, tail, from_ms, events FROM transcript
+        const rows = db
+          .query<Row, [Uint8Array, string]>(
+            `SELECT dev, ino, size, mtime_ms, tail, from_ms, events FROM transcript
            WHERE parser = ? AND (dev, ino) IN (SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]') FROM json_each(?))`,
-        ).all(parser, JSON.stringify(keyed.map((e) => [e.dev, e.ino])));
+          )
+          .all(parser, JSON.stringify(keyed.map((e) => [e.dev, e.ino])));
         const byKey = new Map(rows.map((r) => [`${r.dev}:${r.ino}`, r]));
         const candidates = keyed.flatMap((entry) => {
           const row = byKey.get(`${entry.dev}:${entry.ino}`);
-          return row && row.size === entry.size && row.mtime_ms === entry.mtimeMs && row.from_ms <= cutoffMs ? [{ entry, row }] : [];
+          return row && row.size === entry.size && row.mtime_ms === entry.mtimeMs && row.from_ms <= cutoffMs
+            ? [{ entry, row }]
+            : [];
         });
         let next = 0;
         const reader = async (): Promise<void> => {
@@ -212,8 +265,13 @@ function cacheOn(db: Database, parser: Uint8Array, path: string): TranscriptCach
       } catch (e) {
         found.clear();
         broken.length = 0;
-        if (!replaceable(e)) { failed = true; return null; }
-        try { db.close(); } catch {}
+        if (!replaceable(e)) {
+          failed = true;
+          return null;
+        }
+        try {
+          db.close();
+        } catch {}
         try {
           // Only the file this run opened: a different one at the path is
           // another run's fresh cache. Unlinking a file another run still has
@@ -246,7 +304,17 @@ function cacheOn(db: Database, parser: Uint8Array, path: string): TranscriptCach
           for (const k of broken) drop.run(k);
           for (const { entry: e, tail, fromMs, events } of fresh) {
             if (e.ino === 0 || !events.every((ev) => UUID.test(ev.sessionId))) continue;
-            upsert.run({ dev: e.dev, ino: e.ino, parser, size: e.size, mtime: e.mtimeMs, tail, from: fromMs, now: nowMs, events: encode(events) });
+            upsert.run({
+              dev: e.dev,
+              ino: e.ino,
+              parser,
+              size: e.size,
+              mtime: e.mtimeMs,
+              tail,
+              from: fromMs,
+              now: nowMs,
+              events: encode(events),
+            });
           }
           for (const e of hit) if (e.ino !== 0) touch.run({ now: nowMs, dev: e.dev, ino: e.ino });
           db.run("DELETE FROM transcript WHERE used_at < ?", [nowMs - KEEP_MS]);
@@ -255,7 +323,9 @@ function cacheOn(db: Database, parser: Uint8Array, path: string): TranscriptCach
     },
 
     close() {
-      try { db.close(); } catch {}
+      try {
+        db.close();
+      } catch {}
     },
   };
 }

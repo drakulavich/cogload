@@ -25,11 +25,17 @@ const label = (date: string) => {
 
 export function renderWeek(days: Day[], color: boolean): string {
   // 12-char label, 24 cells of 3 chars, peak in 6, active in 8.
-  const header = "            " + Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")} `).join("") + "  peak  active";
+  const header =
+    "            " + Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")} `).join("") + "  peak  active";
   const rows = days.map((d) => {
-    const cells = d.buckets.map((b) => ` ${b.score ? paint(GLYPH[b.score.level], b.score.level, color) : "·"} `).join("");
+    const cells = d.buckets
+      .map((b) => ` ${b.score ? paint(GLYPH[b.score.level], b.score.level, color) : "·"} `)
+      .join("");
     // Padding stays outside the paint so the escape codes add no width.
-    const peak = d.peak === null ? "-".padStart(6) : " ".repeat(6 - String(d.peak).length) + paint(String(d.peak), levelOf(d.peak), color);
+    const peak =
+      d.peak === null
+        ? "-".padStart(6)
+        : " ".repeat(6 - String(d.peak).length) + paint(String(d.peak), levelOf(d.peak), color);
     const row = `${label(d.date).padEnd(12)}${cells}${peak}${hm(d.activeMin).padStart(8)}`;
     // A day no hour scored in is 24 dots and a dash: no escape of its own, so
     // one dim wrapper is enough.
@@ -44,9 +50,22 @@ export function renderWeek(days: Day[], color: boolean): string {
   const decisions = days.reduce((s, d) => s + d.totals.decisions, 0);
   const maxSessions = Math.max(0, ...days.map((d) => d.totals.maxSessions));
   // Compact counts keep a very active window inside the grid's 98 columns.
-  const totals = dim(`  ${hm(active)} active   ${plural(prompts, "prompt")}   ${plural(reports, "report")}   ${plural(decisions, "decision")}   ${plural(maxSessions, "session")} at once`, color);
+  const totals = dim(
+    `  ${hm(active)} active   ${plural(prompts, "prompt")}   ${plural(reports, "report")}   ${plural(decisions, "decision")}   ${plural(maxSessions, "session")} at once`,
+    color,
+  );
   // Today need not be the last row: --to may name a later day.
-  return [header, ...rows, "", legend, totals, ...snapshotLine(days.find((d) => d.asOf), color)].join("\n");
+  return [
+    header,
+    ...rows,
+    "",
+    legend,
+    totals,
+    ...snapshotLine(
+      days.find((d) => d.asOf),
+      color,
+    ),
+  ].join("\n");
 }
 
 const fmtTokens = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
@@ -82,14 +101,27 @@ const EXPLAIN: Col[] = [
 // other columns always show, so two days still line up.
 const EVENT_COLS = new Set(["rep", "intr", "rej", "quest", "plan", "mode", "ctx-sw"]);
 const FULL_NAME: Record<string, string> = {
-  rep: "reports", intr: "interrupts", rej: "rejects", quest: "questions",
-  plan: "plans", mode: "mode switches", "ctx-sw": "context switches",
+  rep: "reports",
+  intr: "interrupts",
+  rej: "rejects",
+  quest: "questions",
+  plan: "plans",
+  mode: "mode switches",
+  "ctx-sw": "context switches",
 };
 
 export function renderDay(day: Day, opts: { explain: boolean; color: boolean }): string {
   const cols = opts.explain ? [...COLS, ...EXPLAIN] : COLS;
   const line = (columns: Col[], cells: string[]) =>
-    cells.map((c, i) => { const w = columns[i]![1]; if (i === 0) return c.padEnd(w); if (columns[i]![0] === "level") return `  ${c.padEnd(w - 2)}`; return c.padStart(w); }).join("").trimEnd();
+    cells
+      .map((c, i) => {
+        const w = columns[i]![1];
+        if (i === 0) return c.padEnd(w);
+        if (columns[i]![0] === "level") return `  ${c.padEnd(w - 2)}`;
+        return c.padStart(w);
+      })
+      .join("")
+      .trimEnd();
 
   const active = day.buckets.filter((b) => b.score !== null);
   // The snapshot line still shows on an empty open day, or a run at 09:00 and
@@ -99,7 +131,10 @@ export function renderDay(day: Day, opts: { explain: boolean; color: boolean }):
   const visible = cols.filter(([name, , f]) => !EVENT_COLS.has(name) || active.some((b) => f(b) !== "0"));
   const leftOut = cols.filter((col) => EVENT_COLS.has(col[0]) && !visible.includes(col));
 
-  const header = line(visible, visible.map(([name]) => name));
+  const header = line(
+    visible,
+    visible.map(([name]) => name),
+  );
   const rows = active.map((b) => {
     const cells = visible.map(([, , f]) => f(b));
     const text = line(visible, cells);

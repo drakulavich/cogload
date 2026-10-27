@@ -42,7 +42,8 @@ export function statusOf(day: Day, now: Date): Status {
     peak: index === null ? day.peak : Math.max(index, day.peak ?? 0),
     activeMin: day.activeMin,
     streakMin,
-    restAt: streakMin > 0 ? new Date(Date.parse(day.presence!.streakStartAt) + NORMS.streakMin * 60000).toISOString() : null,
+    restAt:
+      streakMin > 0 ? new Date(Date.parse(day.presence!.streakStartAt) + NORMS.streakMin * 60000).toISOString() : null,
     restMin: GAP_MS / 60000,
   };
 }

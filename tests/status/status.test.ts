@@ -18,19 +18,29 @@ const busy = Array.from({ length: 12 }, (_, i) => {
 }).flat();
 const t = transcript([
   ...busy,
-  prompt("2026-09-14T14:10:00.000Z", S[0]!), assistant("2026-09-14T14:12:00.000Z", S[0]!),
+  prompt("2026-09-14T14:10:00.000Z", S[0]!),
+  assistant("2026-09-14T14:12:00.000Z", S[0]!),
 ]);
 
 describe("status: today's load in eleven fields", () => {
   test("the last sixty minutes, and the day's peak and active time", () => {
     const now = new Date("2026-09-14T14:25:00.000Z");
     const [day] = analyze([t], { to: "2026-09-14", days: 1, now });
-    const current = day!.buckets[14]!, busiest = day!.buckets[13]!;
+    const current = day!.buckets[14]!,
+      busiest = day!.buckets[13]!;
     const s = statusOf(day!, now);
     expect(s).toEqual({
-      schema: 1, asOf: "2026-09-14T14:25:00.000Z", date: "2026-09-14", hour: 14,
-      index: day!.live!.score!.index, level: day!.live!.score!.level,
-      peak: day!.peak, activeMin: day!.activeMin, streakMin: 0, restAt: null, restMin: 10,
+      schema: 1,
+      asOf: "2026-09-14T14:25:00.000Z",
+      date: "2026-09-14",
+      hour: 14,
+      index: day!.live!.score!.index,
+      level: day!.live!.score!.level,
+      peak: day!.peak,
+      activeMin: day!.activeMin,
+      streakMin: 0,
+      restAt: null,
+      restMin: 10,
     });
     // The window (13:25, 14:25] holds the tail of the busy hour and the quiet
     // exchange, a quarter of it after a 15-minute break: less than the peak,
@@ -54,12 +64,26 @@ describe("status: today's load in eleven fields", () => {
   test("a day with no activity is all null and zero, and still has its date and time", () => {
     const now = new Date("2026-09-14T09:15:00.000Z");
     const [day] = analyze([], { to: "2026-09-14", days: 1, now });
-    expect(statusOf(day!, now)).toEqual({ schema: 1, asOf: "2026-09-14T09:15:00.000Z", date: "2026-09-14", hour: 9, index: null, level: null, peak: null, activeMin: 0, streakMin: 0, restAt: null, restMin: 10 });
+    expect(statusOf(day!, now)).toEqual({
+      schema: 1,
+      asOf: "2026-09-14T09:15:00.000Z",
+      date: "2026-09-14",
+      hour: 9,
+      index: null,
+      level: null,
+      peak: null,
+      activeMin: 0,
+      streakMin: 0,
+      restAt: null,
+      restMin: 10,
+    });
   });
   test("renderStatus is one line in the spec's field order with a newline", () => {
     const now = new Date("2026-09-14T09:15:00.000Z");
     const [day] = analyze([], { to: "2026-09-14", days: 1, now });
-    expect(renderStatus(statusOf(day!, now))).toBe('{"schema":1,"asOf":"2026-09-14T09:15:00.000Z","date":"2026-09-14","hour":9,"index":null,"level":null,"peak":null,"activeMin":0,"streakMin":0,"restAt":null,"restMin":10}\n');
+    expect(renderStatus(statusOf(day!, now))).toBe(
+      '{"schema":1,"asOf":"2026-09-14T09:15:00.000Z","date":"2026-09-14","hour":9,"index":null,"level":null,"peak":null,"activeMin":0,"streakMin":0,"restAt":null,"restMin":10}\n',
+    );
   });
   test("the peak counts the last sixty minutes too, so the index is never above it", () => {
     // Three sessions prompting every two minutes from 13:32 to 14:30: each
@@ -105,7 +129,7 @@ describe("status: the streak is live, not the hour's", () => {
 
   test("five minutes after the last action the streak counts up to now", () => {
     const s = statusAt("2026-09-14T11:03:00.000Z");
-    expect(s.streakMin).toBe(63);   // 10:00 to 11:03, across the hour boundary
+    expect(s.streakMin).toBe(63); // 10:00 to 11:03, across the hour boundary
     expect(s.hour).toBe(11);
   });
 
@@ -152,17 +176,29 @@ describe("status: a streak that began yesterday", () => {
   test("the streak is measured from where it began, not from midnight", () => {
     const run = [prompt("2026-09-13T23:50:00.000Z", A), prompt("2026-09-13T23:58:00.000Z", A)];
     expect(statusAt(run, "2026-09-14T00:03:00.000Z").streakMin).toBe(13);
-    const day = analyze([transcript(run)], { to: "2026-09-14", days: 1, now: new Date("2026-09-14T00:03:00.000Z") })[0]!;
+    const day = analyze([transcript(run)], {
+      to: "2026-09-14",
+      days: 1,
+      now: new Date("2026-09-14T00:03:00.000Z"),
+    })[0]!;
     expect(day.presence).toEqual({ lastAt: "2026-09-13T23:58:00.000Z", streakStartAt: "2026-09-13T23:50:00.000Z" });
   });
 
   test("yesterday's action counts for nothing else", () => {
-    const day = analyze([transcript(lateAction)], { to: "2026-09-14", days: 1, now: new Date("2026-09-14T00:03:00.000Z") })[0]!;
+    const day = analyze([transcript(lateAction)], {
+      to: "2026-09-14",
+      days: 1,
+      now: new Date("2026-09-14T00:03:00.000Z"),
+    })[0]!;
     expect([day.activeMin, day.totals.prompts, day.buckets[0]!.streakMin, day.peak]).toEqual([0, 0, 0, null]);
   });
 
   test("an action of the day's own wins over the one carried in", () => {
-    const day = analyze([transcript([...lateAction, prompt("2026-09-14T00:05:00.000Z", A)])], { to: "2026-09-14", days: 1, now: new Date("2026-09-14T00:07:00.000Z") })[0]!;
+    const day = analyze([transcript([...lateAction, prompt("2026-09-14T00:05:00.000Z", A)])], {
+      to: "2026-09-14",
+      days: 1,
+      now: new Date("2026-09-14T00:07:00.000Z"),
+    })[0]!;
     expect(day.presence).toEqual({ lastAt: "2026-09-14T00:05:00.000Z", streakStartAt: "2026-09-13T23:58:00.000Z" });
   });
 });
@@ -172,7 +208,9 @@ describe("status: the streak stays inside the reader contract", () => {
   // A prompt every five minutes from 20:00 the day before to 23:45: nearly 28
   // hours. The reader contract bounds streakMin to 0..1500, and a reader treats
   // anything above as no data, so a longer streak is written as 1500.
-  const marathon = Array.from({ length: 12 * 28 - 2 }, (_, i) => prompt(new Date(Date.parse("2026-09-13T20:00:00.000Z") + i * 300_000).toISOString(), A));
+  const marathon = Array.from({ length: 12 * 28 - 2 }, (_, i) =>
+    prompt(new Date(Date.parse("2026-09-13T20:00:00.000Z") + i * 300_000).toISOString(), A),
+  );
 
   test("a streak longer than 25 hours is written as 1500 minutes", () => {
     const now = new Date("2026-09-14T23:50:00.000Z");
@@ -185,7 +223,11 @@ describe("status: the streak stays inside the reader contract", () => {
 describe("status: when the running streak is due a rest", () => {
   const A = "aaaaaaaa-1111-4111-8111-111111111111";
   const run = (lastMin: number) =>
-    transcript(Array.from({ length: lastMin / 5 + 1 }, (_, i) => prompt(`2026-09-14T10:${String(i * 5).padStart(2, "0")}:00.000Z`, A)));
+    transcript(
+      Array.from({ length: lastMin / 5 + 1 }, (_, i) =>
+        prompt(`2026-09-14T10:${String(i * 5).padStart(2, "0")}:00.000Z`, A),
+      ),
+    );
   const statusAt = (lastMin: number, iso: string) => {
     const now = new Date(iso);
     return statusOf(analyze([run(lastMin)], { to: "2026-09-14", days: 1, now })[0]!, now);

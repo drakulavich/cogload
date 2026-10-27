@@ -2,7 +2,10 @@ import { expect, test } from "bun:test";
 import { join } from "node:path";
 
 // What `npm publish` would ship, from npm's own dry run of this checkout.
-const pack = Bun.spawn(["npm", "pack", "--dry-run", "--json"], { cwd: join(import.meta.dir, "../.."), stderr: "ignore" });
+const pack = Bun.spawn(["npm", "pack", "--dry-run", "--json"], {
+  cwd: join(import.meta.dir, "../.."),
+  stderr: "ignore",
+});
 const packed = await new Response(pack.stdout).text();
 if ((await pack.exited) !== 0) throw new Error("npm pack failed");
 const [{ files, unpackedSize }] = JSON.parse(packed) as [{ files: { path: string }[]; unpackedSize: number }];

@@ -3,7 +3,17 @@ import { join } from "node:path";
 import { analyze } from "../../src/lib/metrics/index.ts";
 import { renderDay, renderJson, renderWeek } from "../../src/lib/text/index.ts";
 import { report } from "../../src/lib/report/index.ts";
-import { assistant, interrupt, mode, plan, prompt, question, reject, teammate, transcript } from "../helpers/transcript.ts";
+import {
+  assistant,
+  interrupt,
+  mode,
+  plan,
+  prompt,
+  question,
+  reject,
+  teammate,
+  transcript,
+} from "../helpers/transcript.ts";
 import type { Day, HourBucket } from "../../src/lib/types.ts";
 
 const projects = join(import.meta.dir, "../fixtures/busy-week/projects");
@@ -18,8 +28,18 @@ describe("week grid", () => {
   const lines = text.split("\n");
 
   test("header, seven rows, legend and totals", () => {
-    expect(lines[0]).toBe("            00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23   peak  active");
-    expect(lines.slice(1, 8).map((l) => l.slice(0, 9))).toEqual(["Mon 14/09", "Tue 15/09", "Wed 16/09", "Thu 17/09", "Fri 18/09", "Sat 19/09", "Sun 20/09"]);
+    expect(lines[0]).toBe(
+      "            00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23   peak  active",
+    );
+    expect(lines.slice(1, 8).map((l) => l.slice(0, 9))).toEqual([
+      "Mon 14/09",
+      "Tue 15/09",
+      "Wed 16/09",
+      "Thu 17/09",
+      "Fri 18/09",
+      "Sat 19/09",
+      "Sun 20/09",
+    ]);
     expect(lines[8]).toBe("");
     expect(lines[9]).toBe("  ░ calm   ▒ warming   ▓ heating   █ fried");
     // Hand-computed from the generator's day-by-day schedule (see busy-week.ts):
@@ -118,11 +138,16 @@ describe("week grid", () => {
     expect(coloredLines[9]).toMatch(/\x1b\[0m$/);
     expect(coloredLines[9]).toContain("\x1b[32m░\x1b[0m\x1b[2m");
     expect(coloredLines[9]).toContain("\x1b[38;5;208m▓\x1b[0m\x1b[2m");
-    expect(coloredLines[10]).toBe("\x1b[2m  21h10 active   323 prompts   0 reports   86 decisions   5 sessions at once\x1b[0m");
+    expect(coloredLines[10]).toBe(
+      "\x1b[2m  21h10 active   323 prompts   0 reports   86 decisions   5 sessions at once\x1b[0m",
+    );
   });
 
   test("the totals line uses the singular for exactly one", () => {
-    const one = analyze([transcript([prompt("2026-09-14T13:00:00.000Z", "aaaaaaaa-1111-4111-8111-111111111111")])], { to: "2026-09-14", days: 1 });
+    const one = analyze([transcript([prompt("2026-09-14T13:00:00.000Z", "aaaaaaaa-1111-4111-8111-111111111111")])], {
+      to: "2026-09-14",
+      days: 1,
+    });
     const totals = renderWeek(one, false).split("\n")[4]!;
     expect(totals).toMatch(/ active   1 prompt   0 reports   0 decisions   1 session at once$/);
   });
@@ -131,19 +156,79 @@ describe("week grid", () => {
     // Mutation this pins: dropping formatCount from any of the four counts
     // (prompts, reports, decisions, sessions at once) in the totals line.
     const emptyBucket = (hour: number): HourBucket => ({
-      hour, score: null, sessions: 0, prompts: 0, reports: 0, outputTokens: 0, interrupts: 0, rejects: 0,
-      questions: 0, plans: 0, modeSwitches: 0, decisions: 0, contextSwitches: 0, activeMin: 0, streakMin: 0, lateNight: false,
+      hour,
+      score: null,
+      sessions: 0,
+      prompts: 0,
+      reports: 0,
+      outputTokens: 0,
+      interrupts: 0,
+      rejects: 0,
+      questions: 0,
+      plans: 0,
+      modeSwitches: 0,
+      decisions: 0,
+      contextSwitches: 0,
+      activeMin: 0,
+      streakMin: 0,
+      lateNight: false,
     });
     const emptyBuckets = (): HourBucket[] => Array.from({ length: 24 }, (_, h) => emptyBucket(h));
-    const emptyDay = (date: string): Day => ({ date, peak: null, mean: null, activeMin: 0, presence: null, buckets: emptyBuckets(), totals: { prompts: 0, reports: 0, outputTokens: 0, interrupts: 0, rejects: 0, questions: 0, plans: 0, modeSwitches: 0, decisions: 0, contextSwitches: 0, maxSessions: 0 } });
+    const emptyDay = (date: string): Day => ({
+      date,
+      peak: null,
+      mean: null,
+      activeMin: 0,
+      presence: null,
+      buckets: emptyBuckets(),
+      totals: {
+        prompts: 0,
+        reports: 0,
+        outputTokens: 0,
+        interrupts: 0,
+        rejects: 0,
+        questions: 0,
+        plans: 0,
+        modeSwitches: 0,
+        decisions: 0,
+        contextSwitches: 0,
+        maxSessions: 0,
+      },
+    });
     // One day carries every huge value; the other six stay empty, so the week
     // sums (prompts, reports, decisions) equal that day's totals exactly and
     // maxSessions (a max, not a sum) is unaffected by how many days hold it.
-    const hugeDay: Day = { ...emptyDay("2026-09-14"), activeMin: 999_999, totals: { prompts: 999_999_999, reports: 999_999_999, outputTokens: 0, interrupts: 0, rejects: 0, questions: 0, plans: 0, modeSwitches: 0, decisions: 999_999_999, contextSwitches: 0, maxSessions: 999_999_999 } };
-    const hugeDays = [hugeDay, emptyDay("2026-09-15"), emptyDay("2026-09-16"), emptyDay("2026-09-17"), emptyDay("2026-09-18"), emptyDay("2026-09-19"), emptyDay("2026-09-20")];
+    const hugeDay: Day = {
+      ...emptyDay("2026-09-14"),
+      activeMin: 999_999,
+      totals: {
+        prompts: 999_999_999,
+        reports: 999_999_999,
+        outputTokens: 0,
+        interrupts: 0,
+        rejects: 0,
+        questions: 0,
+        plans: 0,
+        modeSwitches: 0,
+        decisions: 999_999_999,
+        contextSwitches: 0,
+        maxSessions: 999_999_999,
+      },
+    };
+    const hugeDays = [
+      hugeDay,
+      emptyDay("2026-09-15"),
+      emptyDay("2026-09-16"),
+      emptyDay("2026-09-17"),
+      emptyDay("2026-09-18"),
+      emptyDay("2026-09-19"),
+      emptyDay("2026-09-20"),
+    ];
     const hugeLines = renderWeek(hugeDays, false).split("\n");
     expect(hugeLines[9]).toBe("  ░ calm   ▒ warming   ▓ heating   █ fried");
-    expect(hugeLines[10]).toBe("  16666h39 active   999M prompts   999M reports   999M decisions   999M sessions at once");
+    expect(hugeLines[10]).toBe(
+      "  16666h39 active   999M prompts   999M reports   999M decisions   999M sessions at once",
+    );
     expect(hugeLines[9]!.length).toBeLessThanOrEqual(100);
     expect(hugeLines[10]!.length).toBeLessThanOrEqual(100);
     // Values under 10 000 (busy-week's) are unaffected by the compact format.
@@ -158,7 +243,9 @@ describe("day table", () => {
     // busy-week has no inbound agent messages, so `rep` reads 0 in every bucket all
     // day and is left out; every other event column is nonzero somewhere (the
     // storm hours). Mutation: dropping `rep` from EVENT_COLS would put it back.
-    expect(lines[0]).toBe("hour   index  level    sess  prompts  intr  rej  quest  plan  mode  ctx-sw  streak  out-tok");
+    expect(lines[0]).toBe(
+      "hour   index  level    sess  prompts  intr  rej  quest  plan  mode  ctx-sw  streak  out-tok",
+    );
     const row13 = lines.find((l) => l.startsWith("13:00"))!;
     // 5 sessions x 11 prompt/reply pairs each (m = n, n+5, ..., <=55) = 55 prompts and
     // 55 assistant replies at 1000 output tokens apiece = 55000 -> "55.0k".
@@ -188,7 +275,9 @@ describe("day table", () => {
     // A quiet today needs "as of" too: otherwise a run at 09:00 and one at
     // 18:00 on an empty today would print the identical output.
     const [open] = analyze([], { to: "2026-09-14", days: 1, now: new Date("2026-09-14T09:15:00.000Z") });
-    expect(renderDay(open!, { explain: false, color: false }).split("\n").at(-1)).toBe("  as of 09:15, this hour is still running");
+    expect(renderDay(open!, { explain: false, color: false }).split("\n").at(-1)).toBe(
+      "  as of 09:15, this hour is still running",
+    );
     const [closed] = analyze([], { to: "2026-09-14", days: 1 });
     expect(renderDay(closed!, { explain: false, color: false })).not.toContain("as of");
   });
@@ -230,17 +319,14 @@ describe("day table", () => {
       "a/s.jsonl",
     );
     const tb = transcript(
-      [
-        mode(B, "auto"),
-        prompt(at("13:06"), B),
-        assistant(at("13:07"), B),
-        teammate(at("13:08"), B),
-      ],
+      [mode(B, "auto"), prompt(at("13:06"), B), assistant(at("13:07"), B), teammate(at("13:08"), B)],
       "b/s.jsonl",
     );
     const day = analyze([ta, tb], { to: "2026-09-14", days: 1 })[0]!;
     const lines = renderDay(day, { explain: false, color: false }).split("\n");
-    expect(lines[0]).toBe("hour   index  level    sess  prompts  rep  intr  rej  quest  plan  mode  ctx-sw  streak  out-tok");
+    expect(lines[0]).toBe(
+      "hour   index  level    sess  prompts  rep  intr  rej  quest  plan  mode  ctx-sw  streak  out-tok",
+    );
     expect(lines.length).toBe(2); // header + one row (13:00), no note
     expect(lines.some((l) => l.startsWith("  no "))).toBe(false);
   });
@@ -248,7 +334,9 @@ describe("day table", () => {
   test("a day taken today ends with the snapshot time; a closed day does not", () => {
     const t = transcript([prompt("2026-09-14T13:00:00.000Z", "aaaaaaaa-1111-4111-8111-111111111111")]);
     const [day] = analyze([t], { to: "2026-09-14", days: 1, now: new Date("2026-09-14T14:32:00.000Z") });
-    expect(renderDay(day!, { explain: false, color: false }).split("\n").at(-1)).toBe("  as of 14:32, this hour is still running");
+    expect(renderDay(day!, { explain: false, color: false }).split("\n").at(-1)).toBe(
+      "  as of 14:32, this hour is still running",
+    );
     expect(renderWeek([day!], false).split("\n").at(-1)).toBe("  as of 14:32, this hour is still running");
     const [closed] = analyze([t], { to: "2026-09-14", days: 1 });
     expect(renderDay(closed!, { explain: false, color: false })).not.toContain("as of");

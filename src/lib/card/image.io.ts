@@ -8,7 +8,13 @@ import { pathToFileURL } from "node:url";
 import type { CardAssets } from "./cardhtml.ts";
 
 const ASSETS = new URL("../../../assets/", import.meta.url);
-const FILES = ["fonts/inter-400.woff2", "fonts/inter-700.woff2", "fonts/inter-800.woff2", "fonts/jetbrains-mono-500.woff2", "characters.webp"] as const;
+const FILES = [
+  "fonts/inter-400.woff2",
+  "fonts/inter-700.woff2",
+  "fonts/inter-800.woff2",
+  "fonts/jetbrains-mono-500.woff2",
+  "characters.webp",
+] as const;
 
 // A missing or empty asset is a broken install, reported without a path.
 export async function loadAssets(): Promise<CardAssets> {
@@ -20,21 +26,28 @@ export async function loadAssets(): Promise<CardAssets> {
   }
   const [inter400, inter700, inter800, mono500, characters] = parts;
   if (parts.some((p) => p.length === 0)) throw new Error("assets missing: reinstall cogload");
-  return { fonts: { inter400: inter400!, inter700: inter700!, inter800: inter800!, mono500: mono500! }, characters: characters! };
+  return {
+    fonts: { inter400: inter400!, inter700: inter700!, inter800: inter800!, mono500: mono500! },
+    characters: characters!,
+  };
 }
 
 const BACKEND = process.platform === "darwin" ? "webkit" : "chrome";
-const ENGINE_LINE = "card needs a browser engine: install a Chromium browser such as Chrome or Edge, or write --out card.html";
+const ENGINE_LINE =
+  "card needs a browser engine: install a Chromium browser such as Chrome or Edge, or write --out card.html";
 // Thrown for a card that cannot be written, so the caller can name the place it
 // chose; the message is the line for an --out the person gave.
 export class CardWriteError extends Error {
-  constructor() { super("cannot write the card: check the --out directory"); }
+  constructor() {
+    super("cannot write the card: check the --out directory");
+  }
 }
 const TEMP_LINE = "cannot draw the card: the temporary directory is not writable";
 const SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
 const WIDTH = 2400;
 const HEIGHT = 1260;
-const READY = 'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
+const READY =
+  'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
 
 // The budget bounds the whole render, and the view closes the moment it runs
 // out. The page loads from a file because a data: URL this size sometimes
@@ -46,7 +59,9 @@ export async function renderCard(html: string, out: string, timeoutMs = 15_000):
     await write(out, html);
     return;
   }
-  const dir = await mkdtemp(join(tmpdir(), "cogload-card-")).catch(() => { throw new Error(TEMP_LINE); });
+  const dir = await mkdtemp(join(tmpdir(), "cogload-card-")).catch(() => {
+    throw new Error(TEMP_LINE);
+  });
   // Ctrl-C (or a hangup, or kill) mid-render would skip the finally below and
   // leave the page behind: remove it, then end as the signal would have.
   const onSignal = (signal: NodeJS.Signals): void => {
@@ -57,8 +72,12 @@ export async function renderCard(html: string, out: string, timeoutMs = 15_000):
   let bytes: Uint8Array | null;
   try {
     const page = join(dir, "card.html");
-    await writeFile(page, html, { mode: 0o600 }).catch(() => { throw new Error(TEMP_LINE); });
-    bytes = await shoot(pathToFileURL(page).href, lower.endsWith(".webp"), timeoutMs).catch(() => { throw new Error(ENGINE_LINE); });
+    await writeFile(page, html, { mode: 0o600 }).catch(() => {
+      throw new Error(TEMP_LINE);
+    });
+    bytes = await shoot(pathToFileURL(page).href, lower.endsWith(".webp"), timeoutMs).catch(() => {
+      throw new Error(ENGINE_LINE);
+    });
   } finally {
     // The handlers stay until the page is gone: a signal during this rm still cleans up.
     await rm(dir, { recursive: true, force: true }).catch(() => {});
@@ -93,7 +112,12 @@ async function shoot(url: string, webp: boolean, ms: number): Promise<Uint8Array
   // After the deadline closes the view, the calls still pending on it may reject.
   work.catch(() => {});
   try {
-    return await Promise.race([work, new Promise<null>((done) => { timer = setTimeout(() => done(null), ms); })]);
+    return await Promise.race([
+      work,
+      new Promise<null>((done) => {
+        timer = setTimeout(() => done(null), ms);
+      }),
+    ]);
   } finally {
     clearTimeout(timer);
     view.close();
@@ -111,7 +135,11 @@ async function write(out: string, data: string | Uint8Array): Promise<void> {
   try {
     const handle = await open(tmp, "wx");
     created = true;
-    try { await handle.writeFile(data); } finally { await handle.close(); }
+    try {
+      await handle.writeFile(data);
+    } finally {
+      await handle.close();
+    }
     await rename(tmp, out);
   } catch {
     if (created) await unlink(tmp).catch(() => {});
@@ -129,6 +157,10 @@ export function openCard(path: string): void {
 // terminal cogload leads, dies with cogload. A program that fails to start is ignored.
 function startInBackground(command: string[]): void {
   try {
-    Bun.spawnSync(["sh", "-c", 'trap "" HUP; "$0" "$@" </dev/null >/dev/null 2>&1 &', ...command], { stdin: "ignore", stdout: "ignore", stderr: "ignore" });
+    Bun.spawnSync(["sh", "-c", 'trap "" HUP; "$0" "$@" </dev/null >/dev/null 2>&1 &', ...command], {
+      stdin: "ignore",
+      stdout: "ignore",
+      stderr: "ignore",
+    });
   } catch {}
 }

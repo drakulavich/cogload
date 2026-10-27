@@ -1,6 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import { analyze } from "../../src/lib/metrics/index.ts";
-import { assistantText, assistantTokensLiteral, assistantToolUseOnly, bashInput, bashStdout, compactSummary, crossSession, meta, monitorEvent, peer, pluginMessage, prompt, slashCommand, slashStdout, taskNotification, teammate, transcript } from "../helpers/transcript.ts";
+import {
+  assistantText,
+  assistantTokensLiteral,
+  assistantToolUseOnly,
+  bashInput,
+  bashStdout,
+  compactSummary,
+  crossSession,
+  meta,
+  monitorEvent,
+  peer,
+  pluginMessage,
+  prompt,
+  slashCommand,
+  slashStdout,
+  taskNotification,
+  teammate,
+  transcript,
+} from "../helpers/transcript.ts";
 
 const S = "11111111-1111-4111-8111-111111111111";
 const W = { to: "2026-09-14", days: 1 };
@@ -29,11 +47,10 @@ describe("inbound agent messages are reports, never prompts", () => {
   });
 
   test("an hour of reports and no prompt is a live session with no presence", () => {
-    const b2 = analyze([transcript([
-      teammate(at("09:00"), S),
-      crossSession(at("09:20"), S),
-      taskNotification(at("09:40"), S),
-    ])], W)[0]!.buckets[9]!;
+    const b2 = analyze(
+      [transcript([teammate(at("09:00"), S), crossSession(at("09:20"), S), taskNotification(at("09:40"), S)])],
+      W,
+    )[0]!.buckets[9]!;
     expect(b2.sessions).toBe(1);
     expect(b2.reports).toBe(3);
     expect(b2.activeMin).toBe(0);
@@ -64,14 +81,19 @@ describe("records Claude Code writes itself are not prompts (#221)", () => {
   const T = "22222222-2222-4222-8222-222222222222";
 
   test("a person who typed once and left has one prompt and no streak", () => {
-    const day = analyze([transcript([
-      prompt(at("10:00"), S),
-      compactSummary(at("10:09"), S),
-      pluginMessage(at("10:18"), S),
-      bashStdout(at("10:27"), S),
-      slashStdout(at("10:36"), S),
-      monitorEvent(at("10:45"), S),
-    ])], W)[0]!;
+    const day = analyze(
+      [
+        transcript([
+          prompt(at("10:00"), S),
+          compactSummary(at("10:09"), S),
+          pluginMessage(at("10:18"), S),
+          bashStdout(at("10:27"), S),
+          slashStdout(at("10:36"), S),
+          monitorEvent(at("10:45"), S),
+        ]),
+      ],
+      W,
+    )[0]!;
     const b = day.buckets[10]!;
     expect(b.prompts).toBe(1);
     expect(b.reports).toBe(2);
@@ -92,16 +114,20 @@ describe("records Claude Code writes itself are not prompts (#221)", () => {
   });
 
   test("a plugin message in another session is no context switch", () => {
-    const b = analyze([
-      transcript([prompt(at("13:00"), S), prompt(at("13:02"), S)], "p/a.jsonl"),
-      transcript([pluginMessage(at("13:01"), T)], "p/b.jsonl"),
-    ], W)[0]!.buckets[13]!;
+    const b = analyze(
+      [
+        transcript([prompt(at("13:00"), S), prompt(at("13:02"), S)], "p/a.jsonl"),
+        transcript([pluginMessage(at("13:01"), T)], "p/b.jsonl"),
+      ],
+      W,
+    )[0]!.buckets[13]!;
     expect(b.prompts).toBe(2);
     expect(b.contextSwitches).toBe(0);
   });
 
   test("an interrupt marker wins over promptSource system", () => {
-    const b = analyze([transcript([pluginMessage(at("13:00"), S, "[Request interrupted by user]")])], W)[0]!.buckets[13]!;
+    const b = analyze([transcript([pluginMessage(at("13:00"), S, "[Request interrupted by user]")])], W)[0]!
+      .buckets[13]!;
     expect(b.interrupts).toBe(1);
     expect(b.reports).toBe(0);
   });
@@ -109,13 +135,15 @@ describe("records Claude Code writes itself are not prompts (#221)", () => {
 
 describe("a message from another session in the 2.1.280+ shape is a report (#226)", () => {
   test("a peer message between two prompts is one report", () => {
-    const b = analyze([transcript([prompt(at("10:00"), S), peer(at("10:05"), S), prompt(at("10:10"), S)])], W)[0]!.buckets[10]!;
+    const b = analyze([transcript([prompt(at("10:00"), S), peer(at("10:05"), S), prompt(at("10:10"), S)])], W)[0]!
+      .buckets[10]!;
     expect(b.reports).toBe(1);
     expect(b.prompts).toBe(2);
   });
 
   test("a system reminder in the same place is still nothing", () => {
-    const b = analyze([transcript([prompt(at("10:00"), S), meta(at("10:05"), S), prompt(at("10:10"), S)])], W)[0]!.buckets[10]!;
+    const b = analyze([transcript([prompt(at("10:00"), S), meta(at("10:05"), S), prompt(at("10:10"), S)])], W)[0]!
+      .buckets[10]!;
     expect(b.reports).toBe(0);
     expect(b.prompts).toBe(2);
   });
@@ -139,10 +167,7 @@ describe("output tokens are summed once per requestId per file", () => {
   });
 
   test("distinct requestIds each contribute their own tokens", () => {
-    const t = transcript([
-      assistantText(at("13:00"), S, 100, "req_a"),
-      assistantText(at("13:01"), S, 200, "req_b"),
-    ]);
+    const t = transcript([assistantText(at("13:00"), S, 100, "req_a"), assistantText(at("13:01"), S, 200, "req_b")]);
     const day = analyze([t], W)[0]!;
     expect(day.buckets[13]!.outputTokens).toBe(300);
   });

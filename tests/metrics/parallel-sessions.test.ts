@@ -8,14 +8,22 @@ const at = (mm: string) => `2026-09-14T13:${mm}:00.000Z`;
 
 describe("parallel sessions", () => {
   test("one session, several prompts: no context switches, parallel part 0", () => {
-    const d = analyze([transcript([prompt(at("00"), sid(1)), prompt(at("10"), sid(1)), prompt(at("20"), sid(1))])], W)[0]!;
+    const d = analyze(
+      [transcript([prompt(at("00"), sid(1)), prompt(at("10"), sid(1)), prompt(at("20"), sid(1))])],
+      W,
+    )[0]!;
     expect(d.buckets[13]!.sessions).toBe(1);
     expect(d.buckets[13]!.contextSwitches).toBe(0);
     expect(d.buckets[13]!.score!.parts.parallel).toBe(0);
   });
 
   test("three sessions interleaved in one hour", () => {
-    const files = [1, 2, 3].map((n) => transcript([prompt(at(`0${n}`), sid(n)), assistant(at(`0${n + 3}`), sid(n)), prompt(at(`3${n}`), sid(n))], `p/${n}.jsonl`));
+    const files = [1, 2, 3].map((n) =>
+      transcript(
+        [prompt(at(`0${n}`), sid(n)), assistant(at(`0${n + 3}`), sid(n)), prompt(at(`3${n}`), sid(n))],
+        `p/${n}.jsonl`,
+      ),
+    );
     const b = analyze(files, W)[0]!.buckets[13]!;
     expect(b.sessions).toBe(3);
     // prompt order: s1 01, s2 02, s3 03, s1 31, s2 32, s3 33 → 5 switches
@@ -32,7 +40,10 @@ describe("parallel sessions", () => {
   });
 
   test("sessions are counted per hour, not per day", () => {
-    const files = [transcript([prompt(at("05"), sid(1))], "p/1.jsonl"), transcript([prompt("2026-09-14T15:05:00.000Z", sid(2))], "p/2.jsonl")];
+    const files = [
+      transcript([prompt(at("05"), sid(1))], "p/1.jsonl"),
+      transcript([prompt("2026-09-14T15:05:00.000Z", sid(2))], "p/2.jsonl"),
+    ];
     const d = analyze(files, W)[0]!;
     expect(d.buckets[13]!.sessions).toBe(1);
     expect(d.buckets[15]!.sessions).toBe(1);

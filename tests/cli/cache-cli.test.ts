@@ -25,12 +25,32 @@ beforeAll(async () => {
   base = await temp("tree");
   cwd = await temp("cwd");
   await writeTree(base, [
-    { path: `${DIR}/a.jsonl`, lines: [prompt("2026-09-12T09:00:00.000Z", A), assistant("2026-09-12T09:05:00.000Z", A), prompt("2026-09-12T09:30:00.000Z", A), prompt("2026-09-14T10:00:00.000Z", A), assistant("2026-09-14T11:05:00.000Z", A)], mtime: "2026-09-14T11:05:00.000Z" },
-    { path: `${DIR}/b.jsonl`, lines: [prompt("2026-09-13T14:00:00.000Z", B), assistant("2026-09-13T15:10:00.000Z", B)], mtime: "2026-09-13T15:10:00.000Z" },
-    { path: `${DIR}/c.jsonl`, lines: [prompt("2026-09-14T16:00:00.000Z", C), assistant("2026-09-14T17:20:00.000Z", C)], mtime: "2026-09-14T17:20:00.000Z" },
+    {
+      path: `${DIR}/a.jsonl`,
+      lines: [
+        prompt("2026-09-12T09:00:00.000Z", A),
+        assistant("2026-09-12T09:05:00.000Z", A),
+        prompt("2026-09-12T09:30:00.000Z", A),
+        prompt("2026-09-14T10:00:00.000Z", A),
+        assistant("2026-09-14T11:05:00.000Z", A),
+      ],
+      mtime: "2026-09-14T11:05:00.000Z",
+    },
+    {
+      path: `${DIR}/b.jsonl`,
+      lines: [prompt("2026-09-13T14:00:00.000Z", B), assistant("2026-09-13T15:10:00.000Z", B)],
+      mtime: "2026-09-13T15:10:00.000Z",
+    },
+    {
+      path: `${DIR}/c.jsonl`,
+      lines: [prompt("2026-09-14T16:00:00.000Z", C), assistant("2026-09-14T17:20:00.000Z", C)],
+      mtime: "2026-09-14T17:20:00.000Z",
+    },
   ]);
 });
-afterAll(async () => { for (const d of temps) await rm(d, { recursive: true, force: true }); });
+afterAll(async () => {
+  for (const d of temps) await rm(d, { recursive: true, force: true });
+});
 
 // Each test changes its own copy of the tree and starts with an empty HOME.
 async function setup(): Promise<{ home: string; projects: string }> {
@@ -39,12 +59,22 @@ async function setup(): Promise<{ home: string; projects: string }> {
   return { home: await temp("home"), projects };
 }
 
-async function spawn(home: string, projects: string, ...args: string[]): Promise<{ code: number; out: string; err: string }> {
-  const p = Bun.spawn(["bun", CLI, "--projects", projects, "--to", "2026-09-14", "--json", ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+async function spawn(
+  home: string,
+  projects: string,
+  ...args: string[]
+): Promise<{ code: number; out: string; err: string }> {
+  const p = Bun.spawn(["bun", CLI, "--projects", projects, "--to", "2026-09-14", "--json", ...args], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
+  });
   const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
   return { code, out, err };
 }
-const uncached = async (projects: string, ...args: string[]) => spawn(await temp("home"), projects, "--no-cache", ...args);
+const uncached = async (projects: string, ...args: string[]) =>
+  spawn(await temp("home"), projects, "--no-cache", ...args);
 
 const lineOf = (err: string, label: string) => err.split("\n").find((l) => l.startsWith(`${label} `));
 function hitsOf(err: string): { hits: number; misses: number } {
@@ -55,14 +85,24 @@ function hitsOf(err: string): { hits: number; misses: number } {
 const cacheDb = (home: string) => join(home, ".claude", "cogload", "cache.db");
 function sql(home: string, statement: string): void {
   const db = new Database(cacheDb(home));
-  try { db.run(statement); } finally { db.close(); }
+  try {
+    db.run(statement);
+  } finally {
+    db.close();
+  }
 }
 function rows(home: string): number {
   const db = new Database(cacheDb(home), { readonly: true });
-  try { return db.query<{ n: number }, []>("SELECT COUNT(*) AS n FROM transcript").get()!.n; } finally { db.close(); }
+  try {
+    return db.query<{ n: number }, []>("SELECT COUNT(*) AS n FROM transcript").get()!.n;
+  } finally {
+    db.close();
+  }
 }
 function bucket(out: string, date: string, hour: number): { prompts: number } {
-  const day = (JSON.parse(out) as { date: string; buckets: { hour: number; prompts: number }[] }[]).find((d) => d.date === date);
+  const day = (JSON.parse(out) as { date: string; buckets: { hour: number; prompts: number }[] }[]).find(
+    (d) => d.date === date,
+  );
   return day?.buckets.find((b) => b.hour === hour) ?? { prompts: 0 };
 }
 
@@ -83,7 +123,11 @@ describe("the transcript cache", () => {
 
   test("a history copied under another session counts once from the cache as without it (#222)", async () => {
     const projects = await temp("proj");
-    const lines = [prompt("2026-09-14T10:00:00.000Z", A), assistant("2026-09-14T10:05:00.000Z", A), prompt("2026-09-14T10:30:00.000Z", A)];
+    const lines = [
+      prompt("2026-09-14T10:00:00.000Z", A),
+      assistant("2026-09-14T10:05:00.000Z", A),
+      prompt("2026-09-14T10:30:00.000Z", A),
+    ];
     await writeTree(projects, [
       { path: `${DIR}/x.jsonl`, lines, mtime: "2026-09-14T10:30:00.000Z" },
       { path: `${DIR}/y.jsonl`, lines: copiedTo(lines, B), mtime: "2026-09-14T10:30:00.000Z" },
@@ -179,7 +223,10 @@ describe("the transcript cache", () => {
 
   test("two runs at once both print what --no-cache prints", async () => {
     const { home, projects } = await setup();
-    const [narrow, wide] = await Promise.all([spawn(home, projects, "--days", "1"), spawn(home, projects, "--days", "7")]);
+    const [narrow, wide] = await Promise.all([
+      spawn(home, projects, "--days", "1"),
+      spawn(home, projects, "--days", "7"),
+    ]);
     expect([narrow.code, narrow.err, wide.code, wide.err]).toEqual([0, "", 0, ""]);
     expect(narrow.out).toBe((await uncached(projects, "--days", "1")).out);
     expect(wide.out).toBe((await uncached(projects, "--days", "7")).out);
@@ -270,7 +317,13 @@ describe("the transcript cache", () => {
   test("a transcript with a session id that is not a UUID is never cached", async () => {
     const { home, projects } = await setup();
     const marker = "cogload-private-marker";
-    await writeTree(projects, [{ path: `${DIR}/x.jsonl`, lines: [prompt("2026-09-13T08:00:00.000Z", marker), assistant("2026-09-13T08:05:00.000Z", marker)], mtime: "2026-09-13T08:05:00.000Z" }]);
+    await writeTree(projects, [
+      {
+        path: `${DIR}/x.jsonl`,
+        lines: [prompt("2026-09-13T08:00:00.000Z", marker), assistant("2026-09-13T08:05:00.000Z", marker)],
+        mtime: "2026-09-13T08:05:00.000Z",
+      },
+    ]);
     await spawn(home, projects);
     const run2 = await spawn(home, projects, "--verbose");
     expect(run2.code).toBe(0);
@@ -320,7 +373,10 @@ describe("the transcript cache", () => {
     // cogload no longer narrows the process umask (that reached the card), so the
     // cache sets its own modes: umask 000 would otherwise leave 0777 and 0644.
     const { home, projects } = await setup();
-    const p = Bun.spawn(["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+    const p = Bun.spawn(
+      ["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"],
+      { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } },
+    );
     expect(await p.exited).toBe(0);
     const cogload = join(home, ".claude", "cogload");
     const mode = async (p: string) => (await stat(p)).mode & 0o777;
@@ -342,7 +398,9 @@ describe("the transcript cache", () => {
     const db = join(cogload, "cache.db");
     const stop = join(home, "stop");
     const poller = join(home, "poll.ts");
-    await writeFile(poller, `import { existsSync, statSync } from "node:fs";
+    await writeFile(
+      poller,
+      `import { existsSync, statSync } from "node:fs";
 const [db, stop] = process.argv.slice(2);
 const seen = new Set();
 console.log("ready");
@@ -351,12 +409,16 @@ for (let i = 0, until = Date.now() + 20000; Date.now() < until; i++) {
   if (i % 100 === 0 && existsSync(stop)) break;
 }
 console.log([...seen].sort().join(" "));
-`);
+`,
+    );
     const watch = Bun.spawn(["bun", poller, db, stop], { stdout: "pipe" });
     const lines = watch.stdout.pipeThrough(new TextDecoderStream()).getReader();
     let out = (await lines.read()).value ?? "";
     expect(out).toStartWith("ready");
-    const run = Bun.spawn(["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+    const run = Bun.spawn(
+      ["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"],
+      { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } },
+    );
     expect(await run.exited).toBe(0);
     await writeFile(stop, "");
     for (let r = await lines.read(); !r.done; r = await lines.read()) out += r.value;

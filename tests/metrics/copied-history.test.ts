@@ -6,7 +6,10 @@ const S = "11111111-1111-4111-8111-111111111111";
 const T = "22222222-2222-4222-8222-222222222222";
 const W = { to: "2026-09-14", days: 1 };
 const at = (hhmm: string) => `2026-09-14T${hhmm}:00.000Z`;
-const six = ["10:00", "10:05", "10:10", "10:15", "10:20", "10:25"].flatMap((t) => [prompt(at(t), S), assistant(at(t), S)]);
+const six = ["10:00", "10:05", "10:10", "10:15", "10:20", "10:25"].flatMap((t) => [
+  prompt(at(t), S),
+  assistant(at(t), S),
+]);
 
 describe("a history copied under a new session id counts once (#222)", () => {
   test("the copy adds no prompt, switch or session", () => {
@@ -36,7 +39,10 @@ describe("a history copied under a new session id counts once (#222)", () => {
 
   test("a copied record without text still counts once", () => {
     const withResult = [prompt(at("10:00"), S), toolResult(at("10:01"), S)];
-    const b = analyze([transcript(withResult, "p/a.jsonl"), transcript(copiedTo(withResult.slice(1), T), "p/b.jsonl")], W)[0]!.buckets[10]!;
+    const b = analyze(
+      [transcript(withResult, "p/a.jsonl"), transcript(copiedTo(withResult.slice(1), T), "p/b.jsonl")],
+      W,
+    )[0]!.buckets[10]!;
     expect(b.sessions).toBe(1);
   });
 });
