@@ -26,8 +26,7 @@ const base = (ts: string, sid: string, extra: Record<string, unknown>) =>
     ...extra,
   });
 
-export const prompt = (ts: string, sid: string) =>
-  base(ts, sid, { type: "user", message: { role: "user", content: "placeholder prompt" } });
+export const prompt = (ts: string, sid: string) => base(ts, sid, { type: "user", message: { role: "user", content: "placeholder prompt" } });
 
 export const promptBlocks = (ts: string, sid: string) =>
   base(ts, sid, { type: "user", message: { role: "user", content: [{ type: "text", text: "placeholder prompt" }] } });
@@ -183,8 +182,7 @@ export const toolUse = (ts: string, sid: string, name: string, id = "toolu_place
 export const question = (ts: string, sid: string, id?: string) => toolUse(ts, sid, "AskUserQuestion", id);
 export const plan = (ts: string, sid: string, id?: string) => toolUse(ts, sid, "ExitPlanMode", id);
 
-export const mode = (sid: string, m: string) =>
-  JSON.stringify({ type: "permission-mode", permissionMode: m, sessionId: sid });
+export const mode = (sid: string, m: string) => JSON.stringify({ type: "permission-mode", permissionMode: m, sessionId: sid });
 
 // Inbound agent messages: subagent reports, other-session messages and task
 // notifications. `bare` / `bracket` select the alternate real-world form seen
@@ -258,20 +256,13 @@ export const bashStdout = (ts: string, sid: string) =>
     turnOrigin: "human",
   });
 export const slashCommand = (ts: string, sid: string) =>
-  userText(
-    ts,
-    sid,
-    "<command-name>/placeholder</command-name>\n<command-message>placeholder</command-message>\n<command-args></command-args>",
-  );
-export const slashStdout = (ts: string, sid: string) =>
-  userText(ts, sid, "<local-command-stdout>placeholder output</local-command-stdout>");
-export const monitorEvent = (ts: string, sid: string) =>
-  userText(ts, sid, "<ci-monitor-event>placeholder event</ci-monitor-event>");
+  userText(ts, sid, "<command-name>/placeholder</command-name>\n<command-message>placeholder</command-message>\n<command-args></command-args>");
+export const slashStdout = (ts: string, sid: string) => userText(ts, sid, "<local-command-stdout>placeholder output</local-command-stdout>");
+export const monitorEvent = (ts: string, sid: string) => userText(ts, sid, "<ci-monitor-event>placeholder event</ci-monitor-event>");
 
 // A session moved to the background: Claude Code copies its records, uuid and
 // timestamp kept, into a new transcript under the new session id (#222).
-export const copiedTo = (lines: string[], sid: string) =>
-  lines.map((l) => JSON.stringify({ ...JSON.parse(l), sessionId: sid, sessionKind: "bg" }));
+export const copiedTo = (lines: string[], sid: string) => lines.map((l) => JSON.stringify({ ...JSON.parse(l), sessionId: sid, sessionKind: "bg" }));
 
 export const sidechain = (ts: string, sid: string) =>
   base(ts, sid, {
@@ -284,8 +275,7 @@ export const sidechain = (ts: string, sid: string) =>
 // A `claude -p` or Agent SDK run: Claude Code stamps every record with the entrypoint.
 export const sdk = (line: string, entrypoint = "sdk-cli") => {
   const r = JSON.parse(line);
-  if (r.type === "user" && typeof r.message?.content === "string")
-    Object.assign(r, { promptSource: "sdk", turnOrigin: "sdk" });
+  if (r.type === "user" && typeof r.message?.content === "string") Object.assign(r, { promptSource: "sdk", turnOrigin: "sdk" });
   return JSON.stringify({ ...r, entrypoint });
 };
 
@@ -294,10 +284,7 @@ export const transcript = (lines: string[], path = "p/s.jsonl"): Transcript => (
   text: lines.join("\n") + "\n",
 });
 
-export async function writeTree(
-  root: string,
-  files: { path: string; lines: string[]; mtime: string }[],
-): Promise<void> {
+export async function writeTree(root: string, files: { path: string; lines: string[]; mtime: string }[]): Promise<void> {
   for (const f of files) {
     const full = join(root, f.path);
     await mkdir(dirname(full), { recursive: true });

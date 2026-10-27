@@ -44,12 +44,7 @@ function fingerprint(): Uint8Array {
   const h = createHash("sha256");
   h.update(readFileSync(new URL("./parse.ts", import.meta.url)));
   h.update(readFileSync(new URL("../types.ts", import.meta.url)));
-  h.update(
-    String(
-      (JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8")) as { version?: unknown })
-        .version,
-    ),
-  );
+  h.update(String((JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8")) as { version?: unknown }).version));
   return h.digest();
 }
 
@@ -74,20 +69,12 @@ function decode(blob: Uint8Array): Event[] | null {
     const d: unknown = JSON.parse(new TextDecoder().decode(blob));
     if (typeof d !== "object" || d === null) return null;
     const { sessions, events } = d as { sessions?: unknown; events?: unknown };
-    if (!Array.isArray(sessions) || !sessions.every((s) => typeof s === "string") || !Array.isArray(events))
-      return null;
+    if (!Array.isArray(sessions) || !sessions.every((s) => typeof s === "string") || !Array.isArray(events)) return null;
     const out: Event[] = [];
     for (const r of events) {
       if (!Array.isArray(r) || r.length < 3 || r.length > 5) return null;
       const [ts, kind, i, tokens, bg] = r as unknown[];
-      if (
-        typeof ts !== "number" ||
-        typeof kind !== "string" ||
-        !Object.hasOwn(KINDS, kind) ||
-        typeof i !== "number" ||
-        sessions[i] === undefined
-      )
-        return null;
+      if (typeof ts !== "number" || typeof kind !== "string" || !Object.hasOwn(KINDS, kind) || typeof i !== "number" || sessions[i] === undefined) return null;
       const e: Event = { ts, sessionId: sessions[i] as string, kind: kind as EventKind };
       if (r.length === 5) {
         if (bg !== 1) return null;
@@ -138,8 +125,7 @@ type Row = {
 class Foreign extends Error {}
 
 // Only a file that is not ours is replaced; a locked or unopenable one is left alone.
-const replaceable = (e: unknown): boolean =>
-  e instanceof Foreign || /^SQLITE_(NOTADB|CORRUPT)/.test(String((e as { code?: unknown } | null)?.code));
+const replaceable = (e: unknown): boolean => e instanceof Foreign || /^SQLITE_(NOTADB|CORRUPT)/.test(String((e as { code?: unknown } | null)?.code));
 
 // Modes are set on what cogload creates; a mode the person set later is theirs.
 function connect(path: string): Database {
@@ -246,9 +232,7 @@ function cacheOn(db: Database, parser: Uint8Array, path: string): TranscriptCach
         const byKey = new Map(rows.map((r) => [`${r.dev}:${r.ino}`, r]));
         const candidates = keyed.flatMap((entry) => {
           const row = byKey.get(`${entry.dev}:${entry.ino}`);
-          return row && row.size === entry.size && row.mtime_ms === entry.mtimeMs && row.from_ms <= cutoffMs
-            ? [{ entry, row }]
-            : [];
+          return row && row.size === entry.size && row.mtime_ms === entry.mtimeMs && row.from_ms <= cutoffMs ? [{ entry, row }] : [];
         });
         let next = 0;
         const reader = async (): Promise<void> => {

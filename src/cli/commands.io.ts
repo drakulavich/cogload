@@ -1,15 +1,7 @@
 import { statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
-import {
-  CardWriteError,
-  cardData,
-  cardHtml,
-  loadAssets,
-  openCard,
-  renderCard,
-  sentenceText,
-} from "../lib/card/index.ts";
+import { CardWriteError, cardData, cardHtml, loadAssets, openCard, renderCard, sentenceText } from "../lib/card/index.ts";
 import { report, type Timing } from "../lib/report/index.ts";
 import { renderStatus, statusOf, streakFrom, writeStatus } from "../lib/status/index.ts";
 import { renderDay, renderJson, renderWeek } from "../lib/text/index.ts";
@@ -18,17 +10,9 @@ import type { Day } from "../lib/types.ts";
 import type { Args } from "./args.ts";
 
 export async function table(a: Args, now: Date, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
-  const days: Day[] = await report(
-    { projects: a.projects, to: a.to, days: a.days, now, streakFrom: streakFrom(now) },
-    timing,
-    cache,
-  );
+  const days: Day[] = await report({ projects: a.projects, to: a.to, days: a.days, now, streakFrom: streakFrom(now) }, timing, cache);
   const data = a.command === "day" ? days[0] : days;
-  const text = a.json
-    ? renderJson(data!)
-    : a.command === "day"
-      ? renderDay(days[0]!, { explain: a.explain, color: a.color })
-      : renderWeek(days, a.color);
+  const text = a.json ? renderJson(data!) : a.command === "day" ? renderDay(days[0]!, { explain: a.explain, color: a.color }) : renderWeek(days, a.color);
   // Not console.log: in Bun 1.4.2, once process.stdout is touched (isTTY in parseArgs), console.log into a pipe stops at 64 KiB.
   process.stdout.write(`${text}\n`);
   return 0;
@@ -36,11 +20,7 @@ export async function table(a: Args, now: Date, cache: TranscriptCache | null, t
 
 // The write comes first: a caller never reads a line that was not saved.
 export async function status(a: Args, now: Date, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
-  const days: Day[] = await report(
-    { projects: a.projects, to: a.to, days: a.days, now, streakFrom: streakFrom(now) },
-    timing,
-    cache,
-  );
+  const days: Day[] = await report({ projects: a.projects, to: a.to, days: a.days, now, streakFrom: streakFrom(now) }, timing, cache);
   const line = renderStatus(statusOf(days[0]!, now));
   const t = performance.now();
   await writeStatus(line, process.env);

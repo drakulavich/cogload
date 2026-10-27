@@ -18,8 +18,7 @@ import { pathToFileURL } from "node:url";
 export const WEBVIEW_TEST_TIMEOUT = Number(process.env.COGLOAD_WEBVIEW_TIMEOUT_MS) || 30_000;
 export const WEBVIEW_STEP_TIMEOUT = WEBVIEW_TEST_TIMEOUT / 3;
 const BACKEND = process.platform === "darwin" ? "webkit" : "chrome";
-const READY =
-  'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
+const READY = 'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
 
 export const webviewMissing: string | null = await (async () => {
   try {
@@ -53,10 +52,7 @@ export async function openPage(html: string, width: number, height: number): Pro
   let timer: ReturnType<typeof setTimeout> | undefined;
   const late = new Promise<never>((_, reject) => {
     timer = setTimeout(
-      () =>
-        reject(
-          new Error(`page never became ready in ${WEBVIEW_STEP_TIMEOUT} ms: navigate, fonts or images did not settle`),
-        ),
+      () => reject(new Error(`page never became ready in ${WEBVIEW_STEP_TIMEOUT} ms: navigate, fonts or images did not settle`)),
       WEBVIEW_STEP_TIMEOUT,
     );
   });

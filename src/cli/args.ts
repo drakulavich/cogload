@@ -80,16 +80,9 @@ function spanDays(from: string, to: string): number {
 }
 
 // Checks run in the order a reader meets the flags in --help.
-function windowOf(
-  days: string | null,
-  from: string | null,
-  to: string | null,
-  defaultDays: number,
-  now: Date,
-): { to: string; days: number } {
+function windowOf(days: string | null, from: string | null, to: string | null, defaultDays: number, now: Date): { to: string; days: number } {
   if (from !== null && days !== null) throw new UsageError("--from sets the length; drop --days");
-  if (days !== null && (!/^\d+$/.test(days) || Number(days) < 1 || Number(days) > 90))
-    throw new UsageError(`--days must be 1..90${got(days)}`);
+  if (days !== null && (!/^\d+$/.test(days) || Number(days) < 1 || Number(days) > 90)) throw new UsageError(`--days must be 1..90${got(days)}`);
   const last = to === null ? localDate(now) : resolveDate("--to", to, now);
   if (from === null) return { to: last, days: days === null ? defaultDays : Number(days) };
   const first = resolveDate("--from", from, now);
@@ -99,13 +92,7 @@ function windowOf(
   return { to: last, days: span };
 }
 
-export function parseArgs(
-  argv: string[],
-  now: Date,
-  env: Record<string, string | undefined>,
-  isTTY: boolean,
-  projects: string,
-): Args {
+export function parseArgs(argv: string[], now: Date, env: Record<string, string | undefined>, isTTY: boolean, projects: string): Args {
   const a: Args = {
     command: "grid",
     to: localDate(now),
@@ -144,8 +131,7 @@ export function parseArgs(
       if (inline !== null) v = inline;
       else {
         const next = argv[++i];
-        if (next === undefined || (next.startsWith("-") && !(negativeNumberIsValue && /^-\d/.test(next))))
-          throw new UsageError(`${arg} needs a value`);
+        if (next === undefined || (next.startsWith("-") && !(negativeNumberIsValue && /^-\d/.test(next)))) throw new UsageError(`${arg} needs a value`);
         v = next;
       }
       if (v === "") throw new UsageError(`${arg} needs a value`);

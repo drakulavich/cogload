@@ -1,17 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import {
-  chmod,
-  lstat,
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  realpath,
-  rm,
-  stat,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cardData, cardHtml, loadAssets } from "../../src/lib/card/index.ts";
@@ -36,10 +24,7 @@ afterEach(async () => {
 async function run(...args: string[]): Promise<{ code: number; out: string; err: string }> {
   return runWith({}, ...args);
 }
-async function runWith(
-  env: Record<string, string>,
-  ...args: string[]
-): Promise<{ code: number; out: string; err: string }> {
+async function runWith(env: Record<string, string>, ...args: string[]): Promise<{ code: number; out: string; err: string }> {
   const p = Bun.spawn(["bun", CLI, "--projects", projects, ...args], {
     cwd,
     stdout: "pipe",
@@ -83,11 +68,7 @@ async function openedWithin(ms: number): Promise<string[]> {
 }
 
 // A run that exits without asking returns at once: a missing question fails an assertion.
-async function runInTerminal(
-  answer: string,
-  args: string[],
-  answerAfterMs = 0,
-): Promise<{ code: number; out: string }> {
+async function runInTerminal(answer: string, args: string[], answerAfterMs = 0): Promise<{ code: number; out: string }> {
   let out = "";
   const decoder = new TextDecoder();
   const p = Bun.spawn(["bun", CLI, "--projects", projects, ...args], {
@@ -117,11 +98,7 @@ async function runInTerminal(
 }
 
 // The script points one stream away from the terminal; a run still going after `limitMs` is killed (code null).
-async function runHalfTerminal(
-  script: string,
-  args: string[],
-  limitMs = 5000,
-): Promise<{ code: number | null; out: string }> {
+async function runHalfTerminal(script: string, args: string[], limitMs = 5000): Promise<{ code: number | null; out: string }> {
   let out = "";
   const decoder = new TextDecoder();
   const p = Bun.spawn(["sh", "-c", script, CLI, "--projects", projects, ...args], {
@@ -171,11 +148,7 @@ describe("the card reads the same hours as the grid", () => {
     const now = Date.now();
     const at = (min: number) => new Date(now + min * 60_000).toISOString();
     const lines = [prompt(at(-120), "aaaaaaaa-1111-4111-8111-111111111111")];
-    for (const sid of [
-      "bbbbbbbb-1111-4111-8111-111111111111",
-      "cccccccc-1111-4111-8111-111111111111",
-      "dddddddd-1111-4111-8111-111111111111",
-    ]) {
+    for (const sid of ["bbbbbbbb-1111-4111-8111-111111111111", "cccccccc-1111-4111-8111-111111111111", "dddddddd-1111-4111-8111-111111111111"]) {
       for (let m = 60; m <= 110; m += 2) lines.push(prompt(at(m), sid));
     }
     const tree = join(cwd, "tree");
@@ -192,10 +165,7 @@ describe("cogload card", () => {
     const r = await run("card", "--to", "2026-09-20", "--out", "./x.html");
     expect(r.code).toBe(0);
     expect(r.out).toBe("The Marathoner: Longest streak 7h53m without a break, 68% of your hours calm.\nwrote x.html\n");
-    const expected = cardHtml(
-      cardData(await report({ projects, to: "2026-09-20", days: 14 }), { days: 14 })!,
-      await loadAssets(),
-    );
+    const expected = cardHtml(cardData(await report({ projects, to: "2026-09-20", days: 14 }), { days: 14 })!, await loadAssets());
     expect(await readFile(join(cwd, "x.html"), "utf8")).toBe(expected);
   });
 
@@ -211,10 +181,7 @@ describe("cogload card", () => {
     const r = await run("card", "--to", "2026-09-20", "--out", "X.HTML");
     expect(r.code).toBe(0);
     expect(r.out.endsWith("wrote X.HTML\n")).toBe(true);
-    const expected = cardHtml(
-      cardData(await report({ projects, to: "2026-09-20", days: 14 }), { days: 14 })!,
-      await loadAssets(),
-    );
+    const expected = cardHtml(cardData(await report({ projects, to: "2026-09-20", days: 14 }), { days: 14 })!, await loadAssets());
     expect(await readFile(join(cwd, "X.HTML"), "utf8")).toBe(expected);
   });
 
@@ -222,19 +189,7 @@ describe("cogload card", () => {
     const r = await run("card", "--to", "2026-09-20", "--json");
     expect(r.code).toBe(0);
     const j = JSON.parse(r.out);
-    expect(Object.keys(j)).toEqual([
-      "from",
-      "to",
-      "days",
-      "character",
-      "name",
-      "sentence",
-      "motto",
-      "shares",
-      "peak",
-      "spectrum",
-      "highlights",
-    ]);
+    expect(Object.keys(j)).toEqual(["from", "to", "days", "character", "name", "sentence", "motto", "shares", "peak", "spectrum", "highlights"]);
     expect(j.from).toBe("2026-09-07");
     expect(j.to).toBe("2026-09-20");
     expect(j.days).toBe(14);
@@ -268,9 +223,7 @@ describe("cogload card", () => {
     async () => {
       const r = await run("card", "--to", "2026-09-20");
       expect(r.code).toBe(0);
-      expect(r.out).toBe(
-        "The Marathoner: Longest streak 7h53m without a break, 68% of your hours calm.\nwrote cogload-card.png to Downloads\n",
-      );
+      expect(r.out).toBe("The Marathoner: Longest streak 7h53m without a break, 68% of your hours calm.\nwrote cogload-card.png to Downloads\n");
       expect(await downloads()).toEqual(["cogload-card.png"]);
       expect(await files()).toEqual([]);
       const bytes = await readFile(join(home, "Downloads", "cogload-card.png"));
@@ -336,9 +289,7 @@ describe("cogload card", () => {
       expect(r.err).not.toContain("a\nb");
       expect(await files()).toEqual([]);
     }
-    expect((await run("card", "--to", "2026-09-20", "--out", "dir/.webp")).err.split("\n")[0]).toBe(
-      "cogload: --out needs a file name before .webp",
-    );
+    expect((await run("card", "--to", "2026-09-20", "--out", "dir/.webp")).err.split("\n")[0]).toBe("cogload: --out needs a file name before .webp");
   });
 
   test("a card that cannot be written exits 1 with one line that names no path", async () => {
@@ -411,14 +362,7 @@ describe("cogload card", () => {
       try {
         const drawn = await runWith({ TMPDIR: tmp }, "card", "--to", "2026-09-20", "--out", "c.png");
         expect(drawn.code).toBe(0);
-        const unwritable = await runWith(
-          { TMPDIR: tmp },
-          "card",
-          "--to",
-          "2026-09-20",
-          "--out",
-          join(cwd, "missing", "c.png"),
-        );
+        const unwritable = await runWith({ TMPDIR: tmp }, "card", "--to", "2026-09-20", "--out", join(cwd, "missing", "c.png"));
         expect(unwritable.code).toBe(1);
         expect((await readdir(tmp)).filter((name) => name.startsWith("cogload-card-"))).toEqual([]);
       } finally {
@@ -494,23 +438,12 @@ describe("cogload card", () => {
   test("the card's mode is the umask's, whether or not the cache is on", async () => {
     // The cache keeps its own files private; that must not reach a card meant to be shared.
     const modeOf = async (out: string, ...flags: string[]) => {
-      const p = Bun.spawn(
-        [
-          "sh",
-          "-c",
-          'umask 022; exec bun "$0" "$@"',
-          CLI,
-          "--projects",
-          projects,
-          "card",
-          "--to",
-          "2026-09-20",
-          "--out",
-          out,
-          ...flags,
-        ],
-        { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } },
-      );
+      const p = Bun.spawn(["sh", "-c", 'umask 022; exec bun "$0" "$@"', CLI, "--projects", projects, "card", "--to", "2026-09-20", "--out", out, ...flags], {
+        cwd,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
+      });
       expect(await p.exited).toBe(0);
       return (await stat(join(cwd, out))).mode & 0o777;
     };
@@ -530,11 +463,7 @@ describe("cogload card", () => {
   test("--json with --out is a usage error: the data is printed and the picture never written", async () => {
     for (const out of ["me.png", "me.html"]) {
       const r = await run("card", "--to", "2026-09-20", "--json", "--out", out);
-      expect([r.code, r.out, r.err]).toEqual([
-        2,
-        "",
-        "cogload: --json writes no file; drop --out\nrun 'cogload --help' for usage\n",
-      ]);
+      expect([r.code, r.out, r.err]).toEqual([2, "", "cogload: --json writes no file; drop --out\nrun 'cogload --help' for usage\n"]);
     }
     expect(await files()).toEqual([]);
   });
@@ -546,27 +475,18 @@ describe("cogload card", () => {
   });
 
   // Linux uses Bun's Chromium backend; a path to nothing forces its failure path.
-  test.skipIf(process.platform !== "linux")(
-    "without a browser engine, card names what to install and the way around it",
-    async () => {
-      const p = Bun.spawn(["bun", CLI, "--projects", projects, "card", "--to", "2026-09-20", "--out", "c.png"], {
-        cwd,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home, BUN_CHROME_PATH: join(cwd, "no-such-browser") },
-      });
-      const [out, err, code] = await Promise.all([
-        new Response(p.stdout).text(),
-        new Response(p.stderr).text(),
-        p.exited,
-      ]);
-      expect(code).toBe(1);
-      expect(out).toBe("");
-      expect(err).toBe(
-        "cogload: card needs a browser engine: install a Chromium browser such as Chrome or Edge, or write --out card.html\n",
-      );
-    },
-  );
+  test.skipIf(process.platform !== "linux")("without a browser engine, card names what to install and the way around it", async () => {
+    const p = Bun.spawn(["bun", CLI, "--projects", projects, "card", "--to", "2026-09-20", "--out", "c.png"], {
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home, BUN_CHROME_PATH: join(cwd, "no-such-browser") },
+    });
+    const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
+    expect(code).toBe(1);
+    expect(out).toBe("");
+    expect(err).toBe("cogload: card needs a browser engine: install a Chromium browser such as Chrome or Edge, or write --out card.html\n");
+  });
 
   for (const [name, format] of [
     ["x.png", "png"],
@@ -590,11 +510,7 @@ describe("cogload card", () => {
   test.skipIf(webviewMissing !== null)(
     "in a terminal, a picture says it is being drawn and clears that line before the result",
     async () => {
-      const r = await runHalfTerminal(
-        'exec bun "$0" "$@" > out.txt',
-        ["card", "--to", "2026-09-20", "--out", "c.png"],
-        (WEBVIEW_TEST_TIMEOUT * 2) / 3,
-      );
+      const r = await runHalfTerminal('exec bun "$0" "$@" > out.txt', ["card", "--to", "2026-09-20", "--out", "c.png"], (WEBVIEW_TEST_TIMEOUT * 2) / 3);
       expect(r.code).toBe(0);
       expect(r.out).toBe("drawing the card…\r\x1b[K");
       expect(await readFile(join(cwd, "out.txt"), "utf8")).toMatch(/^The Marathoner:.*\nwrote c\.png\n$/);
@@ -713,13 +629,7 @@ describe("cogload card", () => {
 
   test("with stdout a terminal but stdin a pipe there is no question and no read", async () => {
     // A run that asked would read this "y" and open the card.
-    const r = await runHalfTerminal('printf "y\\n" | exec bun "$0" "$@"', [
-      "card",
-      "--to",
-      "2026-09-20",
-      "--out",
-      "c.html",
-    ]);
+    const r = await runHalfTerminal('printf "y\\n" | exec bun "$0" "$@"', ["card", "--to", "2026-09-20", "--out", "c.html"]);
     expect(r.code).toBe(0);
     expect(r.out).toContain("wrote c.html\r\n");
     expect(r.out).not.toContain("open it?");

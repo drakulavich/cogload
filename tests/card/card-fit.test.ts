@@ -28,13 +28,7 @@ const MOTTOS: Record<Character, string> = {
 const SENTENCES: Record<Character, Segment[]> = {
   conductor: [strong("999B+ sessions"), plain(" at once, "), strong("999B+ context switches"), plain(" in one hour.")],
   supervisor: [strong("999B+ agent reports"), plain(" and "), strong("999B+ tokens"), plain(" of output read.")],
-  marathoner: [
-    plain("Longest streak "),
-    strong("999h+"),
-    plain(" without a break, "),
-    strong("100%"),
-    plain(" of your hours calm."),
-  ],
+  marathoner: [plain("Longest streak "), strong("999h+"), plain(" without a break, "), strong("100%"), plain(" of your hours calm.")],
   nightOwl: [strong("100%"), plain(" of your hours "), strong("late at night"), plain(".")],
 };
 const longest = (character: Character): CardData => ({
@@ -109,11 +103,7 @@ describe("the longest values fit the layout", () => {
     async () => {
       for (const count of [1, 2]) {
         const base = longest("conductor");
-        const view = await openPage(
-          cardHtml({ ...base, highlights: base.highlights.slice(0, count) }, assets),
-          2400,
-          1260,
-        );
+        const view = await openPage(cardHtml({ ...base, highlights: base.highlights.slice(0, count) }, assets), 2400, 1260);
         try {
           const m = await view.evaluate<Measure>(MEASURE);
           expect(m.statCount).toBe(count);
@@ -174,11 +164,7 @@ describe("renderCard", () => {
       try {
         await renderCard(html, join(dir, "q.png"), WEBVIEW_STEP_TIMEOUT);
         const png = (await readFile(join(dir, "q.png"))).toString("base64");
-        const view = await openPage(
-          `<canvas width=2400 height=1260></canvas><img id=i src="data:image/png;base64,${png}">`,
-          100,
-          100,
-        );
+        const view = await openPage(`<canvas width=2400 height=1260></canvas><img id=i src="data:image/png;base64,${png}">`, 100, 100);
         try {
           const colors = await view.evaluate<string[]>(`(() => {
           const c = document.querySelector("canvas").getContext("2d");
@@ -204,9 +190,7 @@ describe("renderCard", () => {
     async () => {
       const dir = await mkdtemp(join(tmpdir(), "cogload-render-"));
       try {
-        await expect(renderCard(cardHtml(longest("conductor"), assets), join(dir, "c.png"), 1)).rejects.toThrow(
-          /^render timed out$/,
-        );
+        await expect(renderCard(cardHtml(longest("conductor"), assets), join(dir, "c.png"), 1)).rejects.toThrow(/^render timed out$/);
         expect(await readdir(dir)).toEqual([]);
       } finally {
         await rm(dir, { recursive: true, force: true });

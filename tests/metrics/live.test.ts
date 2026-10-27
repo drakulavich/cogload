@@ -12,10 +12,7 @@ const mm = (n: number) => String(n).padStart(2, "0");
 const busyHour = transcript(
   Array.from({ length: 11 }, (_, i) => {
     const sid = i % 2 ? B : A;
-    return [
-      prompt(`2026-09-14T11:${mm(5 + i * 5)}:00.000Z`, sid),
-      assistant(`2026-09-14T11:${mm(5 + i * 5)}:30.000Z`, sid),
-    ];
+    return [prompt(`2026-09-14T11:${mm(5 + i * 5)}:00.000Z`, sid), assistant(`2026-09-14T11:${mm(5 + i * 5)}:30.000Z`, sid)];
   }).flat(),
 );
 
@@ -73,9 +70,7 @@ describe("live: the rule's edges", () => {
     const start = Date.parse("2026-09-14T11:20:00.000Z");
     const every2 = (until: string) => {
       const count = (Date.parse(until) - start) / 120_000 + 1;
-      return transcript(
-        Array.from({ length: count }, (_, i) => prompt(new Date(start + i * 120_000).toISOString(), A)),
-      );
+      return transcript(Array.from({ length: count }, (_, i) => prompt(new Date(start + i * 120_000).toISOString(), A)));
     };
     const now = new Date("2026-09-14T12:30:00.000Z");
     const toTheEnd = analyze([every2("2026-09-14T12:30:00.000Z")], { to: "2026-09-14", days: 1, now })[0]!;
@@ -101,9 +96,7 @@ describe("live: the rule's edges", () => {
     // 23:05: the running streak is at its norm both times, so everything in the
     // index is equal but the ten late points. Mutation this pins: taking
     // lateNight from the hour the window starts in.
-    const evening = transcript(
-      Array.from({ length: 9 }, (_, i) => prompt(`2026-09-14T22:${mm(15 + i * 5)}:00.000Z`, A)),
-    );
+    const evening = transcript(Array.from({ length: 9 }, (_, i) => prompt(`2026-09-14T22:${mm(15 + i * 5)}:00.000Z`, A)));
     const at = (iso: string) => analyze([evening], { to: "2026-09-14", days: 1, now: new Date(iso) })[0]!.live!;
     const before = at("2026-09-14T22:55:00.000Z"),
       after = at("2026-09-14T23:05:00.000Z");
@@ -145,8 +138,7 @@ describe("live: a break cools the index", () => {
     const s = Date.parse(at(t0));
     return [0, 5, 10].map((m) => prompt(new Date(s + m * 60_000).toISOString(), A));
   };
-  const live = (lines: string[], now: string) =>
-    analyze([transcript(lines)], { to: "2026-09-14", days: 1, now: new Date(at(now)) })[0]!.live!;
+  const live = (lines: string[], now: string) => analyze([transcript(lines)], { to: "2026-09-14", days: 1, now: new Date(at(now)) })[0]!.live!;
 
   test("a 5-minute pause is no break: the live index is the whole window's", () => {
     // One streak from 10:04, 51 minutes at 10:55, so every action counts.

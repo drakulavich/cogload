@@ -25,12 +25,7 @@ const W = { to: "2026-09-14", days: 1 };
 const at = (hhmm: string) => `2026-09-14T${hhmm}:00.000Z`;
 
 describe("inbound agent messages are reports, never prompts", () => {
-  const t = transcript([
-    teammate(at("13:00"), S),
-    crossSession(at("13:01"), S),
-    taskNotification(at("13:02"), S),
-    prompt(at("13:03"), S),
-  ]);
+  const t = transcript([teammate(at("13:00"), S), crossSession(at("13:01"), S), taskNotification(at("13:02"), S), prompt(at("13:03"), S)]);
   const day = analyze([t], W)[0]!;
   const b = day.buckets[13]!;
 
@@ -47,10 +42,7 @@ describe("inbound agent messages are reports, never prompts", () => {
   });
 
   test("an hour of reports and no prompt is a live session with no presence", () => {
-    const b2 = analyze(
-      [transcript([teammate(at("09:00"), S), crossSession(at("09:20"), S), taskNotification(at("09:40"), S)])],
-      W,
-    )[0]!.buckets[9]!;
+    const b2 = analyze([transcript([teammate(at("09:00"), S), crossSession(at("09:20"), S), taskNotification(at("09:40"), S)])], W)[0]!.buckets[9]!;
     expect(b2.sessions).toBe(1);
     expect(b2.reports).toBe(3);
     expect(b2.activeMin).toBe(0);
@@ -115,10 +107,7 @@ describe("records Claude Code writes itself are not prompts (#221)", () => {
 
   test("a plugin message in another session is no context switch", () => {
     const b = analyze(
-      [
-        transcript([prompt(at("13:00"), S), prompt(at("13:02"), S)], "p/a.jsonl"),
-        transcript([pluginMessage(at("13:01"), T)], "p/b.jsonl"),
-      ],
+      [transcript([prompt(at("13:00"), S), prompt(at("13:02"), S)], "p/a.jsonl"), transcript([pluginMessage(at("13:01"), T)], "p/b.jsonl")],
       W,
     )[0]!.buckets[13]!;
     expect(b.prompts).toBe(2);
@@ -126,8 +115,7 @@ describe("records Claude Code writes itself are not prompts (#221)", () => {
   });
 
   test("an interrupt marker wins over promptSource system", () => {
-    const b = analyze([transcript([pluginMessage(at("13:00"), S, "[Request interrupted by user]")])], W)[0]!
-      .buckets[13]!;
+    const b = analyze([transcript([pluginMessage(at("13:00"), S, "[Request interrupted by user]")])], W)[0]!.buckets[13]!;
     expect(b.interrupts).toBe(1);
     expect(b.reports).toBe(0);
   });
@@ -135,15 +123,13 @@ describe("records Claude Code writes itself are not prompts (#221)", () => {
 
 describe("a message from another session in the 2.1.280+ shape is a report (#226)", () => {
   test("a peer message between two prompts is one report", () => {
-    const b = analyze([transcript([prompt(at("10:00"), S), peer(at("10:05"), S), prompt(at("10:10"), S)])], W)[0]!
-      .buckets[10]!;
+    const b = analyze([transcript([prompt(at("10:00"), S), peer(at("10:05"), S), prompt(at("10:10"), S)])], W)[0]!.buckets[10]!;
     expect(b.reports).toBe(1);
     expect(b.prompts).toBe(2);
   });
 
   test("a system reminder in the same place is still nothing", () => {
-    const b = analyze([transcript([prompt(at("10:00"), S), meta(at("10:05"), S), prompt(at("10:10"), S)])], W)[0]!
-      .buckets[10]!;
+    const b = analyze([transcript([prompt(at("10:00"), S), meta(at("10:05"), S), prompt(at("10:10"), S)])], W)[0]!.buckets[10]!;
     expect(b.reports).toBe(0);
     expect(b.prompts).toBe(2);
   });
@@ -191,10 +177,7 @@ describe("output tokens are summed once per requestId per file", () => {
     // The first record of req_mixed has no text block and must not emit; the
     // dedupe set must therefore stay empty for req_mixed until the second
     // record (which does have a text block) emits and marks it seen.
-    const t = transcript([
-      assistantToolUseOnly(at("13:00"), S, 300, "req_mixed"),
-      assistantText(at("13:00"), S, 300, "req_mixed"),
-    ]);
+    const t = transcript([assistantToolUseOnly(at("13:00"), S, 300, "req_mixed"), assistantText(at("13:00"), S, 300, "req_mixed")]);
     const day = analyze([t], W)[0]!;
     expect(day.buckets[13]!.outputTokens).toBe(300);
   });
@@ -234,10 +217,7 @@ describe("reports and output tokens enter the index through supervision and read
   // lonely: supervision 0 -> index round(0.75) = 1.
   // busy: supervision 30*(0 + 9 + 0)/45 = 6.0 -> index round(0.75 + 6) = 7.
   const lonely = analyze([transcript([prompt(at("13:00"), S)])], W)[0]!.buckets[13]!;
-  const busy = analyze(
-    [transcript([prompt(at("13:00"), S), ...Array.from({ length: 9 }, () => teammate(at("13:00"), S))])],
-    W,
-  )[0]!.buckets[13]!;
+  const busy = analyze([transcript([prompt(at("13:00"), S), ...Array.from({ length: 9 }, () => teammate(at("13:00"), S))])], W)[0]!.buckets[13]!;
 
   test("9 reports add exactly 30*9/45 = 6.0 supervision points and nothing else", () => {
     expect(lonely.reports).toBe(0);
@@ -257,14 +237,8 @@ describe("reports and output tokens enter the index through supervision and read
   // away from 0, so this is the pair that pins the reading component.
   // withTokens: reading 10*(40000/80000) = 5.0 -> index round(0.75 + 5) = 6.
   // withoutTokens: reading 0 -> index round(0.75) = 1.
-  const withTokens = analyze(
-    [transcript([prompt(at("15:00"), S), assistantText(at("15:00"), S, 40_000, "req_tok_a")])],
-    W,
-  )[0]!.buckets[15]!;
-  const withoutTokens = analyze(
-    [transcript([prompt(at("15:00"), S), assistantToolUseOnly(at("15:00"), S, 40_000, "req_tok_b")])],
-    W,
-  )[0]!.buckets[15]!;
+  const withTokens = analyze([transcript([prompt(at("15:00"), S), assistantText(at("15:00"), S, 40_000, "req_tok_a")])], W)[0]!.buckets[15]!;
+  const withoutTokens = analyze([transcript([prompt(at("15:00"), S), assistantToolUseOnly(at("15:00"), S, 40_000, "req_tok_b")])], W)[0]!.buckets[15]!;
 
   test("40 000 output tokens add exactly 10*40000/80000 = 5.0 reading points and nothing else", () => {
     expect(withTokens.outputTokens).toBe(40_000);

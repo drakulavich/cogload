@@ -43,17 +43,9 @@ describe("score", () => {
     ["40 min streak caps", { streakMin: 40 }, 10], // 10*(40/40) = 10
     ["late night alone", { lateNight: true }, 10], // 10*1 = 10
     // 25 + 15 + 30 + 10 + 10 + 10 = 100
-    [
-      "everything at cap",
-      { sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40, lateNight: true },
-      100,
-    ],
+    ["everything at cap", { sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40, lateNight: true }, 100],
     // The same without the late-night flag: 25 + 15 + 30 + 10 + 10 = 90, the daytime maximum.
-    [
-      "everything at cap but the hour",
-      { sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40 },
-      90,
-    ],
+    ["everything at cap but the hour", { sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40 }, 90],
     // Integer weights keep this exact in floating point: 12.5 + 5 = 17.5, and
     // Math.round takes a mathematical half upwards, so the index is 18, not 17.
     ["an exact half-point sum rounds up", { sessions: 3, streakMin: 20 }, 18],
@@ -112,11 +104,7 @@ describe("score", () => {
   });
 
   test("capped breaks a tie in weight by the order of the weights", () => {
-    expect(score(m({ lateNight: true, outputTokens: 80_000, streakMin: 40 }))?.capped).toEqual([
-      "reading",
-      "streak",
-      "late",
-    ]);
+    expect(score(m({ lateNight: true, outputTokens: 80_000, streakMin: 40 }))?.capped).toEqual(["reading", "streak", "late"]);
   });
 
   test("top is the part closest to its weight when nothing is capped", () => {
@@ -159,8 +147,6 @@ describe("score", () => {
   test("the daytime maximum of 90 is already Fried", () => {
     // Without the late-night flag the index tops out at 90, which is inside the
     // 85-100 Fried band: a full daytime hour is not merely Heating.
-    expect(score(m({ sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40 }))?.level).toBe(
-      "Fried",
-    );
+    expect(score(m({ sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40 }))?.level).toBe("Fried");
   });
 });

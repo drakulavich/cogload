@@ -16,11 +16,7 @@ beforeAll(async () => {
   await writeTree(root, [
     {
       path: "-Users-me-proj/a.jsonl",
-      lines: [
-        prompt("2026-09-14T13:00:00.000Z", A),
-        assistant("2026-09-14T13:02:00.000Z", A),
-        interrupt("2026-09-14T13:03:00.000Z", A),
-      ],
+      lines: [prompt("2026-09-14T13:00:00.000Z", A), assistant("2026-09-14T13:02:00.000Z", A), interrupt("2026-09-14T13:03:00.000Z", A)],
       mtime: "2026-09-14T13:03:00.000Z",
     },
     {
@@ -143,44 +139,26 @@ describe("cli", () => {
     // The window rules each have their own line.
     const line = async (...args: string[]) => (await first(...args))[1];
     expect(await line("--from", "2026-09-10", "--days", "3")).toBe("cogload: --from sets the length; drop --days");
-    expect(await line("--from", "2026-09-20", "--to", "2026-09-14")).toBe(
-      "cogload: --from 2026-09-20 is after --to 2026-09-14",
-    );
-    expect(await line("--from", "2026-06-01", "--to", "2026-09-14")).toBe(
-      "cogload: --from 2026-06-01 to 2026-09-14 is 106 days; the most is 90",
-    );
+    expect(await line("--from", "2026-09-20", "--to", "2026-09-14")).toBe("cogload: --from 2026-09-20 is after --to 2026-09-14");
+    expect(await line("--from", "2026-06-01", "--to", "2026-09-14")).toBe("cogload: --from 2026-06-01 to 2026-09-14 is 106 days; the most is 90");
     expect(await line("today", "--days", "3")).toBe("cogload: --days, --from and --to do not apply to a named day");
     expect(await line("week")).toBe("cogload: unknown command week (try today, yesterday, a date, card or status)");
-    for (const args of [
-      ["2099-01-01"],
-      ["--to", "2099-01-01"],
-      ["--from", "2099-01-01"],
-      ["card", "--to", "2099-01-01"],
-    ]) {
-      expect([args.join(" "), ...(await first(...args))]).toEqual([
-        args.join(" "),
-        2,
-        "cogload: 2099-01-01 is in the future",
-      ]);
+    for (const args of [["2099-01-01"], ["--to", "2099-01-01"], ["--from", "2099-01-01"], ["card", "--to", "2099-01-01"]]) {
+      expect([args.join(" "), ...(await first(...args))]).toEqual([args.join(" "), 2, "cogload: 2099-01-01 is in the future"]);
     }
   });
 
   test("a usage error never echoes a path or an escape, only a short plain value", async () => {
     const line = async (...args: string[]) => (await first(...args))[1];
-    expect(await line(join(root, "secret"))).toBe(
-      "cogload: unknown command (try today, yesterday, a date, card or status)",
-    );
-    expect(await line("--to", "/Users/someone/2026-09-14")).toBe(
-      "cogload: --to must be YYYY-MM-DD, today or yesterday",
-    );
+    expect(await line(join(root, "secret"))).toBe("cogload: unknown command (try today, yesterday, a date, card or status)");
+    expect(await line("--to", "/Users/someone/2026-09-14")).toBe("cogload: --to must be YYYY-MM-DD, today or yesterday");
     expect(await line("--days", "\x1b[31m7")).toBe("cogload: --days must be 1..90");
     expect(await line("--bogus\n")).toBe("cogload: unknown flag");
     expect(await line("--days", "seven")).toBe("cogload: --days must be 1..90, got seven");
   });
 
   test("the window: --days ends today, --to ends there, --from sets the length", async () => {
-    const dates = async (...args: string[]) =>
-      JSON.parse((await run(...args, "--json")).out).map((d: { date: string }) => d.date);
+    const dates = async (...args: string[]) => JSON.parse((await run(...args, "--json")).out).map((d: { date: string }) => d.date);
     expect(await dates("--from", "2026-09-13", "--to", "2026-09-14")).toEqual(["2026-09-13", "2026-09-14"]);
     expect(await dates("--from", "2026-09-14", "--to", "2026-09-14")).toEqual(["2026-09-14"]);
     expect(await dates("--to", "2026-09-14")).toHaveLength(7);
@@ -228,13 +206,7 @@ describe("cli", () => {
     // moved out of the week footer and into --help).
     expect(help.out).toContain("levels: calm 0-29");
     expect(help.out).toContain("bugs, ideas and a star: github.com/drakulavich/cogload");
-    for (const line of [
-      "cogload today|yesterday|<date>",
-      "cogload card [window]",
-      "cogload status",
-      "--from <date>",
-      "--days <N>",
-    ])
+    for (const line of ["cogload today|yesterday|<date>", "cogload card [window]", "cogload status", "--from <date>", "--days <N>"])
       expect(help.out).toContain(line);
     expect(help.out.split("\n").every((l) => l.length <= 80)).toBe(true);
     expect((await run("--version")).out.trim()).toMatch(/^\d+\.\d+\.\d+$/);
@@ -272,11 +244,7 @@ describe("cli", () => {
         stderr: "pipe",
         env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
       });
-      const [out, err, code] = await Promise.all([
-        new Response(p.stdout).text(),
-        new Response(p.stderr).text(),
-        p.exited,
-      ]);
+      const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
       expect(err).toBe("");
       expect(code).toBe(0);
       expect(JSON.parse(out).totals.prompts).toBe(2); // both files, including the one beside the loop
@@ -342,11 +310,7 @@ describe("cli", () => {
         stderr: "pipe",
         env: { ...process.env, HOME: home },
       });
-      const [out, err, code] = await Promise.all([
-        new Response(p.stdout).text(),
-        new Response(p.stderr).text(),
-        p.exited,
-      ]);
+      const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
       expect(code).toBe(1);
       expect(out).toBe("");
       expect(err.trim()).toBe("cogload: projects directory cannot be read (check its permissions)");
@@ -374,11 +338,7 @@ describe("cli", () => {
         stderr: "pipe",
         env: { ...process.env, HOME: home },
       });
-      const [out, err, code] = await Promise.all([
-        new Response(p.stdout).text(),
-        new Response(p.stderr).text(),
-        p.exited,
-      ]);
+      const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
       expect([code, out, err]).toEqual([1, "", "cogload: projects directory cannot be read (check its permissions)\n"]);
     } finally {
       await chmod(dir, 0o755).catch(() => {});
@@ -393,11 +353,7 @@ describe("cli", () => {
       stderr: "pipe",
       env: { ...process.env, HOME: home },
     });
-    const [out, err, code] = await Promise.all([
-      new Response(p.stdout).text(),
-      new Response(p.stderr).text(),
-      p.exited,
-    ]);
+    const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
     expect([code, out, err]).toEqual([1, "", "cogload: projects path is not a directory (pass --projects <dir>)\n"]);
   });
 
@@ -412,10 +368,7 @@ describe("cli", () => {
       const p = Bun.spawn([...args, "--json"], { stdout: "pipe", stderr: "pipe", env });
       const [out, code] = await Promise.all([new Response(p.stdout).text(), p.exited]);
       expect(code).toBe(0);
-      const days = JSON.parse(out).map((d: { date: string; totals: { prompts: number } }) => [
-        d.date,
-        d.totals.prompts,
-      ]);
+      const days = JSON.parse(out).map((d: { date: string; totals: { prompts: number } }) => [d.date, d.totals.prompts]);
       expect(days).toEqual([
         ["2011-12-29", 0],
         ["2011-12-30", 0],
@@ -470,11 +423,7 @@ describe("cli", () => {
         stderr: "pipe",
         env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
       });
-      const [out, err, code] = await Promise.all([
-        new Response(p.stdout).text(),
-        new Response(p.stderr).text(),
-        p.exited,
-      ]);
+      const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
       expect(err).toBe("");
       expect(code).toBe(0);
       const day = JSON.parse(out);
@@ -538,11 +487,7 @@ describe("cli", () => {
         stderr: "pipe",
         env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
       });
-      const [out, err, code] = await Promise.all([
-        new Response(p.stdout).text(),
-        new Response(p.stderr).text(),
-        p.exited,
-      ]);
+      const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
       expect(code).toBe(0);
       expect(err).toBe("");
       const d = JSON.parse(out);

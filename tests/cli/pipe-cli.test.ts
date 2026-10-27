@@ -26,15 +26,7 @@ test("a reader that leaves early (`| head -1`) gets no stack trace, and cogload 
   const code = join(home, "code");
   // dash has no pipefail, so cogload's own exit code is written to a file.
   const p = Bun.spawn(
-    [
-      "sh",
-      "-c",
-      '{ bun "$0" --days 90 --to 2026-09-20 --projects "$1" 2>"$2"; echo $? >"$3"; } | head -1 >/dev/null',
-      CLI,
-      projects,
-      err,
-      code,
-    ],
+    ["sh", "-c", '{ bun "$0" --days 90 --to 2026-09-20 --projects "$1" 2>"$2"; echo $? >"$3"; } | head -1 >/dev/null', CLI, projects, err, code],
     { env: { ...process.env, TZ: "UTC", HOME: home } },
   );
   await p.exited;

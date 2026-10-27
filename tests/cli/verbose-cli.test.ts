@@ -19,11 +19,7 @@ beforeAll(async () => {
   await writeTree(root, [
     {
       path: "-Users-me-proj/a.jsonl",
-      lines: [
-        prompt("2026-09-14T13:00:00.000Z", A),
-        assistant("2026-09-14T13:02:00.000Z", A),
-        bigToolResult("2026-09-14T13:03:00.000Z", A, 300_000),
-      ],
+      lines: [prompt("2026-09-14T13:00:00.000Z", A), assistant("2026-09-14T13:02:00.000Z", A), bigToolResult("2026-09-14T13:03:00.000Z", A, 300_000)],
       mtime: "2026-09-14T13:03:00.000Z",
     },
     {
@@ -72,16 +68,7 @@ describe("--verbose", () => {
     expect(plain.err).toBe("");
     const lines = r.err.trimEnd().split("\n");
     expect(lines[0]).toMatch(/^cogload \d+\.\d+\.\d+ · bun \d+\.\d+\.\d+ · \w+ \w+ · \d+ cpus$/);
-    expect(lines.slice(1).map((l) => l.split(" ")[0])).toEqual([
-      "start",
-      "open",
-      "scan",
-      "cache",
-      "read",
-      "analyze",
-      "save",
-      "total",
-    ]);
+    expect(lines.slice(1).map((l) => l.split(" ")[0])).toEqual(["start", "open", "scan", "cache", "read", "analyze", "save", "total"]);
     for (const l of lines.slice(1)) expect(l).toMatch(new RegExp(MS));
   });
 
@@ -123,11 +110,8 @@ describe("--verbose", () => {
     const r = await run("--to", "2026-09-14", "--days", "2", "--json", "--verbose", "--no-cache");
     // a and b are in the window by mtime; old.jsonl is opened only for its tail; the subagent file is never counted.
     expect(lineOf(r.err, "scan")).toMatch(new RegExp(String.raw`^scan\s+3 files, 2 in window, 1 tail check` + MS));
-    const bytes =
-      (await stat(join(root, "-Users-me-proj/a.jsonl"))).size + (await stat(join(root, "-Users-me-proj/b.jsonl"))).size;
-    expect(lineOf(r.err, "read")).toMatch(
-      new RegExp(String.raw`^read\s+2 files, ${(bytes / 1e6).toFixed(1)} MB, \d+ at a time` + MS),
-    );
+    const bytes = (await stat(join(root, "-Users-me-proj/a.jsonl"))).size + (await stat(join(root, "-Users-me-proj/b.jsonl"))).size;
+    expect(lineOf(r.err, "read")).toMatch(new RegExp(String.raw`^read\s+2 files, ${(bytes / 1e6).toFixed(1)} MB, \d+ at a time` + MS));
     expect(r.err).not.toContain("/");
   });
 
@@ -142,16 +126,16 @@ describe("--verbose", () => {
     await chmod(join(tree, "-Users-me-lockedfile/b.jsonl"), 0o000);
     await chmod(join(tree, "-Users-me-secretdir"), 0o000);
     try {
-      const p = Bun.spawn(
-        ["bun", CLI, "--projects", tree, "--to", "2026-09-14", "--days", "1", "--json", "--verbose", "--no-cache"],
-        { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } },
-      );
+      const p = Bun.spawn(["bun", CLI, "--projects", tree, "--to", "2026-09-14", "--days", "1", "--json", "--verbose", "--no-cache"], {
+        cwd,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
+      });
       const [err, code] = await Promise.all([new Response(p.stderr).text(), p.exited]);
       expect(code).toBe(0);
       // b is seen and fails to read; the locked directory is never entered, so c is not counted as a file.
-      expect(lineOf(err, "scan")).toMatch(
-        new RegExp(String.raw`^scan\s+2 files, 2 in window, 0 tail checks, 2 unreadable skipped` + MS),
-      );
+      expect(lineOf(err, "scan")).toMatch(new RegExp(String.raw`^scan\s+2 files, 2 in window, 0 tail checks, 2 unreadable skipped` + MS));
       expect(err).not.toContain("lockedfile");
       expect(err).not.toContain("secretdir");
     } finally {

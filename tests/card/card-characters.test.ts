@@ -12,10 +12,7 @@ const keys = (lines: string[]) => cardOf(lines).highlights.map((h) => h.key);
 // Five sessions, one prompt each, in one hour: parallel 25 + pace 3.75 of 40 -> 0.72.
 const conductor = ["a", "b", "c", "d", "e"].map((c, i) => prompt(at(10, i), sid(c)));
 // One session, 45 agent reports in 45 minutes and one 5000-token reply: supervision 30 + reading 0.6 of 40 -> 0.77.
-const supervisor = [
-  ...Array.from({ length: 45 }, (_, i) => teammate(at(10, i), sid("s"))),
-  assistantText(at(10, 45), sid("s"), 5000, nextRequestId()),
-];
+const supervisor = [...Array.from({ length: 45 }, (_, i) => teammate(at(10, i), sid("s"))), assistantText(at(10, 45), sid("s"), 5000, nextRequestId())];
 // One session, a prompt every 5 minutes from 10:00 to 12:55: streak 55/115/175 min, all past the 40-minute norm -> 10 + 10 + 10 of 30 -> 1.0.
 const marathoner = Array.from({ length: 36 }, (_, i) => prompt(at(10 + Math.floor(i / 12), (i % 12) * 5), sid("m")));
 // Two prompts at 01:00 and 01:05: late 10 of 10 -> 1.0.
@@ -158,10 +155,7 @@ describe("zero highlights", () => {
 
   test("a Night Owl with a streak keeps it as the second highlight", () => {
     const c = cardOf(nightOwl);
-    expect(c.highlights.map((h) => `${h.value} ${h.caption}`)).toEqual([
-      "100% of hours late at night",
-      "5m longest streak",
-    ]);
+    expect(c.highlights.map((h) => `${h.value} ${h.caption}`)).toEqual(["100% of hours late at night", "5m longest streak"]);
   });
 
   test("a lone single-prompt hour still has its one panel: the character's own number", () => {
@@ -205,10 +199,7 @@ describe("one figure per fact", () => {
   for (let i = 0; i < 20; i++) [a, c, d][i % 3]!.push(prompt(at(9, i * 3, 16), sid("acd"[i % 3]!)));
   for (let r = 0; r < 30; r++) a.push(teammate(at(9, 30, 16, r * 1000), sid("a")));
   const card = cardData(
-    analyze(
-      [transcript(a, "p/a.jsonl"), transcript(b, "p/b.jsonl"), transcript(c, "p/c.jsonl"), transcript(d, "p/d.jsonl")],
-      { to: "2026-09-16", days: 3 },
-    ),
+    analyze([transcript(a, "p/a.jsonl"), transcript(b, "p/b.jsonl"), transcript(c, "p/c.jsonl"), transcript(d, "p/d.jsonl")], { to: "2026-09-16", days: 3 }),
     { days: 3 },
   )!;
 
@@ -227,13 +218,9 @@ describe("spectrum rounding", () => {
     // the fried hour takes its 1 from calm. Its peak reads Fried on the same card.
     const lines: string[] = [];
     let n = 0;
-    for (let day = 7; day <= 19 && n < 200; day++)
-      for (let h = 6; h <= 21 && n < 200; h++, n++) lines.push(prompt(at(h, 0, day), sid("a")));
+    for (let day = 7; day <= 19 && n < 200; day++) for (let h = 6; h <= 21 && n < 200; h++, n++) lines.push(prompt(at(h, 0, day), sid("a")));
     for (let i = 0; i < 30; i++)
-      lines.push(
-        prompt(at(10, i * 2, 20), sid("bcdef"[i % 5]!)),
-        assistantText(at(10, i * 2, 20, 5000), sid("bcdef"[i % 5]!), 3000, nextRequestId()),
-      );
+      lines.push(prompt(at(10, i * 2, 20), sid("bcdef"[i % 5]!)), assistantText(at(10, i * 2, 20, 5000), sid("bcdef"[i % 5]!), 3000, nextRequestId()));
     for (let r = 0; r < 40; r++) lines.push(teammate(at(10, 30, 20, r * 1000), sid("b")));
     const c = cardData(analyze([transcript(lines)], { to: "2026-09-20", days: 14 }), { days: 14 })!;
     expect(c.peak.level).toBe("Fried");
@@ -244,8 +231,7 @@ describe("spectrum rounding", () => {
     // Three active hours: one prompt (Calm, index 1); five sessions x 3 prompts one
     // minute apart (index 47, Warming); five sessions x 6 prompts two minutes apart
     // (index 64, Heating). Gaps over 10 minutes between them, so no streak carries.
-    const storm = (h: number, prompts: number, step: number) =>
-      Array.from({ length: prompts }, (_, i) => prompt(at(h, i * step), sid("abcde"[i % 5]!)));
+    const storm = (h: number, prompts: number, step: number) => Array.from({ length: prompts }, (_, i) => prompt(at(h, i * step), sid("abcde"[i % 5]!)));
     const c = cardOf([prompt(at(10, 0), sid("a")), ...storm(12, 15, 1), ...storm(14, 30, 2)]);
     expect(c.spectrum).toEqual({ calm: 34, warming: 33, heating: 33, fried: 0 });
   });

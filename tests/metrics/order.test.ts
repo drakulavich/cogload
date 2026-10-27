@@ -8,11 +8,7 @@ const W = { to: "2026-09-14", days: 1 };
 describe("order independence", () => {
   const files = [1, 2, 3].map((n) =>
     transcript(
-      [
-        prompt(`2026-09-14T13:0${n}:00.000Z`, sid(n)),
-        assistant(`2026-09-14T13:1${n}:00.000Z`, sid(n)),
-        prompt(`2026-09-14T13:2${n}:00.000Z`, sid(n)),
-      ],
+      [prompt(`2026-09-14T13:0${n}:00.000Z`, sid(n)), assistant(`2026-09-14T13:1${n}:00.000Z`, sid(n)), prompt(`2026-09-14T13:2${n}:00.000Z`, sid(n))],
       `p/${n}.jsonl`,
     ),
   );

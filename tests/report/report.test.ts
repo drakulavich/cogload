@@ -113,9 +113,7 @@ describe("report", () => {
 
   test("a file longer than the longest string the engine can hold is skipped, not fatal", async () => {
     await withTempDir(async (dir) => {
-      await writeTree(dir, [
-        { path: "proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" },
-      ]);
+      await writeTree(dir, [{ path: "proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" }]);
       // A sparse file one byte past the limit: it takes no disk and, skipped
       // by its size, is never read into memory. Read and decoded, it threw
       // "Cannot create a string longer than 2147483647 characters" and failed
@@ -132,9 +130,7 @@ describe("report", () => {
 
   test("a missing projects root rejects without printing the path", async () => {
     await withTempDir(async (dir) => {
-      await expect(report({ projects: join(dir, "nope"), to: "2026-09-14", days: 1 })).rejects.toThrow(
-        "projects directory not found (pass --projects <dir>)",
-      );
+      await expect(report({ projects: join(dir, "nope"), to: "2026-09-14", days: 1 })).rejects.toThrow("projects directory not found (pass --projects <dir>)");
     });
   });
 

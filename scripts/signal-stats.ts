@@ -123,9 +123,7 @@ function renderTable(active: Bucket[]): string {
   // Each column is as wide as its longest value (outputTokens can run to 6+ digits), plus a
   // fixed 2-space gap, so a wide value can never run into the next column with no separator.
   const gap = "  ";
-  const colW = Object.fromEntries(
-    cols.map((c) => [c, Math.max(c.length, ...rows.map((r) => String(r[c]).length))]),
-  ) as Record<(typeof cols)[number], number>;
+  const colW = Object.fromEntries(cols.map((c) => [c, Math.max(c.length, ...rows.map((r) => String(r[c]).length))])) as Record<(typeof cols)[number], number>;
   const header = "signal".padEnd(labelW) + cols.map((c) => c.padStart(colW[c])).join(gap);
   const lines = rows.map((r) => r.label.padEnd(labelW) + cols.map((c) => String(r[c]).padStart(colW[c])).join(gap));
   return [header, ...lines].join("\n");
@@ -141,18 +139,7 @@ function renderTopHours(active: (Bucket & { date: string })[], by: "reports" | "
   return [`top 8 hours by ${label}:`, ...rows].join("\n");
 }
 
-const EVENT_KINDS: EventKind[] = [
-  "prompt",
-  "report",
-  "output",
-  "interrupt",
-  "reject",
-  "answer",
-  "question",
-  "plan_review",
-  "mode_change",
-  "activity",
-];
+const EVENT_KINDS: EventKind[] = ["prompt", "report", "output", "interrupt", "reject", "answer", "question", "plan_review", "mode_change", "activity"];
 
 type Drift = {
   files: number;
@@ -179,9 +166,7 @@ type Shape = {
 const field = (v: unknown): string | null => (v === undefined || v === null ? null : JSON.stringify(v).slice(0, 40));
 const firstText = (c: unknown): string | null => {
   if (typeof c === "string") return c;
-  if (Array.isArray(c))
-    for (const b of c)
-      if (typeof b === "object" && b !== null && b.type === "text" && typeof b.text === "string") return b.text;
+  if (Array.isArray(c)) for (const b of c) if (typeof b === "object" && b !== null && b.type === "text" && typeof b.text === "string") return b.text;
   return null;
 };
 

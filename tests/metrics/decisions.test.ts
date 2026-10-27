@@ -1,16 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { analyze } from "../../src/lib/metrics/index.ts";
-import {
-  assistant,
-  interrupt,
-  mode,
-  plan,
-  prompt,
-  question,
-  reject,
-  toolResult,
-  transcript,
-} from "../helpers/transcript.ts";
+import { assistant, interrupt, mode, plan, prompt, question, reject, toolResult, transcript } from "../helpers/transcript.ts";
 
 const S = "11111111-1111-4111-8111-111111111111";
 const W = { to: "2026-09-14", days: 1 };
@@ -57,10 +47,7 @@ describe("decisions in one hour", () => {
   });
 
   test("each switch waiting for a timestamp is counted, not just the last", () => {
-    const d = analyze(
-      [transcript([mode(S, "auto"), mode(S, "plan"), mode(S, "acceptEdits"), prompt(at("14:00"), S)])],
-      W,
-    )[0]!;
+    const d = analyze([transcript([mode(S, "auto"), mode(S, "plan"), mode(S, "acceptEdits"), prompt(at("14:00"), S)])], W)[0]!;
     expect(d.buckets[14]!.modeSwitches).toBe(2);
   });
 

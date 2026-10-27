@@ -38,9 +38,7 @@ export function fractionsOf(m: Metrics): Fractions {
   const parallel = clamp01((m.sessions - 1) / NORMS.parallelSpan);
   const pace = clamp01(m.prompts / NORMS.pacePerHour);
   // A decision costs `decisionWeight` reports or session hops; the three share a norm.
-  const supervision = clamp01(
-    (NORMS.decisionWeight * m.decisions + m.reports + m.contextSwitches) / NORMS.supervisionPerHour,
-  );
+  const supervision = clamp01((NORMS.decisionWeight * m.decisions + m.reports + m.contextSwitches) / NORMS.supervisionPerHour);
   const reading = clamp01(m.outputTokens / NORMS.readingTokens);
   const streak = clamp01(m.streakMin / NORMS.streakMin);
   const late = m.lateNight ? 1 : 0;

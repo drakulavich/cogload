@@ -1,18 +1,7 @@
 // Deterministic 7-day fixture. Monday is the reference day the README shows.
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  assistant,
-  assistantText,
-  interrupt,
-  mode,
-  nextRequestId,
-  plan,
-  prompt,
-  question,
-  reject,
-  writeTree,
-} from "../helpers/transcript.ts";
+import { assistant, assistantText, interrupt, mode, nextRequestId, plan, prompt, question, reject, writeTree } from "../helpers/transcript.ts";
 
 const root = join(import.meta.dir, "busy-week", "projects");
 const sid = (n: number) => `${String(n).repeat(8)}-1111-4111-8111-111111111111`;

@@ -1,16 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { analyze } from "../../src/lib/metrics/index.ts";
-import {
-  assistant,
-  interrupt,
-  prompt,
-  question,
-  reject,
-  teammate,
-  toolResult,
-  toolUse,
-  transcript,
-} from "../helpers/transcript.ts";
+import { assistant, interrupt, prompt, question, reject, teammate, toolResult, toolUse, transcript } from "../helpers/transcript.ts";
 
 const A = "aaaaaaaa-1111-4111-8111-111111111111";
 const B = "bbbbbbbb-1111-4111-8111-111111111111";
@@ -152,10 +142,7 @@ describe("active minutes", () => {
   });
 
   test("a span across an hour boundary gives each hour its own slots", () => {
-    const d = analyze(
-      [transcript([prompt("2026-09-14T14:58:00.000Z", A), prompt("2026-09-14T15:04:00.000Z", A)])],
-      W,
-    )[0]!;
+    const d = analyze([transcript([prompt("2026-09-14T14:58:00.000Z", A), prompt("2026-09-14T15:04:00.000Z", A)])], W)[0]!;
     expect(d.buckets[14]!.activeMin).toBe(5); // slot 14:55
     expect(d.buckets[15]!.activeMin).toBe(5); // slot 15:00
     expect(d.buckets[15]!.streakMin).toBe(6);
@@ -213,10 +200,7 @@ describe("presence is every human action", () => {
   });
 
   test("a human action is presence and still a decision", () => {
-    const b = analyze(
-      [transcript([prompt(at("10:00"), A), interrupt(at("10:08"), A), reject(at("10:16"), A), prompt(at("10:24"), A)])],
-      W,
-    )[0]!.buckets[10]!;
+    const b = analyze([transcript([prompt(at("10:00"), A), interrupt(at("10:08"), A), reject(at("10:16"), A), prompt(at("10:24"), A)])], W)[0]!.buckets[10]!;
     expect([b.prompts, b.interrupts, b.rejects, b.decisions]).toEqual([2, 1, 1, 2]);
   });
 });
@@ -227,12 +211,7 @@ describe("answering the agent is presence", () => {
   // The agent asks at 10:02, the human picks an option at 10:05, and types the
   // next prompt 8 minutes after that. Nothing here is more than 10 minutes from
   // the action before it, so the hour holds one streak.
-  const answered = [
-    prompt(at("10:00"), A),
-    question(at("10:02"), A, Q),
-    toolResult(at("10:05"), A, Q),
-    prompt(at("10:13"), A),
-  ];
+  const answered = [prompt(at("10:00"), A), question(at("10:02"), A, Q), toolResult(at("10:05"), A, Q), prompt(at("10:13"), A)];
 
   test("the answer bridges the gap the question opened", () => {
     const b = analyze([transcript(answered)], W)[0]!.buckets[10]!;

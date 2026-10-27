@@ -1,17 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import {
-  chmod,
-  lstat,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-  stat,
-  symlink,
-  utimes,
-  writeFile,
-} from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assistant, prompt, writeTree } from "../helpers/transcript.ts";
@@ -35,9 +23,7 @@ const spawn = (home: string, ...args: string[]): Promise<{ code: number; out: st
     stderr: "pipe",
     env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
   });
-  return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(
-    ([out, err, code]) => ({ code, out, err }),
-  );
+  return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(([out, err, code]) => ({ code, out, err }));
 };
 const spawnToday = (home: string, ...args: string[]): Promise<{ code: number; out: string; err: string }> => {
   const p = Bun.spawn(["bun", CLI, "today", "--json", ...args], {
@@ -46,9 +32,7 @@ const spawnToday = (home: string, ...args: string[]): Promise<{ code: number; ou
     stderr: "pipe",
     env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
   });
-  return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(
-    ([out, err, code]) => ({ code, out, err }),
-  );
+  return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(([out, err, code]) => ({ code, out, err }));
 };
 const run = (home: string, ...args: string[]) => spawn(home, "--projects", projects, ...args);
 // The same run, under a umask that would narrow every mode cogload asks for.
@@ -59,9 +43,7 @@ const masked = (home: string): Promise<{ code: number; out: string; err: string 
     stderr: "pipe",
     env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
   });
-  return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(
-    ([out, err, code]) => ({ code, out, err }),
-  );
+  return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(([out, err, code]) => ({ code, out, err }));
 };
 const home = () => mkdtemp(join(tmpdir(), "cogload-status-home-"));
 const dirOf = (h: string) => join(h, ".claude", "cogload");
@@ -94,19 +76,7 @@ describe("cogload status", () => {
     expect(r.out).toBe(file);
     expect(file.endsWith("\n") && file.split("\n").length === 2).toBe(true);
     const s = JSON.parse(file);
-    expect(Object.keys(s)).toEqual([
-      "schema",
-      "asOf",
-      "date",
-      "hour",
-      "index",
-      "level",
-      "peak",
-      "activeMin",
-      "streakMin",
-      "restAt",
-      "restMin",
-    ]);
+    expect(Object.keys(s)).toEqual(["schema", "asOf", "date", "hour", "index", "level", "peak", "activeMin", "streakMin", "restAt", "restMin"]);
     expect(s.schema).toBe(1);
     expect(s.date).toBe(utcDay(0));
     expect(s.asOf).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
@@ -192,10 +162,7 @@ describe("cogload status", () => {
   // A prompt every five minutes for the given hours, the last one five minutes
   // ago, read by `status` in the zone where the clock now shows `localHour`.
   // Returns the line and the instant of the streak's first prompt.
-  const statusOfRun = async (
-    hours: number,
-    localHour: number,
-  ): Promise<{ s: { asOf: string; hour: number; streakMin: number }; start: number }> => {
+  const statusOfRun = async (hours: number, localHour: number): Promise<{ s: { asOf: string; hour: number; streakMin: number }; start: number }> => {
     const d = (((localHour - new Date().getUTCHours()) % 24) + 24) % 24;
     const off = d > 14 ? d - 24 : d;
     const tz = off >= 0 ? `Etc/GMT-${off}` : `Etc/GMT+${-off}`; // POSIX signs: Etc/GMT-3 is UTC+3
@@ -217,11 +184,7 @@ describe("cogload status", () => {
         stderr: "pipe",
         env: { ...process.env, TZ: tz, NO_COLOR: "1", HOME: await home() },
       });
-      const [out, err, code] = await Promise.all([
-        new Response(p.stdout).text(),
-        new Response(p.stderr).text(),
-        p.exited,
-      ]);
+      const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
       expect([code, err]).toEqual([0, ""]);
       return { s: JSON.parse(out), start };
     } finally {

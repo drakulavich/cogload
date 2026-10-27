@@ -46,8 +46,7 @@ type Live = {
   score: { index: number; level: Level; capped: Part[]; top: Part } | null;
 };
 
-const isInt = (v: unknown, min: number, max: number): v is number =>
-  Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
+const isInt = (v: unknown, min: number, max: number): v is number => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
 
 const isIndex = (v: unknown): v is number | null => v === null || isInt(v, 0, 100);
 
@@ -107,16 +106,14 @@ const toast = async ($: EngineInterface, text: string) => {
   else $.clock.after(at - now, () => $.ui.toast(text));
 };
 
-const formatMinutes = (min: number): string =>
-  min < 60 ? `${min}m` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`;
+const formatMinutes = (min: number): string => (min < 60 ? `${min}m` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`);
 
 const clockTime = (ms: number): string => new Date(ms).toTimeString().slice(0, 5);
 
 const past = (until: number): string =>
   `The person is on a rest until ${clockTime(until)}. This prompt came from their phone through Remote Control, which the rest lets through. Begin your reply with one short line saying it went past the rest, then answer as usual.`;
 
-const LIFTED =
-  "The person just lifted their rest with this skip line, and nothing else was sent. Reply with one short line saying the rest is lifted.";
+const LIFTED = "The person just lifted their rest with this skip line, and nothing else was sent. Reply with one short line saying the rest is lifted.";
 
 const PHRASE: Record<Part, (l: Live) => string> = {
   parallel: (l) => `${l.sessions} sessions at once`,
@@ -127,8 +124,7 @@ const PHRASE: Record<Part, (l: Live) => string> = {
   late: () => "late at night",
 };
 
-const joinHeld = (list: string[]): string =>
-  list.filter((p, i) => !list.slice(i + 1).some((q) => q.includes(p))).join("\n\n");
+const joinHeld = (list: string[]): string => list.filter((p, i) => !list.slice(i + 1).some((q) => q.includes(p))).join("\n\n");
 
 const hourLine = (live: Live, score: NonNullable<Live["score"]>): string => {
   const head = `${score.level} ${score.index} this hour`;
@@ -156,8 +152,7 @@ const restsSince = async ($: EngineInterface, since: number): Promise<number[]> 
   return Array.isArray(list) ? (list as number[]).filter((at) => at > since) : [];
 };
 
-const isSpent = async ($: EngineInterface, s: Status): Promise<boolean> =>
-  s.restAt !== null && (await $.store.get("spent")) === s.restAt;
+const isSpent = async ($: EngineInterface, s: Status): Promise<boolean> => s.restAt !== null && (await $.store.get("spent")) === s.restAt;
 
 const startRestIfDue = async ($: EngineInterface, s: Status) => {
   const now = await $.clock.now();
@@ -335,18 +330,14 @@ export const register: Register = (on) => {
     if (e.props.hasSurvey || s === null || s.index === null || s.level === null) return beneath;
     const now = await $.clock.now();
     const until = await restUntil($, now);
-    const isAhead =
-      until === null && s.restAt !== null && Date.parse(s.restAt) > Date.parse(s.asOf) && !(await isSpent($, s));
+    const isAhead = until === null && s.restAt !== null && Date.parse(s.restAt) > Date.parse(s.asOf) && !(await isSpent($, s));
     const parts: string[] = [];
     if (until !== null) parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`);
     else if (isAhead && s.restAt !== null) parts.push(`rest at ${clockTime(Date.parse(s.restAt))}`);
     else if (e.props.bodyColumns >= NARROW && s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`);
     const { Box, Text } = $.ui.resolve(e);
     const head = Text({ color: COLOR[s.level], children: `● ${s.level}` });
-    const own =
-      parts.length === 0
-        ? head
-        : Box({ children: [head, Text({ dimColor: true, children: parts.map((p) => ` · ${p}`).join("") })] });
+    const own = parts.length === 0 ? head : Box({ children: [head, Text({ dimColor: true, children: parts.map((p) => ` · ${p}`).join("") })] });
     return Box({ flexDirection: "column", children: [own, beneath] });
   });
 };

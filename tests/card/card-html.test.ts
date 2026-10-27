@@ -16,12 +16,7 @@ const GOLDEN = "1ef85879d67cad5243703baa9fc9a7f1fad9b81ad656ac3f049c7a2fdd642506
 describe("card page for busy-week", () => {
   test("name and sentence appear once, the motto follows the sentence", () => {
     expect(count(html, "The Marathoner")).toBe(1);
-    expect(
-      count(
-        html,
-        "Longest streak <b>7h53m</b> without a break, <b>68%</b> of your hours calm. You do not stop while it compiles.",
-      ),
-    ).toBe(1);
+    expect(count(html, "Longest streak <b>7h53m</b> without a break, <b>68%</b> of your hours calm. You do not stop while it compiles.")).toBe(1);
   });
 
   test("the window label and the peak pill", () => {
@@ -33,9 +28,7 @@ describe("card page for busy-week", () => {
     // busy-week reaches all four levels: 15 Calm, 3 Warming, 1 Heating (Friday's
     // half storm) and 3 Fried of 22 hours, so every segment is drawn. The rule
     // for a level at 0% is pinned separately below.
-    const segments = [...html.matchAll(/<div class="(calm|warm|heat|fried)" style="width:(\d+)%"><\/div>/g)].map(
-      (m) => `${m[1]} ${m[2]}%`,
-    );
+    const segments = [...html.matchAll(/<div class="(calm|warm|heat|fried)" style="width:(\d+)%"><\/div>/g)].map((m) => `${m[1]} ${m[2]}%`);
     expect(segments).toEqual(["calm 68%", "warm 14%", "heat 4%", "fried 14%"]);
   });
 
@@ -88,9 +81,7 @@ describe("card page rules", () => {
   });
 
   test("each character gets its own accent and sprite rectangle", () => {
-    const pages = (["conductor", "supervisor", "marathoner", "nightOwl"] as const).map((character) =>
-      cardHtml({ ...card, character }, assets),
-    );
+    const pages = (["conductor", "supervisor", "marathoner", "nightOwl"] as const).map((character) => cardHtml({ ...card, character }, assets));
     const positions = pages.map((p) => /background-position:([^;]+);/.exec(p)![1]);
     expect(new Set(positions).size).toBe(4);
     expect(pages[0]).toContain("--accent:#8b5cf6;");
@@ -121,13 +112,7 @@ describe("card page rules", () => {
 
 describe("loadAssets", () => {
   test("returns five non-empty base64 strings and the sheet decodes to 1024x1024", async () => {
-    for (const s of [
-      assets.fonts.inter400,
-      assets.fonts.inter700,
-      assets.fonts.inter800,
-      assets.fonts.mono500,
-      assets.characters,
-    ]) {
+    for (const s of [assets.fonts.inter400, assets.fonts.inter700, assets.fonts.inter800, assets.fonts.mono500, assets.characters]) {
       expect(s.length).toBeGreaterThan(1000);
       expect(s).toMatch(/^[A-Za-z0-9+/]+=*$/);
     }

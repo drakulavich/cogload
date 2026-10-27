@@ -16,15 +16,7 @@
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import {
-  assistantText,
-  interrupt,
-  mode,
-  nextRequestId,
-  prompt,
-  question,
-  writeTree,
-} from "../tests/helpers/transcript.ts";
+import { assistantText, interrupt, mode, nextRequestId, prompt, question, writeTree } from "../tests/helpers/transcript.ts";
 
 // Double-quoted for bash, so a path with spaces still runs; the four characters that
 // keep their meaning inside double quotes are escaped.

@@ -130,18 +130,13 @@ const start = async ($: Engine) => {
   await $.session.start({ cwd: "/", surface: "terminal", isInteractive: true });
   await clock.advance(0);
 };
-const turnOnly = ($: Engine) =>
-  $.turn.complete({ answer: "", durationMs: 1, isAborted: false, turnId: "t", reason: "answer" });
+const turnOnly = ($: Engine) => $.turn.complete({ answer: "", durationMs: 1, isAborted: false, turnId: "t", reason: "answer" });
 const turn = async ($: Engine) => {
   await turnOnly($);
   await clock.advance(0);
 };
 
-const mount = (
-  $: Engine,
-  props: { bodyColumns?: number; hasSurvey?: boolean } = {},
-  surface: (typeof SURFACES)[number] = "terminal",
-) =>
+const mount = ($: Engine, props: { bodyColumns?: number; hasSurvey?: boolean } = {}, surface: (typeof SURFACES)[number] = "terminal") =>
   $.ui.mount({
     plugin: "cognitive-load",
     surface,
@@ -407,8 +402,7 @@ const SHORT = "A skip needs a reason of three words or more.";
 const BACK = 'Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.';
 const PAST = (until: number) =>
   `The person is on a rest until ${hhmm(until)}. This prompt came from their phone through Remote Control, which the rest lets through. Begin your reply with one short line saying it went past the rest, then answer as usual.`;
-const LIFTED =
-  "The person just lifted their rest with this skip line, and nothing else was sent. Reply with one short line saying the rest is lifted.";
+const LIFTED = "The person just lifted their rest with this skip line, and nothing else was sent. Reply with one short line saying the rest is lifted.";
 const cogload = async ($: Engine) => {
   const { text } = await $.command.run({
     command: "cogload",
@@ -419,8 +413,7 @@ const cogload = async ($: Engine) => {
   if (text === undefined) throw new Error("/cogload gave no text");
   return text;
 };
-const typed = ($: Engine, text: string, kind: "composer" | "bridge" = "composer") =>
-  $.prompt.submit({ text, wait: false, origin: { kind } });
+const typed = ($: Engine, text: string, kind: "composer" | "bridge" = "composer") => $.prompt.submit({ text, wait: false, origin: { kind } });
 
 describe("rest", () => {
   test("a 40-minute streak starts a rest of ten minutes, with one toast", async ($, on) => {
@@ -534,12 +527,7 @@ describe("rest", () => {
     });
   }
 
-  for (const origin of [
-    { kind: "peer" },
-    { kind: "task-notification" },
-    { kind: "scheduled-trigger" },
-    { kind: "plugin", name: "other" },
-  ] as const) {
+  for (const origin of [{ kind: "peer" }, { kind: "task-notification" }, { kind: "scheduled-trigger" }, { kind: "plugin", name: "other" }] as const) {
     test(`a ${origin.kind} prompt during a rest passes`, async ($, on) => {
       engine(on, [{ stdout: line({ streakMin: 40 }) }]);
       await start($);
@@ -613,9 +601,7 @@ describe("rest", () => {
     test(`the band says when the rest ends (${columns} columns)`, async ($, on) => {
       engine(on, [{ stdout: line({ streakMin: 40 }) }]);
       await start($);
-      expect(await band($, { bodyColumns: columns }, surface)).toBe(
-        `● Heating · rest until ${hhmm(NOW + REST_MS)} (10 min)`,
-      );
+      expect(await band($, { bodyColumns: columns }, surface)).toBe(`● Heating · rest until ${hhmm(NOW + REST_MS)} (10 min)`);
     });
   }
 
@@ -883,9 +869,7 @@ describe("/cogload", () => {
     ["late", { lateNight: true }, "late at night"],
   ] as const) {
     test(`${part} alone at its cap`, async ($, on) => {
-      expect(await explain($, on, { stdout: today(metrics, { capped: [part] }) })).toBe(
-        `Heating 80 this hour, at the cap: ${phrase}.`,
-      );
+      expect(await explain($, on, { stdout: today(metrics, { capped: [part] }) })).toBe(`Heating 80 this hour, at the cap: ${phrase}.`);
     });
   }
 
@@ -894,9 +878,7 @@ describe("/cogload", () => {
       { prompts: 32, decisions: 16, contextSwitches: 13, streakMin: 57 },
       { capped: ["streak", "pace", "supervision"], parts: { ...NO_PARTS, streak: 10, pace: 15, supervision: 30 } },
     );
-    expect(await explain($, on, { stdout })).toBe(
-      "Heating 80 this hour, at the cap: a 57m streak, 32 prompts, 16 decisions and 13 context switches.",
-    );
+    expect(await explain($, on, { stdout })).toBe("Heating 80 this hour, at the cap: a 57m streak, 32 prompts, 16 decisions and 13 context switches.");
   });
 
   test("with none capped, cogload's top part", async ($, on) => {
@@ -908,19 +890,13 @@ describe("/cogload", () => {
   });
 
   test("a score cooled to 0 names no part", async ($, on) => {
-    const stdout = today(
-      { prompts: 16, contextSwitches: 15 },
-      { index: 0, level: "Calm", top: "supervision", parts: NO_PARTS },
-    );
+    const stdout = today({ prompts: 16, contextSwitches: 15 }, { index: 0, level: "Calm", top: "supervision", parts: NO_PARTS });
     expect(await explain($, on, { stdout })).toBe("Calm 0 this hour: you have been away.");
   });
 
   test("quotes live's streak as cogload counts it", async ($, on) => {
     const presence = { lastAt: "2026-10-03T09:58:30.000Z", streakStartAt: "2026-10-03T09:11:30.000Z" };
-    const stdout = today({ streakMin: 9 }, { capped: ["streak"] }).replace(
-      '"presence":null',
-      `"presence":${JSON.stringify(presence)}`,
-    );
+    const stdout = today({ streakMin: 9 }, { capped: ["streak"] }).replace('"presence":null', `"presence":${JSON.stringify(presence)}`);
     expect(await explain($, on, { stdout })).toBe("Heating 80 this hour, at the cap: a 9m streak.");
   });
 
@@ -954,9 +930,7 @@ describe("/cogload", () => {
         ],
       },
     );
-    expect(text).toBe(
-      'Nothing scored this hour.\nThis week: 1 rest taken, 1 skipped (last: "prod is down, fixing it").',
-    );
+    expect(text).toBe('Nothing scored this hour.\nThis week: 1 rest taken, 1 skipped (last: "prod is down, fixing it").');
   });
 
   test("an override whose rest fell out of the week leaves the rests taken alone", async ($, on) => {
@@ -989,9 +963,7 @@ describe("/cogload", () => {
   });
 
   test("no rests or overrides, one line", async ($, on) => {
-    expect(await explain($, on, { stdout: today(null) }, { rests: [NOW - 8 * DAY_MS] })).toBe(
-      "Nothing scored this hour.",
-    );
+    expect(await explain($, on, { stdout: today(null) }, { rests: [NOW - 8 * DAY_MS] })).toBe("Nothing scored this hour.");
   });
 
   test("without cogload, the missing text", async ($, on) => {
@@ -1063,9 +1035,7 @@ describe("first meeting", () => {
 
   test("a status line without restAt shows the older text once and no band", async ($, on) => {
     const toasts: string[] = [];
-    const old = JSON.stringify(
-      Object.fromEntries(Object.entries(JSON.parse(line())).filter(([k]) => k !== "restAt" && k !== "restMin")),
-    );
+    const old = JSON.stringify(Object.fromEntries(Object.entries(JSON.parse(line())).filter(([k]) => k !== "restAt" && k !== "restMin")));
     engine(on, [{ stdout: old }, { stdout: old }], [], toasts, { welcomed: true });
     await start($);
     await turn($);

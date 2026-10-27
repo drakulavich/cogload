@@ -116,14 +116,8 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
       // Claude Code 2.1.280+ marks a message from another session `isMeta` (#226).
       const peer = isObj(rec.origin) && rec.origin.kind === "peer";
       if (head?.startsWith(INTERRUPT_PREFIX)) events.push({ ts, sessionId, kind: "interrupt" });
-      else if (
-        head !== null &&
-        (rec.isMeta !== true || peer) &&
-        rec.isCompactSummary !== true &&
-        !OUTPUT_MARKERS.some((marker) => head.startsWith(marker))
-      ) {
-        if (peer || rec.promptSource === "system" || AGENT_MARKERS.some((marker) => head.startsWith(marker)))
-          events.push({ ts, sessionId, kind: "report" });
+      else if (head !== null && (rec.isMeta !== true || peer) && rec.isCompactSummary !== true && !OUTPUT_MARKERS.some((marker) => head.startsWith(marker))) {
+        if (peer || rec.promptSource === "system" || AGENT_MARKERS.some((marker) => head.startsWith(marker))) events.push({ ts, sessionId, kind: "report" });
         else events.push({ ts, sessionId, kind: "prompt" });
       }
     } else {
@@ -141,18 +135,14 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
       const requestId = str(rec.requestId);
       const usage = isObj(rec.message) ? rec.message.usage : undefined;
       const outputTokens = isObj(usage) ? usage.output_tokens : undefined;
-      const tokens =
-        typeof outputTokens === "number" && Number.isSafeInteger(outputTokens) && outputTokens >= 0
-          ? outputTokens
-          : null;
+      const tokens = typeof outputTokens === "number" && Number.isSafeInteger(outputTokens) && outputTokens >= 0 ? outputTokens : null;
       const hasText = blocks.some((b) => isObj(b) && b.type === "text");
       if (requestId !== null && tokens !== null && hasText && !seenRequestIds.has(requestId)) {
         seenRequestIds.add(requestId);
         events.push({ ts, sessionId, kind: "output", tokens });
       }
     }
-    if (rec.sessionKind === "bg")
-      for (let i = first; i < events.length; i++) if (events[i]!.kind !== "mode_change") events[i]!.bg = true;
+    if (rec.sessionKind === "bg") for (let i = first; i < events.length; i++) if (events[i]!.kind !== "mode_change") events[i]!.bg = true;
   }
   return events;
 }

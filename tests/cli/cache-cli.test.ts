@@ -59,11 +59,7 @@ async function setup(): Promise<{ home: string; projects: string }> {
   return { home: await temp("home"), projects };
 }
 
-async function spawn(
-  home: string,
-  projects: string,
-  ...args: string[]
-): Promise<{ code: number; out: string; err: string }> {
+async function spawn(home: string, projects: string, ...args: string[]): Promise<{ code: number; out: string; err: string }> {
   const p = Bun.spawn(["bun", CLI, "--projects", projects, "--to", "2026-09-14", "--json", ...args], {
     cwd,
     stdout: "pipe",
@@ -73,8 +69,7 @@ async function spawn(
   const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
   return { code, out, err };
 }
-const uncached = async (projects: string, ...args: string[]) =>
-  spawn(await temp("home"), projects, "--no-cache", ...args);
+const uncached = async (projects: string, ...args: string[]) => spawn(await temp("home"), projects, "--no-cache", ...args);
 
 const lineOf = (err: string, label: string) => err.split("\n").find((l) => l.startsWith(`${label} `));
 function hitsOf(err: string): { hits: number; misses: number } {
@@ -100,9 +95,7 @@ function rows(home: string): number {
   }
 }
 function bucket(out: string, date: string, hour: number): { prompts: number } {
-  const day = (JSON.parse(out) as { date: string; buckets: { hour: number; prompts: number }[] }[]).find(
-    (d) => d.date === date,
-  );
+  const day = (JSON.parse(out) as { date: string; buckets: { hour: number; prompts: number }[] }[]).find((d) => d.date === date);
   return day?.buckets.find((b) => b.hour === hour) ?? { prompts: 0 };
 }
 
@@ -123,11 +116,7 @@ describe("the transcript cache", () => {
 
   test("a history copied under another session counts once from the cache as without it (#222)", async () => {
     const projects = await temp("proj");
-    const lines = [
-      prompt("2026-09-14T10:00:00.000Z", A),
-      assistant("2026-09-14T10:05:00.000Z", A),
-      prompt("2026-09-14T10:30:00.000Z", A),
-    ];
+    const lines = [prompt("2026-09-14T10:00:00.000Z", A), assistant("2026-09-14T10:05:00.000Z", A), prompt("2026-09-14T10:30:00.000Z", A)];
     await writeTree(projects, [
       { path: `${DIR}/x.jsonl`, lines, mtime: "2026-09-14T10:30:00.000Z" },
       { path: `${DIR}/y.jsonl`, lines: copiedTo(lines, B), mtime: "2026-09-14T10:30:00.000Z" },
@@ -223,10 +212,7 @@ describe("the transcript cache", () => {
 
   test("two runs at once both print what --no-cache prints", async () => {
     const { home, projects } = await setup();
-    const [narrow, wide] = await Promise.all([
-      spawn(home, projects, "--days", "1"),
-      spawn(home, projects, "--days", "7"),
-    ]);
+    const [narrow, wide] = await Promise.all([spawn(home, projects, "--days", "1"), spawn(home, projects, "--days", "7")]);
     expect([narrow.code, narrow.err, wide.code, wide.err]).toEqual([0, "", 0, ""]);
     expect(narrow.out).toBe((await uncached(projects, "--days", "1")).out);
     expect(wide.out).toBe((await uncached(projects, "--days", "7")).out);
@@ -373,10 +359,12 @@ describe("the transcript cache", () => {
     // cogload no longer narrows the process umask (that reached the card), so the
     // cache sets its own modes: umask 000 would otherwise leave 0777 and 0644.
     const { home, projects } = await setup();
-    const p = Bun.spawn(
-      ["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"],
-      { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } },
-    );
+    const p = Bun.spawn(["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"], {
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
+    });
     expect(await p.exited).toBe(0);
     const cogload = join(home, ".claude", "cogload");
     const mode = async (p: string) => (await stat(p)).mode & 0o777;
@@ -415,10 +403,12 @@ console.log([...seen].sort().join(" "));
     const lines = watch.stdout.pipeThrough(new TextDecoderStream()).getReader();
     let out = (await lines.read()).value ?? "";
     expect(out).toStartWith("ready");
-    const run = Bun.spawn(
-      ["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"],
-      { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } },
-    );
+    const run = Bun.spawn(["sh", "-c", 'umask 000; exec bun "$0" "$@"', CLI, "--projects", projects, "--to", "2026-09-14", "--json"], {
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
+    });
     expect(await run.exited).toBe(0);
     await writeFile(stop, "");
     for (let r = await lines.read(); !r.done; r = await lines.read()) out += r.value;

@@ -9,11 +9,7 @@ export type ScanStats = { files: number; tailChecks: number; skipped: number };
 export type ScanEntry = { path: string; dev: number; ino: number; size: number; mtimeMs: number };
 
 // A `subagents` directory holds the parent agent's conversation, not the human's.
-export async function scan(
-  projects: string,
-  cutoffMs: number,
-  stats: ScanStats = { files: 0, tailChecks: 0, skipped: 0 },
-): Promise<ScanEntry[]> {
+export async function scan(projects: string, cutoffMs: number, stats: ScanStats = { files: 0, tailChecks: 0, skipped: 0 }): Promise<ScanEntry[]> {
   // No path in any message: the CLI never prints one. A directory that can be
   // listed but not entered (mode 444) would otherwise read as one with no activity.
   let root;
@@ -23,8 +19,7 @@ export async function scan(
     root = await readdir(projects, { withFileTypes: true });
   } catch (err) {
     const code = (err as { code?: string }).code;
-    if (code === "EACCES" || code === "EPERM")
-      throw new Error("projects directory cannot be read (check its permissions)");
+    if (code === "EACCES" || code === "EPERM") throw new Error("projects directory cannot be read (check its permissions)");
     if (code === "ENOTDIR") throw new Error("projects path is not a directory (pass --projects <dir>)");
     throw new Error("projects directory not found (pass --projects <dir>)");
   }
@@ -35,13 +30,7 @@ export async function scan(
 
 // One unreadable directory costs only itself. Symlinks are not followed: Claude
 // Code never writes one, and following one is how a loop or $HOME would get in.
-async function collect(
-  dir: string,
-  entries: Dirent[],
-  cutoffMs: number,
-  out: ScanEntry[],
-  stats: ScanStats,
-): Promise<void> {
+async function collect(dir: string, entries: Dirent[], cutoffMs: number, out: ScanEntry[], stats: ScanStats): Promise<void> {
   for (const entry of entries) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {

@@ -33,29 +33,15 @@ describe("hour and day edges", () => {
 
   test("a window of 7 days lists dates oldest first ending at --to", () => {
     const days = analyze([], { to: "2026-09-14", days: 7 });
-    expect(days.map((d) => d.date)).toEqual([
-      "2026-09-08",
-      "2026-09-09",
-      "2026-09-10",
-      "2026-09-11",
-      "2026-09-12",
-      "2026-09-13",
-      "2026-09-14",
-    ]);
+    expect(days.map((d) => d.date)).toEqual(["2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11", "2026-09-12", "2026-09-13", "2026-09-14"]);
     expect(days.every((d) => d.peak === null && d.activeMin === 0)).toBe(true);
   });
 
   test("late-night hours flag 23 and 0-5 only", () => {
-    const d = analyze(
-      [
-        transcript([
-          prompt("2026-09-14T05:30:00.000Z", S),
-          prompt("2026-09-14T06:30:00.000Z", S),
-          prompt("2026-09-14T23:30:00.000Z", S),
-        ]),
-      ],
-      { to: "2026-09-14", days: 1 },
-    )[0]!;
+    const d = analyze([transcript([prompt("2026-09-14T05:30:00.000Z", S), prompt("2026-09-14T06:30:00.000Z", S), prompt("2026-09-14T23:30:00.000Z", S)])], {
+      to: "2026-09-14",
+      days: 1,
+    })[0]!;
     expect(d.buckets[5]!.lateNight).toBe(true);
     expect(d.buckets[6]!.lateNight).toBe(false);
     expect(d.buckets[23]!.lateNight).toBe(true);

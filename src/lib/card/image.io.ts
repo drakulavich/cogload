@@ -8,13 +8,7 @@ import { pathToFileURL } from "node:url";
 import type { CardAssets } from "./cardhtml.ts";
 
 const ASSETS = new URL("../../../assets/", import.meta.url);
-const FILES = [
-  "fonts/inter-400.woff2",
-  "fonts/inter-700.woff2",
-  "fonts/inter-800.woff2",
-  "fonts/jetbrains-mono-500.woff2",
-  "characters.webp",
-] as const;
+const FILES = ["fonts/inter-400.woff2", "fonts/inter-700.woff2", "fonts/inter-800.woff2", "fonts/jetbrains-mono-500.woff2", "characters.webp"] as const;
 
 // A missing or empty asset is a broken install, reported without a path.
 export async function loadAssets(): Promise<CardAssets> {
@@ -33,8 +27,7 @@ export async function loadAssets(): Promise<CardAssets> {
 }
 
 const BACKEND = process.platform === "darwin" ? "webkit" : "chrome";
-const ENGINE_LINE =
-  "card needs a browser engine: install a Chromium browser such as Chrome or Edge, or write --out card.html";
+const ENGINE_LINE = "card needs a browser engine: install a Chromium browser such as Chrome or Edge, or write --out card.html";
 // Thrown for a card that cannot be written, so the caller can name the place it
 // chose; the message is the line for an --out the person gave.
 export class CardWriteError extends Error {
@@ -46,8 +39,7 @@ const TEMP_LINE = "cannot draw the card: the temporary directory is not writable
 const SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
 const WIDTH = 2400;
 const HEIGHT = 1260;
-const READY =
-  'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
+const READY = 'document.fonts.ready.then(() => document.fonts.status === "loaded" && Array.from(document.images).every((i) => i.complete))';
 
 // The budget bounds the whole render, and the view closes the moment it runs
 // out. The page loads from a file because a data: URL this size sometimes

@@ -17,5 +17,4 @@ function ladder(n: number): string {
 export const formatCount = (n: number): string => (n < 10_000 ? String(n) : ladder(n));
 export const formatTokens = (n: number): string => (n < 1000 ? String(n) : ladder(n));
 
-export const plural = (n: number, one: string, many = `${one}s`, count = formatCount): string =>
-  `${count(n)} ${n === 1 ? one : many}`;
+export const plural = (n: number, one: string, many = `${one}s`, count = formatCount): string => `${count(n)} ${n === 1 ? one : many}`;

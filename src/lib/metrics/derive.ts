@@ -76,11 +76,7 @@ const newAcc = (): Acc => ({
 
 // Inside a streak the human sat through the gap, so a pair of actions covers
 // every slot between them; an action that starts a streak covers only its own.
-const coverage = (
-  prevTs: number | null,
-  streakStart: number,
-  e: Event,
-): { from: number; to: number; streakStart: number } => {
+const coverage = (prevTs: number | null, streakStart: number, e: Event): { from: number; to: number; streakStart: number } => {
   const to = Math.floor(e.ts / SLOT_MS);
   if (prevTs !== null && e.ts - prevTs <= GAP_MS) return { from: Math.floor(prevTs / SLOT_MS), to, streakStart };
   return { from: to, to, streakStart: e.ts };
@@ -143,10 +139,7 @@ function finish(a: Acc, lateNight: boolean, streakMin = Math.round(a.maxStreakMs
 // The 24 hour buckets, keyed "date|hour". Events before startMs are look-back:
 // they move the streak but enter no bucket, though a span from one into the
 // window still covers the window's first slots.
-function foldEvents(
-  sorted: Event[],
-  startMs: number,
-): { acc: Map<string, Acc>; carried: { ts: number; streakStart: number } | null } {
+function foldEvents(sorted: Event[], startMs: number): { acc: Map<string, Acc>; carried: { ts: number; streakStart: number } | null } {
   const acc = new Map<string, Acc>(); // key "date|hour"
   const key = (ts: number): string => {
     const d = new Date(ts);
@@ -206,13 +199,7 @@ function foldLive(sorted: Event[], nowMs: number, sinceMs = -Infinity): Acc {
 }
 
 // statusOf reads this streakMin; a break before the streak cools the score.
-function liveBucket(
-  sorted: Event[],
-  presenceTs: number[],
-  presence: Day["presence"],
-  nowMs: number,
-  lateNight: boolean,
-): LiveBucket {
+function liveBucket(sorted: Event[], presenceTs: number[], presence: Day["presence"], nowMs: number, lateNight: boolean): LiveBucket {
   const lastMs = presence ? Date.parse(presence.lastAt) : null;
   const startMs = lastMs !== null && nowMs - lastMs <= GAP_MS ? Date.parse(presence!.streakStartAt) : null;
   const streakMin = startMs === null ? 0 : Math.min(MAX_STREAK_MIN, Math.round((nowMs - startMs) / 60000));
@@ -312,8 +299,7 @@ export function derive(events: Event[], w: Window): Day[] {
     };
   }
   for (const d of days) {
-    if (d.presence)
-      d.presence.streakStartAt = new Date(traceBack(Date.parse(d.presence.streakStartAt), earlier)).toISOString();
+    if (d.presence) d.presence.streakStartAt = new Date(traceBack(Date.parse(d.presence.streakStartAt), earlier)).toISOString();
   }
   if (w.now) {
     const today = localDate(w.now);

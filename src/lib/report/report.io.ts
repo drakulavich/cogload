@@ -1,15 +1,7 @@
 import { constants } from "node:buffer";
 import { open } from "node:fs/promises";
 import { analyzeEvents, windowBounds } from "../metrics/index.ts";
-import {
-  tailHash,
-  type Fresh,
-  type TranscriptCache,
-  parseTranscript,
-  scan,
-  type ScanEntry,
-  type ScanStats,
-} from "../transcripts/index.ts";
+import { tailHash, type Fresh, type TranscriptCache, parseTranscript, scan, type ScanEntry, type ScanStats } from "../transcripts/index.ts";
 import type { Day, Event } from "../types.ts";
 
 export type ReportOptions = { projects: string; to: string; days: number; now?: Date; streakFrom?: Date };
@@ -50,16 +42,10 @@ async function readWhole(entry: ScanEntry): Promise<Read> {
     const bytes = await fh.readFile();
     const after = await fh.stat();
     const same =
-      before.dev === after.dev &&
-      before.ino === after.ino &&
-      before.size === after.size &&
-      before.mtimeMs === after.mtimeMs &&
-      before.size === bytes.length;
+      before.dev === after.dev && before.ino === after.ino && before.size === after.size && before.mtimeMs === after.mtimeMs && before.size === bytes.length;
     return {
       bytes,
-      stable: same
-        ? { path: entry.path, dev: after.dev, ino: after.ino, size: after.size, mtimeMs: after.mtimeMs }
-        : null,
+      stable: same ? { path: entry.path, dev: after.dev, ino: after.ino, size: after.size, mtimeMs: after.mtimeMs } : null,
     };
   } finally {
     await fh.close();

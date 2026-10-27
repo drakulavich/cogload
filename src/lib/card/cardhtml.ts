@@ -37,8 +37,7 @@ function spriteStyle(c: Character): string {
   const px = (v: number): string => `${v.toFixed(1)}px`;
   return `background-size:${px(size)} ${px(size)};background-position:${px(-x * size)} ${px(-y * size)};width:${px(bw)};height:${px(bh)};left:${px(CENTRE.x - bw / 2)};top:${px(CENTRE.y - bh / 2)}`;
 }
-const sentenceHtml = (segments: Segment[]): string =>
-  segments.map((s) => (s.strong ? `<b>${s.text}</b>` : s.text)).join("");
+const sentenceHtml = (segments: Segment[]): string => segments.map((s) => (s.strong ? `<b>${s.text}</b>` : s.text)).join("");
 const fontFace = (family: string, weight: number, data: string): string =>
   `@font-face{font-family:"${family}";font-weight:${weight};font-style:normal;src:url("data:font/woff2;base64,${data}") format("woff2")}`;
 
@@ -56,14 +55,9 @@ export function cardHtml(card: CardData, assets: CardAssets): string {
     .filter(([, pct]) => pct > 0)
     .map(([cls, pct]) => `<div class="${cls}" style="width:${pct}%"></div>`)
     .join("");
-  const legend = levels
-    .map(([cls, pct, name]) => `<span><i class="${cls}"></i><b>${pct}%</b> ${name}</span>`)
-    .join("&nbsp;&nbsp;");
+  const legend = levels.map(([cls, pct, name]) => `<span><i class="${cls}"></i><b>${pct}%</b> ${name}</span>`).join("&nbsp;&nbsp;");
   const stats = card.highlights
-    .map(
-      (h) =>
-        `<div class="stat" data-key="${h.key}"><div class="v">${h.value}</div><div class="c mono">${h.caption}</div></div>`,
-    )
+    .map((h) => `<div class="stat" data-key="${h.key}"><div class="v">${h.value}</div><div class="c mono">${h.caption}</div></div>`)
     .join("");
   const label = card.days === 1 ? "Last 1 day" : `Last ${card.days} days`;
 
