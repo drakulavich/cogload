@@ -17,17 +17,32 @@ let cwd: string;
 // Every run gets its own HOME, so the file each test asserts on is only ever
 // written by that test's own runs.
 const spawn = (home: string, ...args: string[]): Promise<{ code: number; out: string; err: string }> => {
-  const p = Bun.spawn(["bun", CLI, "status", ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+  const p = Bun.spawn(["bun", CLI, "status", ...args], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
+  });
   return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(([out, err, code]) => ({ code, out, err }));
 };
 const spawnToday = (home: string, ...args: string[]): Promise<{ code: number; out: string; err: string }> => {
-  const p = Bun.spawn(["bun", CLI, "today", "--json", ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+  const p = Bun.spawn(["bun", CLI, "today", "--json", ...args], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
+  });
   return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(([out, err, code]) => ({ code, out, err }));
 };
 const run = (home: string, ...args: string[]) => spawn(home, "--projects", projects, ...args);
 // The same run, under a umask that would narrow every mode cogload asks for.
 const masked = (home: string): Promise<{ code: number; out: string; err: string }> => {
-  const p = Bun.spawn(["sh", "-c", 'umask 0277; exec bun "$0" "$@"', CLI, "status", "--projects", projects], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+  const p = Bun.spawn(["sh", "-c", 'umask 0277; exec bun "$0" "$@"', CLI, "status", "--projects", projects], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
+  });
   return Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]).then(([out, err, code]) => ({ code, out, err }));
 };
 const home = () => mkdtemp(join(tmpdir(), "cogload-status-home-"));
@@ -39,7 +54,13 @@ beforeAll(async () => {
   projects = await mkdtemp(join(tmpdir(), "cogload-status-proj-"));
   cwd = await mkdtemp(join(tmpdir(), "cogload-status-cwd-"));
   const d = utcDay(0);
-  await writeTree(projects, [{ path: "-Users-me-proj/t.jsonl", lines: [prompt(`${d}T00:00:00.000Z`, A), assistant(`${d}T00:02:00.000Z`, A)], mtime: `${d}T00:02:00.000Z` }]);
+  await writeTree(projects, [
+    {
+      path: "-Users-me-proj/t.jsonl",
+      lines: [prompt(`${d}T00:00:00.000Z`, A), assistant(`${d}T00:02:00.000Z`, A)],
+      mtime: `${d}T00:02:00.000Z`,
+    },
+  ]);
 });
 afterAll(async () => {
   await rm(projects, { recursive: true, force: true });
@@ -89,7 +110,12 @@ describe("cogload status", () => {
     // concurrency promise and the umask rule at the same time.
     const h = await home();
     const rs = await Promise.all([masked(h), masked(h), masked(h), masked(h)]);
-    expect(rs.map((r) => [r.code, r.err])).toEqual([[0, ""], [0, ""], [0, ""], [0, ""]]);
+    expect(rs.map((r) => [r.code, r.err])).toEqual([
+      [0, ""],
+      [0, ""],
+      [0, ""],
+      [0, ""],
+    ]);
     expect((await stat(dirOf(h))).mode & 0o777).toBe(0o700);
     expect((await stat(statusPath(h))).mode & 0o777).toBe(0o600);
     const file = await readFile(statusPath(h), "utf8");
@@ -110,13 +136,20 @@ describe("cogload status", () => {
       const d = utcDay(0);
       const ahead = (minutes: number) => new Date(Date.now() + minutes * 60_000).toISOString();
       await writeTree(tree, [
-        { path: "-Users-me-proj/t.jsonl", lines: [prompt(`${d}T00:00:00.000Z`, A), assistant(`${d}T00:02:00.000Z`, A)], mtime: `${d}T00:02:00.000Z` },
+        {
+          path: "-Users-me-proj/t.jsonl",
+          lines: [prompt(`${d}T00:00:00.000Z`, A), assistant(`${d}T00:02:00.000Z`, A)],
+          mtime: `${d}T00:02:00.000Z`,
+        },
         { path: "-Users-me-proj/later.jsonl", lines: [prompt(ahead(5), B), assistant(ahead(6), B)], mtime: ahead(6) },
       ]);
       const [hc, hf] = [await home(), await home()];
       const [control, withFuture] = await Promise.all([run(hc), spawn(hf, "--projects", tree)]);
       expect([control.code, withFuture.code]).toEqual([0, 0]);
-      const load = (line: string) => { const { index, level, peak, activeMin, streakMin } = JSON.parse(line); return { index, level, peak, activeMin, streakMin }; };
+      const load = (line: string) => {
+        const { index, level, peak, activeMin, streakMin } = JSON.parse(line);
+        return { index, level, peak, activeMin, streakMin };
+      };
       expect(load(withFuture.out)).toEqual(load(control.out));
       // The fixture does count when it is behind the clock, so equality above
       // is the cutoff at work and not two empty days.
@@ -138,8 +171,19 @@ describe("cogload status", () => {
     const n = hours * 12;
     const tree = await mkdtemp(join(tmpdir(), "cogload-status-streak-"));
     try {
-      await writeTree(tree, [{ path: "-Users-me-proj/t.jsonl", lines: Array.from({ length: n }, (_, i) => prompt(at(i), A)), mtime: at(n - 1) }]);
-      const p = Bun.spawn(["bun", CLI, "status", "--projects", tree], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: tz, NO_COLOR: "1", HOME: await home() } });
+      await writeTree(tree, [
+        {
+          path: "-Users-me-proj/t.jsonl",
+          lines: Array.from({ length: n }, (_, i) => prompt(at(i), A)),
+          mtime: at(n - 1),
+        },
+      ]);
+      const p = Bun.spawn(["bun", CLI, "status", "--projects", tree], {
+        cwd,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, TZ: tz, NO_COLOR: "1", HOME: await home() },
+      });
       const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
       expect([code, err]).toEqual([0, ""]);
       return { s: JSON.parse(out), start };
@@ -173,7 +217,13 @@ describe("cogload status", () => {
     const tree = await mkdtemp(join(tmpdir(), "cogload-today-streak-"));
     try {
       const last = 28 * 12;
-      await writeTree(tree, [{ path: "-Users-me-proj/t.jsonl", lines: Array.from({ length: last + 1 }, (_, i) => prompt(at(i), A)), mtime: at(last) }]);
+      await writeTree(tree, [
+        {
+          path: "-Users-me-proj/t.jsonl",
+          lines: Array.from({ length: last + 1 }, (_, i) => prompt(at(i), A)),
+          mtime: at(last),
+        },
+      ]);
       const [h1, h2] = [await home(), await home()];
       const [status, today] = await Promise.all([spawn(h1, "--projects", tree), spawnToday(h2, "--projects", tree)]);
       expect([status.code, today.code, status.err, today.err]).toEqual([0, 0, "", ""]);

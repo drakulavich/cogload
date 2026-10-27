@@ -6,7 +6,22 @@ import type { Day, Event } from "../types.ts";
 
 export type ReportOptions = { projects: string; to: string; days: number; now?: Date; streakFrom?: Date };
 // What --verbose prints about a run: counts and milliseconds, never a path.
-export type Timing = ScanStats & { inWindow: number; read: number; bytes: number; cache: { hits: number; misses: number } | null; startMs?: number; openMs?: number; scanMs: number; lookupMs: number; readMs: number; analyzeMs: number; saveMs: number; render?: { format: string; ms: number }; writeMs?: number; totalMs?: number };
+export type Timing = ScanStats & {
+  inWindow: number;
+  read: number;
+  bytes: number;
+  cache: { hits: number; misses: number } | null;
+  startMs?: number;
+  openMs?: number;
+  scanMs: number;
+  lookupMs: number;
+  readMs: number;
+  analyzeMs: number;
+  saveMs: number;
+  render?: { format: string; ms: number };
+  writeMs?: number;
+  totalMs?: number;
+};
 
 // Reading one file at a time left the disk idle between files: 1.6 GB took 5.4 s
 // sequentially and 0.9 s in parallel. The cap keeps open files well under the limit.
@@ -26,8 +41,12 @@ async function readWhole(entry: ScanEntry): Promise<Read> {
     if (before.size > constants.MAX_STRING_LENGTH) throw new Error("longer than a string can hold");
     const bytes = await fh.readFile();
     const after = await fh.stat();
-    const same = before.dev === after.dev && before.ino === after.ino && before.size === after.size && before.mtimeMs === after.mtimeMs && before.size === bytes.length;
-    return { bytes, stable: same ? { path: entry.path, dev: after.dev, ino: after.ino, size: after.size, mtimeMs: after.mtimeMs } : null };
+    const same =
+      before.dev === after.dev && before.ino === after.ino && before.size === after.size && before.mtimeMs === after.mtimeMs && before.size === bytes.length;
+    return {
+      bytes,
+      stable: same ? { path: entry.path, dev: after.dev, ino: after.ino, size: after.size, mtimeMs: after.mtimeMs } : null,
+    };
   } finally {
     await fh.close();
   }
@@ -56,7 +75,9 @@ export async function report(o: ReportOptions, timing?: Timing, cache?: Transcri
         const r = await readWhole(entry);
         bytes += r.bytes.length;
         reads.set(entry.path, r);
-      } catch { stats.skipped++; }
+      } catch {
+        stats.skipped++;
+      }
     }
   };
   await Promise.all(Array.from({ length: Math.min(READERS, misses.length) }, reader));
@@ -75,8 +96,24 @@ export async function report(o: ReportOptions, timing?: Timing, cache?: Transcri
   const days = analyzeEvents(events, window);
   const analyzeMs = performance.now() - t;
   t = performance.now();
-  cache?.save(entries.filter((e) => hits.has(e.path)), fresh, Date.now());
+  cache?.save(
+    entries.filter((e) => hits.has(e.path)),
+    fresh,
+    Date.now(),
+  );
   const saveMs = performance.now() - t;
-  if (timing) Object.assign(timing, { ...stats, inWindow: entries.length, read: reads.size, bytes, cache: found ? { hits: hits.size, misses: misses.length } : null, scanMs, lookupMs, readMs, analyzeMs, saveMs });
+  if (timing)
+    Object.assign(timing, {
+      ...stats,
+      inWindow: entries.length,
+      read: reads.size,
+      bytes,
+      cache: found ? { hits: hits.size, misses: misses.length } : null,
+      scanMs,
+      lookupMs,
+      readMs,
+      analyzeMs,
+      saveMs,
+    });
   return days;
 }

@@ -8,18 +8,18 @@ const at = (hhmm: string) => `2026-09-14T${hhmm}:00.000Z`;
 
 describe("decisions in one hour", () => {
   const t = transcript([
-    mode(S, "auto"),                 // baseline, not a switch
+    mode(S, "auto"), // baseline, not a switch
     prompt(at("13:00"), S),
     assistant(at("13:01"), S),
     interrupt(at("13:02"), S),
     interrupt(at("13:03"), S, true),
     reject(at("13:04"), S),
-    toolResult(at("13:05"), S),     // ordinary tool result: not a prompt, not a reject
+    toolResult(at("13:05"), S), // ordinary tool result: not a prompt, not a reject
     question(at("13:06"), S),
     plan(at("13:07"), S),
-    mode(S, "plan"),                 // switch 1 (ts of the plan record, 13:07)
-    mode(S, "plan"),                 // repeat, nothing
-    mode(S, "acceptEdits"),          // switch 2
+    mode(S, "plan"), // switch 1 (ts of the plan record, 13:07)
+    mode(S, "plan"), // repeat, nothing
+    mode(S, "acceptEdits"), // switch 2
     prompt(at("13:08"), S),
   ]);
   const day = analyze([t], W)[0]!;

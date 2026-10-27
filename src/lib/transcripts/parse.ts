@@ -69,7 +69,11 @@ export function parseTranscript(text: string, cutoffMs = -Infinity): Event[] {
     if (line.trim() === "") continue;
     if (lastTs !== null && lastTs < cutoffMs && olderThan(line, cutoffMs)) continue;
     let rec: unknown;
-    try { rec = JSON.parse(line); } catch { continue; }
+    try {
+      rec = JSON.parse(line);
+    } catch {
+      continue;
+    }
     if (!isObj(rec)) continue;
     const type = str(rec.type);
     const sessionId = str(rec.sessionId);

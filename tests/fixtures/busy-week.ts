@@ -19,7 +19,11 @@ const path = (day: number, n: number, kind: string) => `-Users-me-proj-${n}-${ki
 // One session working alone: a prompt and a reply every 10 minutes across [from, to) hours.
 function calm(day: number, n: number, from: number, to: number) {
   const lines = [mode(sid(n), "auto")];
-  for (let h = from; h < to; h++) for (let m = 0; m < 60; m += 10) { lines.push(prompt(ts(day, h, m), sid(n))); lines.push(assistant(ts(day, h, m + 3), sid(n))); }
+  for (let h = from; h < to; h++)
+    for (let m = 0; m < 60; m += 10) {
+      lines.push(prompt(ts(day, h, m), sid(n)));
+      lines.push(assistant(ts(day, h, m + 3), sid(n)));
+    }
   files.push({ path: path(day, n, "calm"), lines, mtime: ts(day, to, 0) });
 }
 // Five sessions at once with interrupts, rejections, questions and a plan review.
@@ -41,14 +45,19 @@ function calm(day: number, n: number, from: number, to: number) {
 function storm(day: number, from: number, to: number, lastMin = 59) {
   for (let n = 1; n <= 5; n++) {
     const lines = [mode(sid(n), "auto")];
-    for (let h = from; h < to; h++) for (let m = n; m + 4 < 60 && m <= lastMin; m += 5) {
-      lines.push(prompt(ts(day, h, m), sid(n)));
-      lines.push(assistantText(ts(day, h, m + 2), sid(n), 1000, nextRequestId()));
-      if (m % 15 === n % 15) lines.push(interrupt(ts(day, h, m + 3), sid(n)));
-      if (n === 2 && m === 22) lines.push(reject(ts(day, h, m + 4), sid(n)));
-      if (n === 3 && m === 33) lines.push(question(ts(day, h, m + 4), sid(n)));
-      if (n === 4 && m === 44) { lines.push(plan(ts(day, h, m + 4), sid(n))); lines.push(mode(sid(n), "plan")); lines.push(mode(sid(n), "auto")); }
-    }
+    for (let h = from; h < to; h++)
+      for (let m = n; m + 4 < 60 && m <= lastMin; m += 5) {
+        lines.push(prompt(ts(day, h, m), sid(n)));
+        lines.push(assistantText(ts(day, h, m + 2), sid(n), 1000, nextRequestId()));
+        if (m % 15 === n % 15) lines.push(interrupt(ts(day, h, m + 3), sid(n)));
+        if (n === 2 && m === 22) lines.push(reject(ts(day, h, m + 4), sid(n)));
+        if (n === 3 && m === 33) lines.push(question(ts(day, h, m + 4), sid(n)));
+        if (n === 4 && m === 44) {
+          lines.push(plan(ts(day, h, m + 4), sid(n)));
+          lines.push(mode(sid(n), "plan"));
+          lines.push(mode(sid(n), "auto"));
+        }
+      }
     files.push({ path: path(day, n, "storm"), lines, mtime: ts(day, to, 0) });
   }
 }
@@ -64,9 +73,13 @@ function stillThere(day: number, n: number, h: number, m: number) {
 
 await rm(root, { recursive: true, force: true });
 // Mon 14: calm morning, storm 12-15 with no gap after it (streak at cap → index 87, Fried), calm evening, late-night tail
-calm(14, 1, 9, 12); storm(14, 12, 15); calm(14, 6, 20, 22); calm(14, 7, 23, 24);
+calm(14, 1, 9, 12);
+storm(14, 12, 15);
+calm(14, 6, 20, 22);
+calm(14, 7, 23, 24);
 // Tue 15: two sessions 10-18, the window's longest run
-calm(15, 1, 10, 18); calm(15, 2, 14, 17);
+calm(15, 1, 10, 18);
+calm(15, 2, 14, 17);
 // Wed 16: nothing
 // Thu 17: one calm session 11-13
 calm(17, 1, 11, 13);
@@ -83,6 +96,7 @@ calm(19, 1, 0, 2);
 // from 9:00 and hour 12 opens at the streak cap, Fried. Tuesday 17:53 ends the
 // window's longest run on a prompt rather than on the reply that used to close
 // it, keeping that run 10:00 to 17:53.
-stillThere(14, 1, 11, 59); stillThere(15, 1, 17, 53);
+stillThere(14, 1, 11, 59);
+stillThere(15, 1, 17, 53);
 await writeTree(root, files);
 console.log(`wrote ${files.length} transcripts under ${root}`);

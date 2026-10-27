@@ -15,7 +15,9 @@ describe("parallel sessions", () => {
   });
 
   test("three sessions interleaved in one hour", () => {
-    const files = [1, 2, 3].map((n) => transcript([prompt(at(`0${n}`), sid(n)), assistant(at(`0${n + 3}`), sid(n)), prompt(at(`3${n}`), sid(n))], `p/${n}.jsonl`));
+    const files = [1, 2, 3].map((n) =>
+      transcript([prompt(at(`0${n}`), sid(n)), assistant(at(`0${n + 3}`), sid(n)), prompt(at(`3${n}`), sid(n))], `p/${n}.jsonl`),
+    );
     const b = analyze(files, W)[0]!.buckets[13]!;
     expect(b.sessions).toBe(3);
     // prompt order: s1 01, s2 02, s3 03, s1 31, s2 32, s3 33 → 5 switches

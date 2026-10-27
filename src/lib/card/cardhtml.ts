@@ -14,7 +14,7 @@ export type CardAssets = {
 const CHARACTER_RECTS: Record<Character, [number, number, number, number]> = {
   conductor: [0.02, 0.01, 0.53, 0.543],
   supervisor: [0.55, 0.07, 0.38, 0.505],
-  marathoner: [0.02, 0.553, 0.50, 0.437],
+  marathoner: [0.02, 0.553, 0.5, 0.437],
   nightOwl: [0.54, 0.585, 0.45, 0.41],
 };
 const BOX = 360;
@@ -51,7 +51,10 @@ export function cardHtml(card: CardData, assets: CardAssets): string {
     ["heat", card.spectrum.heating, "heating"],
     ["fried", card.spectrum.fried, "fried"],
   ] as const;
-  const bar = levels.filter(([, pct]) => pct > 0).map(([cls, pct]) => `<div class="${cls}" style="width:${pct}%"></div>`).join("");
+  const bar = levels
+    .filter(([, pct]) => pct > 0)
+    .map(([cls, pct]) => `<div class="${cls}" style="width:${pct}%"></div>`)
+    .join("");
   const legend = levels.map(([cls, pct, name]) => `<span><i class="${cls}"></i><b>${pct}%</b> ${name}</span>`).join("&nbsp;&nbsp;");
   const stats = card.highlights
     .map((h) => `<div class="stat" data-key="${h.key}"><div class="v">${h.value}</div><div class="c mono">${h.caption}</div></div>`)

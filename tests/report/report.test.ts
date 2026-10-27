@@ -27,9 +27,21 @@ describe("report", () => {
   test("a subagents/ tree is ignored, a same-named file at the root counts, and a .txt file is ignored", async () => {
     await withTempDir(async (dir) => {
       await writeTree(dir, [
-        { path: "proj-a/normal.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" },
-        { path: "proj-a/session/subagents/agent-1.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", B)], mtime: "2026-09-14T13:00:00.000Z" },
-        { path: "subagents-not-a-dir.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", C)], mtime: "2026-09-14T13:00:00.000Z" },
+        {
+          path: "proj-a/normal.jsonl",
+          lines: [prompt("2026-09-14T13:00:00.000Z", A)],
+          mtime: "2026-09-14T13:00:00.000Z",
+        },
+        {
+          path: "proj-a/session/subagents/agent-1.jsonl",
+          lines: [prompt("2026-09-14T13:00:00.000Z", B)],
+          mtime: "2026-09-14T13:00:00.000Z",
+        },
+        {
+          path: "subagents-not-a-dir.jsonl",
+          lines: [prompt("2026-09-14T13:00:00.000Z", C)],
+          mtime: "2026-09-14T13:00:00.000Z",
+        },
         // A real, in-window prompt line, so this only stays excluded because of
         // the extension filter: if scan() ever stopped filtering by ".jsonl",
         // this file's prompt would raise the count below and catch it.
@@ -47,7 +59,11 @@ describe("report", () => {
       await writeTree(dir, [
         // Restored or synced: mtime says August, but the last record is inside
         // the window, so the tail check keeps it.
-        { path: "proj/restored.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-08-01T00:00:00.000Z" },
+        {
+          path: "proj/restored.jsonl",
+          lines: [prompt("2026-09-14T13:00:00.000Z", A)],
+          mtime: "2026-08-01T00:00:00.000Z",
+        },
         // Genuinely old: mtime and the only record both before the window.
         { path: "proj/old.jsonl", lines: [prompt("2026-08-01T13:00:00.000Z", B)], mtime: "2026-08-01T00:00:00.000Z" },
       ]);
@@ -62,7 +78,11 @@ describe("report", () => {
         // Synced from another machine, and the conversation ended on a big file
         // read: the last record's own timestamp sits 12 KB from the end of the
         // file, far past the first few kilobytes.
-        { path: "proj/bigtail.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A), bigToolResult("2026-09-14T13:05:00.000Z", A, 12_000)], mtime: "2026-08-01T00:00:00.000Z" },
+        {
+          path: "proj/bigtail.jsonl",
+          lines: [prompt("2026-09-14T13:00:00.000Z", A), bigToolResult("2026-09-14T13:05:00.000Z", A, 12_000)],
+          mtime: "2026-08-01T00:00:00.000Z",
+        },
       ]);
       const days = await report({ projects: dir, to: "2026-09-14", days: 1 });
       expect(days[0]!.totals.prompts).toBe(1);
@@ -75,7 +95,11 @@ describe("report", () => {
       const secret = join(dir, "proj/secret.jsonl");
       await writeTree(dir, [
         { path: "proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" },
-        { path: "proj/secret.jsonl", lines: [prompt("2026-09-14T13:05:00.000Z", B), prompt("2026-09-14T13:06:00.000Z", B)], mtime: "2026-09-14T13:05:00.000Z" },
+        {
+          path: "proj/secret.jsonl",
+          lines: [prompt("2026-09-14T13:05:00.000Z", B), prompt("2026-09-14T13:06:00.000Z", B)],
+          mtime: "2026-09-14T13:05:00.000Z",
+        },
       ]);
       await chmod(secret, 0o000);
       try {
@@ -89,9 +113,7 @@ describe("report", () => {
 
   test("a file longer than the longest string the engine can hold is skipped, not fatal", async () => {
     await withTempDir(async (dir) => {
-      await writeTree(dir, [
-        { path: "proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" },
-      ]);
+      await writeTree(dir, [{ path: "proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A)], mtime: "2026-09-14T13:00:00.000Z" }]);
       // A sparse file one byte past the limit: it takes no disk and, skipped
       // by its size, is never read into memory. Read and decoded, it threw
       // "Cannot create a string longer than 2147483647 characters" and failed
@@ -108,16 +130,16 @@ describe("report", () => {
 
   test("a missing projects root rejects without printing the path", async () => {
     await withTempDir(async (dir) => {
-      await expect(report({ projects: join(dir, "nope"), to: "2026-09-14", days: 1 }))
-        .rejects.toThrow("projects directory not found (pass --projects <dir>)");
+      await expect(report({ projects: join(dir, "nope"), to: "2026-09-14", days: 1 })).rejects.toThrow("projects directory not found (pass --projects <dir>)");
     });
   });
 
   test("a non-directory projects root rejects, saying so without the path", async () => {
     await withTempDir(async (dir) => {
       await writeTree(dir, [{ path: "notadir.txt", lines: ["x"], mtime: "2026-09-14T13:00:00.000Z" }]);
-      await expect(report({ projects: join(dir, "notadir.txt"), to: "2026-09-14", days: 1 }))
-        .rejects.toThrow("projects path is not a directory (pass --projects <dir>)");
+      await expect(report({ projects: join(dir, "notadir.txt"), to: "2026-09-14", days: 1 })).rejects.toThrow(
+        "projects path is not a directory (pass --projects <dir>)",
+      );
     });
   });
 });

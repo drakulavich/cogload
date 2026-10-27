@@ -1,21 +1,21 @@
-export type Level = 'Calm' | 'Warming' | 'Heating' | 'Fried'
+export type Level = "Calm" | "Warming" | "Heating" | "Fried";
 
 export type Status = {
-  schema: 1
-  asOf: string
-  date: string
-  hour: number
-  index: number | null
-  level: Level | null
-  peak: number | null
-  activeMin: number
-  streakMin: number
-  restAt: string | null
-  restMin: number
-}
+  schema: 1;
+  asOf: string;
+  date: string;
+  hour: number;
+  index: number | null;
+  level: Level | null;
+  peak: number | null;
+  activeMin: number;
+  streakMin: number;
+  restAt: string | null;
+  restMin: number;
+};
 
-declare module 'claude-code' {
+declare module "claude-code" {
   interface PluginState {
-    'cognitive-load': { status: Status | null; lastToast: number; held: string[] }
+    "cognitive-load": { status: Status | null; lastToast: number; held: string[] };
   }
 }

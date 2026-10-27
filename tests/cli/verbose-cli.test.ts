@@ -17,16 +17,41 @@ beforeAll(async () => {
   cwd = await mkdtemp(join(tmpdir(), "cogload-verbose-cwd-"));
   home = await mkdtemp(join(tmpdir(), "cogload-verbose-home-"));
   await writeTree(root, [
-    { path: "-Users-me-proj/a.jsonl", lines: [prompt("2026-09-14T13:00:00.000Z", A), assistant("2026-09-14T13:02:00.000Z", A), bigToolResult("2026-09-14T13:03:00.000Z", A, 300_000)], mtime: "2026-09-14T13:03:00.000Z" },
-    { path: "-Users-me-proj/b.jsonl", lines: [prompt("2026-09-14T15:00:00.000Z", A)], mtime: "2026-09-14T15:00:00.000Z" },
-    { path: "-Users-me-proj/a/subagents/agent-1.jsonl", lines: [sidechain("2026-09-14T13:01:00.000Z", A)], mtime: "2026-09-14T13:01:00.000Z" },
-    { path: "-Users-me-old/old.jsonl", lines: [prompt("2026-09-01T13:00:00.000Z", A)], mtime: "2026-09-01T13:00:00.000Z" },
+    {
+      path: "-Users-me-proj/a.jsonl",
+      lines: [prompt("2026-09-14T13:00:00.000Z", A), assistant("2026-09-14T13:02:00.000Z", A), bigToolResult("2026-09-14T13:03:00.000Z", A, 300_000)],
+      mtime: "2026-09-14T13:03:00.000Z",
+    },
+    {
+      path: "-Users-me-proj/b.jsonl",
+      lines: [prompt("2026-09-14T15:00:00.000Z", A)],
+      mtime: "2026-09-14T15:00:00.000Z",
+    },
+    {
+      path: "-Users-me-proj/a/subagents/agent-1.jsonl",
+      lines: [sidechain("2026-09-14T13:01:00.000Z", A)],
+      mtime: "2026-09-14T13:01:00.000Z",
+    },
+    {
+      path: "-Users-me-old/old.jsonl",
+      lines: [prompt("2026-09-01T13:00:00.000Z", A)],
+      mtime: "2026-09-01T13:00:00.000Z",
+    },
   ]);
 });
-afterAll(async () => { await rm(root, { recursive: true, force: true }); await rm(cwd, { recursive: true, force: true }); await rm(home, { recursive: true, force: true }); });
+afterAll(async () => {
+  await rm(root, { recursive: true, force: true });
+  await rm(cwd, { recursive: true, force: true });
+  await rm(home, { recursive: true, force: true });
+});
 
 async function run(...args: string[]): Promise<{ code: number; out: string; err: string }> {
-  const p = Bun.spawn(["bun", CLI, "--projects", root, ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+  const p = Bun.spawn(["bun", CLI, "--projects", root, ...args], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
+  });
   const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
   return { code, out, err };
 }
@@ -49,14 +74,24 @@ describe("--verbose", () => {
 
   test("without the cache there is nothing to open, look up or save", async () => {
     const r = await run("--to", "2026-09-14", "--days", "2", "--json", "--verbose", "--no-cache");
-    expect(r.err.trimEnd().split("\n").slice(1).map((l) => l.split(" ")[0])).toEqual(["start", "scan", "cache", "read", "analyze", "total"]);
+    expect(
+      r.err
+        .trimEnd()
+        .split("\n")
+        .slice(1)
+        .map((l) => l.split(" ")[0]),
+    ).toEqual(["start", "scan", "cache", "read", "analyze", "total"]);
     expect(lineOf(r.err, "cache")).toBe("cache   off");
   });
 
   test("the rows add up to the total", async () => {
     // Rounding costs half a millisecond a row, and a loaded machine stalls the untimed lines.
     const r = await run("status", "--verbose");
-    const rows = r.err.trimEnd().split("\n").slice(1).map((l) => [l.split(" ")[0]!, Number(/(\d+) ms$/.exec(l)![1])] as const);
+    const rows = r.err
+      .trimEnd()
+      .split("\n")
+      .slice(1)
+      .map((l) => [l.split(" ")[0]!, Number(/(\d+) ms$/.exec(l)![1])] as const);
     const total = rows.pop()![1];
     const sum = rows.reduce((n, [, ms]) => n + ms, 0);
     expect(total - sum).toBeLessThanOrEqual(rows.length / 2 + total / 10);
@@ -91,7 +126,12 @@ describe("--verbose", () => {
     await chmod(join(tree, "-Users-me-lockedfile/b.jsonl"), 0o000);
     await chmod(join(tree, "-Users-me-secretdir"), 0o000);
     try {
-      const p = Bun.spawn(["bun", CLI, "--projects", tree, "--to", "2026-09-14", "--days", "1", "--json", "--verbose", "--no-cache"], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home } });
+      const p = Bun.spawn(["bun", CLI, "--projects", tree, "--to", "2026-09-14", "--days", "1", "--json", "--verbose", "--no-cache"], {
+        cwd,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, TZ: "UTC", NO_COLOR: "1", HOME: home },
+      });
       const [err, code] = await Promise.all([new Response(p.stderr).text(), p.exited]);
       expect(code).toBe(0);
       // b is seen and fails to read; the locked directory is never entered, so c is not counted as a file.

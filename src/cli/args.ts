@@ -27,7 +27,18 @@ levels: calm 0-29  warming 30-59  heating 60-84  fried 85-100
 bugs, ideas and a star: github.com/drakulavich/cogload`;
 export const HINT = "run 'cogload --help' for usage";
 
-export type Args = { command: "grid" | "day" | "card" | "status"; to: string; days: number; explain: boolean; json: boolean; out: string | null; projects: string; color: boolean; verbose: boolean; cache: boolean };
+export type Args = {
+  command: "grid" | "day" | "card" | "status";
+  to: string;
+  days: number;
+  explain: boolean;
+  json: boolean;
+  out: string | null;
+  projects: string;
+  color: boolean;
+  verbose: boolean;
+  cache: boolean;
+};
 
 export class UsageError extends Error {}
 // Thrown only at a flag position, never for a token consumed as another flag's
@@ -61,7 +72,10 @@ function resolveDate(what: string, s: string, now: Date): string {
 
 // UTC arithmetic, so a DST day is still one day.
 function spanDays(from: string, to: string): number {
-  const utc = (s: string): number => { const [y = 0, m = 0, d = 0] = s.split("-").map(Number); return Date.UTC(y, m - 1, d); };
+  const utc = (s: string): number => {
+    const [y = 0, m = 0, d = 0] = s.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
   return Math.round((utc(to) - utc(from)) / 86_400_000) + 1;
 }
 
@@ -79,7 +93,18 @@ function windowOf(days: string | null, from: string | null, to: string | null, d
 }
 
 export function parseArgs(argv: string[], now: Date, env: Record<string, string | undefined>, isTTY: boolean, projects: string): Args {
-  const a: Args = { command: "grid", to: localDate(now), days: 7, explain: false, json: false, out: null, projects, color: isTTY && !env.NO_COLOR, verbose: false, cache: true };
+  const a: Args = {
+    command: "grid",
+    to: localDate(now),
+    days: 7,
+    explain: false,
+    json: false,
+    out: null,
+    projects,
+    color: isTTY && !env.NO_COLOR,
+    verbose: false,
+    cache: true,
+  };
   let days: string | null = null;
   let from: string | null = null;
   let to: string | null = null;
@@ -91,8 +116,13 @@ export function parseArgs(argv: string[], now: Date, env: Record<string, string 
     let arg = argv[i]!;
     let inline: string | null = null;
     const eq = arg.startsWith("--") ? arg.indexOf("=") : -1;
-    if (eq > 0) { inline = arg.slice(eq + 1); arg = arg.slice(0, eq); }
-    const bare = (): void => { if (inline !== null) throw new UsageError(`unknown flag${named(argv[i]!)}`); };
+    if (eq > 0) {
+      inline = arg.slice(eq + 1);
+      arg = arg.slice(0, eq);
+    }
+    const bare = (): void => {
+      if (inline !== null) throw new UsageError(`unknown flag${named(argv[i]!)}`);
+    };
     // A value that looks like another flag is a usage error (`--projects --json`),
     // and so is an empty one (`--projects=`); only --days accepts a negative
     // number, so `--days -1` reaches the range check.
@@ -111,19 +141,48 @@ export function parseArgs(argv: string[], now: Date, env: Record<string, string 
     };
     switch (arg) {
       case "--help":
-      case "-h": bare(); throw new HelpRequested();
+      case "-h":
+        bare();
+        throw new HelpRequested();
       case "--version":
-      case "-V": bare(); throw new VersionRequested();
-      case "--json": bare(); jsonFlag = true; break;
-      case "--explain": bare(); a.explain = true; break;
-      case "--no-color": bare(); a.color = false; break;
-      case "--verbose": bare(); a.verbose = true; break;
-      case "--no-cache": bare(); a.cache = false; break;
-      case "--projects": a.projects = value(); break;
-      case "--from": from = value(); break;
-      case "--to": to = value(); break;
-      case "--days": days = value(true); break;
-      case "--out": a.out = value(); break;
+      case "-V":
+        bare();
+        throw new VersionRequested();
+      case "--json":
+        bare();
+        jsonFlag = true;
+        break;
+      case "--explain":
+        bare();
+        a.explain = true;
+        break;
+      case "--no-color":
+        bare();
+        a.color = false;
+        break;
+      case "--verbose":
+        bare();
+        a.verbose = true;
+        break;
+      case "--no-cache":
+        bare();
+        a.cache = false;
+        break;
+      case "--projects":
+        a.projects = value();
+        break;
+      case "--from":
+        from = value();
+        break;
+      case "--to":
+        to = value();
+        break;
+      case "--days":
+        days = value(true);
+        break;
+      case "--out":
+        a.out = value();
+        break;
       default:
         if (arg.startsWith("-")) throw new UsageError(`unknown flag${named(arg)}`);
         positional.push(arg);
@@ -133,12 +192,19 @@ export function parseArgs(argv: string[], now: Date, env: Record<string, string 
   const [word] = positional;
   if (word === undefined) a.command = "grid";
   else if (word === "card") a.command = "card";
-  else if (word === "status") { a.command = "status"; a.to = localDate(now); a.days = 1; }
-  else if (word === "today" || word === "yesterday" || DATE.test(word)) { a.command = "day"; a.to = resolveDate("date", word, now); a.days = 1; }
-  else throw new UsageError(`unknown command${named(word)} (try today, yesterday, a date, card or status)`);
+  else if (word === "status") {
+    a.command = "status";
+    a.to = localDate(now);
+    a.days = 1;
+  } else if (word === "today" || word === "yesterday" || DATE.test(word)) {
+    a.command = "day";
+    a.to = resolveDate("date", word, now);
+    a.days = 1;
+  } else throw new UsageError(`unknown command${named(word)} (try today, yesterday, a date, card or status)`);
 
   if (a.command === "day" || a.command === "status") {
-    if (days !== null || from !== null || to !== null) throw new UsageError(`--days, --from and --to do not apply to ${a.command === "day" ? "a named day" : "status"}`);
+    if (days !== null || from !== null || to !== null)
+      throw new UsageError(`--days, --from and --to do not apply to ${a.command === "day" ? "a named day" : "status"}`);
   } else {
     ({ to: a.to, days: a.days } = windowOf(days, from, to, a.command === "card" ? 14 : 7, now));
   }

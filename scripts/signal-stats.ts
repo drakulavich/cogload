@@ -49,11 +49,20 @@ function parseArgs(argv: string[], now: Date): Args {
       return v;
     };
     switch (arg) {
-      case "--days": a.days = value(); break;
-      case "--to": a.to = value(); break;
-      case "--projects": a.projects = value(); break;
-      case "--json": a.json = true; break;
-      default: throw new UsageError(`unknown flag ${arg}`);
+      case "--days":
+        a.days = value();
+        break;
+      case "--to":
+        a.to = value();
+        break;
+      case "--projects":
+        a.projects = value();
+        break;
+      case "--json":
+        a.json = true;
+        break;
+      default:
+        throw new UsageError(`unknown flag ${arg}`);
     }
   }
   return a;
@@ -65,10 +74,10 @@ function parseArgs(argv: string[], now: Date): Args {
 // verbatim (first stderr line, same exit code) rather than re-validated.
 function runCli(a: Args): Day[] {
   const cli = join(import.meta.dir, "../src/cli/index.ts");
-  const proc = Bun.spawnSync(
-    ["bun", cli, "--json", "--days", a.days, "--to", a.to, "--projects", a.projects],
-    { stdout: "pipe", stderr: "pipe" },
-  );
+  const proc = Bun.spawnSync(["bun", cli, "--json", "--days", a.days, "--to", a.to, "--projects", a.projects], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
   if (proc.exitCode !== 0) {
     const line = new TextDecoder().decode(proc.stderr).split("\n")[0] ?? "";
     console.error(line);
@@ -86,7 +95,14 @@ function computeStats(xs: number[]): Stats {
   const s = [...xs].sort((x, y) => x - y);
   const n = s.length;
   const pct = (p: number): number => (n === 0 ? 0 : (s[Math.min(n - 1, Math.floor(p * n))] ?? 0));
-  return { n, p50: pct(0.5), p75: pct(0.75), p90: pct(0.9), max: n === 0 ? 0 : Math.max(...s), zero: xs.filter((x) => x === 0).length };
+  return {
+    n,
+    p50: pct(0.5),
+    p75: pct(0.75),
+    p90: pct(0.9),
+    max: n === 0 ? 0 : Math.max(...s),
+    zero: xs.filter((x) => x === 0).length,
+  };
 }
 
 const SIGNALS: { label: string; get: (b: Bucket) => number }[] = [
@@ -107,9 +123,7 @@ function renderTable(active: Bucket[]): string {
   // Each column is as wide as its longest value (outputTokens can run to 6+ digits), plus a
   // fixed 2-space gap, so a wide value can never run into the next column with no separator.
   const gap = "  ";
-  const colW = Object.fromEntries(
-    cols.map((c) => [c, Math.max(c.length, ...rows.map((r) => String(r[c]).length))]),
-  ) as Record<(typeof cols)[number], number>;
+  const colW = Object.fromEntries(cols.map((c) => [c, Math.max(c.length, ...rows.map((r) => String(r[c]).length))])) as Record<(typeof cols)[number], number>;
   const header = "signal".padEnd(labelW) + cols.map((c) => c.padStart(colW[c])).join(gap);
   const lines = rows.map((r) => r.label.padEnd(labelW) + cols.map((c) => String(r[c]).padStart(colW[c])).join(gap));
   return [header, ...lines].join("\n");
@@ -141,7 +155,14 @@ type Drift = {
 // A user record with text, by the fields the parser decides on. Values come from
 // someone else's JSONL: capped and JSON-encoded. The text gives only its first
 // character's class, so nothing typed is printed.
-type Shape = { origin: string | null; promptSource: string | null; isMeta: boolean | null; start: "tag" | "bracket" | "plain"; records: number; events: Partial<Record<EventKind, number>> };
+type Shape = {
+  origin: string | null;
+  promptSource: string | null;
+  isMeta: boolean | null;
+  start: "tag" | "bracket" | "plain";
+  records: number;
+  events: Partial<Record<EventKind, number>>;
+};
 const field = (v: unknown): string | null => (v === undefined || v === null ? null : JSON.stringify(v).slice(0, 40));
 const firstText = (c: unknown): string | null => {
   if (typeof c === "string") return c;
@@ -172,13 +193,21 @@ async function computeDrift(projects: string, to: string, days: number): Promise
 
   for (const { path } of entries) {
     let text: string;
-    try { text = await Bun.file(path).text(); } catch { continue; } // vanished or unreadable: skip, like report()
+    try {
+      text = await Bun.file(path).text();
+    } catch {
+      continue;
+    } // vanished or unreadable: skip, like report()
 
     for (const line of text.split("\n")) {
       if (line.trim() === "") continue;
       lines++;
       let rec: unknown;
-      try { rec = JSON.parse(line); } catch { continue; }
+      try {
+        rec = JSON.parse(line);
+      } catch {
+        continue;
+      }
       if (typeof rec !== "object" || rec === null) continue;
       const type = (rec as { type?: unknown }).type;
       if (typeof type !== "string") continue;
@@ -197,7 +226,10 @@ async function computeDrift(projects: string, to: string, days: number): Promise
       const start = head.startsWith("<") ? "tag" : head.startsWith("[") ? "bracket" : "plain";
       const key = JSON.stringify([origin, promptSource, isMeta, start]);
       let s = shapes.get(key);
-      if (!s) { s = { origin, promptSource, isMeta, start, records: 0, events: {} }; shapes.set(key, s); }
+      if (!s) {
+        s = { origin, promptSource, isMeta, start, records: 0, events: {} };
+        shapes.set(key, s);
+      }
       s.records++;
       // One line alone: enough for prompt, report and interrupt, the kinds a text decides.
       for (const e of parseTranscript(line)) if (e.kind !== "activity") s.events[e.kind] = (s.events[e.kind] ?? 0) + 1;
@@ -216,7 +248,12 @@ async function computeDrift(projects: string, to: string, days: number): Promise
     .map(([type, count]) => ({ type, count }));
 
   return {
-    files: entries.length, lines, recordsWithType, topTypes, events, eventsByKind,
+    files: entries.length,
+    lines,
+    recordsWithType,
+    topTypes,
+    events,
+    eventsByKind,
     eventsPerRecordWithType: recordsWithType === 0 ? 0 : events / recordsWithType,
     shapes: [...shapes.values()].sort((a, b) => b.records - a.records),
   };
@@ -236,7 +273,10 @@ function renderDrift(d: Drift): string {
     "",
     "user records by shape: records, origin.kind, promptSource, isMeta, text start → events",
     ...d.shapes.map((s) => {
-      const ev = Object.entries(s.events).map(([k, n]) => `${k} ${n}`).join(", ") || "none";
+      const ev =
+        Object.entries(s.events)
+          .map(([k, n]) => `${k} ${n}`)
+          .join(", ") || "none";
       return `  ${s.records}  ${s.origin ?? "-"} ${s.promptSource ?? "-"} ${s.isMeta ?? "-"} ${s.start} → ${ev}`;
     }),
   ].join("\n");

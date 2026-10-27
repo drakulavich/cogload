@@ -37,7 +37,9 @@ async function collect(dir: string, entries: Dirent[], cutoffMs: number, out: Sc
       if (entry.name === "subagents") continue;
       try {
         await collect(full, await readdir(full, { withFileTypes: true }), cutoffMs, out, stats);
-      } catch { stats.skipped++; }
+      } catch {
+        stats.skipped++;
+      }
     } else if (entry.isFile() && entry.name.endsWith(".jsonl")) {
       stats.files++;
       try {
@@ -47,7 +49,9 @@ async function collect(dir: string, entries: Dirent[], cutoffMs: number, out: Sc
           if ((await lastTimestampMs(full)) < cutoffMs) continue;
         }
         out.push({ path: full, dev: st.dev, ino: st.ino, size: st.size, mtimeMs: st.mtimeMs });
-      } catch { stats.skipped++; }
+      } catch {
+        stats.skipped++;
+      }
     }
   }
 }

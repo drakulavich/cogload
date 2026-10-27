@@ -116,6 +116,9 @@ describe("loadAssets", () => {
       expect(s.length).toBeGreaterThan(1000);
       expect(s).toMatch(/^[A-Za-z0-9+/]+=*$/);
     }
-    expect(await new Bun.Image(Buffer.from(assets.characters, "base64")).metadata()).toMatchObject({ width: 1024, height: 1024 });
+    expect(await new Bun.Image(Buffer.from(assets.characters, "base64")).metadata()).toMatchObject({
+      width: 1024,
+      height: 1024,
+    });
   });
 });

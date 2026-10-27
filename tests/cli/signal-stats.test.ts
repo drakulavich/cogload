@@ -9,7 +9,11 @@ const A = "aaaaaaaa-1111-4111-8111-111111111111";
 const B = "bbbbbbbb-1111-4111-8111-111111111111";
 
 async function run(...args: string[]): Promise<{ code: number; out: string; err: string }> {
-  const p = Bun.spawn(["bun", SCRIPT, ...args], { stdout: "pipe", stderr: "pipe", env: { ...process.env, TZ: "UTC", NO_COLOR: "1" } });
+  const p = Bun.spawn(["bun", SCRIPT, ...args], {
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env, TZ: "UTC", NO_COLOR: "1" },
+  });
   const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
   return { code, out, err };
 }
@@ -97,14 +101,28 @@ describe("signal-stats", () => {
       expect(r.out).not.toContain(root);
       const data = JSON.parse(r.out) as {
         distributions: Record<string, { n: number; p50: number; p75: number; p90: number; max: number; zero: number }>;
-        drift: { recordsWithType: number; events: number; eventsByKind: Record<string, number>; eventsPerRecordWithType: number };
+        drift: {
+          recordsWithType: number;
+          events: number;
+          eventsByKind: Record<string, number>;
+          eventsPerRecordWithType: number;
+        };
       };
       expect(data.distributions.prompts).toEqual({ n: 3, p50: 2, p75: 3, p90: 3, max: 3, zero: 0 });
       expect(data.distributions.reports).toEqual({ n: 3, p50: 1, p75: 2, p90: 2, max: 2, zero: 1 });
       expect(data.drift.recordsWithType).toBe(10);
       expect(data.drift.events).toBe(20);
       expect(data.drift.eventsByKind).toEqual({
-        prompt: 6, report: 3, output: 1, interrupt: 0, reject: 0, answer: 0, question: 0, plan_review: 0, mode_change: 0, activity: 10,
+        prompt: 6,
+        report: 3,
+        output: 1,
+        interrupt: 0,
+        reject: 0,
+        answer: 0,
+        question: 0,
+        plan_review: 0,
+        mode_change: 0,
+        activity: 10,
       });
       expect(data.drift.eventsPerRecordWithType).toBe(2);
     } finally {
@@ -117,17 +135,19 @@ describe("signal-stats", () => {
   test("groups user records by shape and shows the events each shape yields, never the text", async () => {
     const root = await mkdtemp(join(tmpdir(), "cogload-stats-shapes-"));
     try {
-      await writeTree(root, [{
-        path: "-Users-me-proj/a.jsonl",
-        lines: [
-          prompt("2026-09-15T09:00:00.000Z", A),
-          prompt("2026-09-15T09:01:00.000Z", A),
-          teammate("2026-09-15T09:02:00.000Z", A, true),
-          meta("2026-09-15T09:03:00.000Z", A),
-          pluginMessage("2026-09-15T09:04:00.000Z", A),
-        ],
-        mtime: "2026-09-15T09:04:00.000Z",
-      }]);
+      await writeTree(root, [
+        {
+          path: "-Users-me-proj/a.jsonl",
+          lines: [
+            prompt("2026-09-15T09:00:00.000Z", A),
+            prompt("2026-09-15T09:01:00.000Z", A),
+            teammate("2026-09-15T09:02:00.000Z", A, true),
+            meta("2026-09-15T09:03:00.000Z", A),
+            pluginMessage("2026-09-15T09:04:00.000Z", A),
+          ],
+          mtime: "2026-09-15T09:04:00.000Z",
+        },
+      ]);
       const r = await run("--projects", root, "--to", "2026-09-15", "--days", "1");
       expect(r.code).toBe(0);
       expect(r.out).not.toContain("placeholder");
@@ -139,7 +159,14 @@ describe("signal-stats", () => {
 
       const j = await run("--projects", root, "--to", "2026-09-15", "--days", "1", "--json");
       const data = JSON.parse(j.out) as { drift: { shapes: unknown } };
-      expect(data.drift.shapes).toContainEqual({ origin: null, promptSource: null, isMeta: true, start: "tag", records: 1, events: {} });
+      expect(data.drift.shapes).toContainEqual({
+        origin: null,
+        promptSource: null,
+        isMeta: true,
+        start: "tag",
+        records: 1,
+        events: {},
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -188,7 +215,13 @@ describe("signal-stats", () => {
       expect(r.code).toBe(0);
       expect(r.err).toBe("");
       const data = JSON.parse(r.out) as {
-        drift: { files: number; lines: number; recordsWithType: number; events: number; eventsByKind: Record<string, number> };
+        drift: {
+          files: number;
+          lines: number;
+          recordsWithType: number;
+          events: number;
+          eventsByKind: Record<string, number>;
+        };
       };
       // 4 raw lines were read (both pairs), but only the 2 in-window records count.
       expect(data.drift.files).toBe(1);
@@ -196,7 +229,16 @@ describe("signal-stats", () => {
       expect(data.drift.recordsWithType).toBe(2);
       expect(data.drift.events).toBe(4); // in-window pair only: activity x2, prompt x1, output x1
       expect(data.drift.eventsByKind).toEqual({
-        prompt: 1, report: 0, output: 1, interrupt: 0, reject: 0, answer: 0, question: 0, plan_review: 0, mode_change: 0, activity: 2,
+        prompt: 1,
+        report: 0,
+        output: 1,
+        interrupt: 0,
+        reject: 0,
+        answer: 0,
+        question: 0,
+        plan_review: 0,
+        mode_change: 0,
+        activity: 2,
       });
     } finally {
       await rm(root, { recursive: true, force: true });

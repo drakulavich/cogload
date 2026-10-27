@@ -22,17 +22,22 @@ describe("noise in transcripts", () => {
 
   test("malformed lines and records without type, sessionId or timestamp are skipped", () => {
     const good = prompt(at("10"), S);
-    const b = analyze([transcript([
-      "{not json",
-      "",
-      JSON.stringify({ sessionId: S, timestamp: at("01"), message: { content: "no type" } }),
-      JSON.stringify({ type: "user", timestamp: at("02"), message: { content: "no session" } }),
-      JSON.stringify({ type: "user", sessionId: S, message: { content: "no timestamp" } }),
-      JSON.stringify({ type: "user", sessionId: S, timestamp: "yesterday", message: { content: "bad timestamp" } }),
-      "[1,2,3]",
-      "null",
-      good,
-    ])], W)[0]!.buckets[13]!;
+    const b = analyze(
+      [
+        transcript([
+          "{not json",
+          "",
+          JSON.stringify({ sessionId: S, timestamp: at("01"), message: { content: "no type" } }),
+          JSON.stringify({ type: "user", timestamp: at("02"), message: { content: "no session" } }),
+          JSON.stringify({ type: "user", sessionId: S, message: { content: "no timestamp" } }),
+          JSON.stringify({ type: "user", sessionId: S, timestamp: "yesterday", message: { content: "bad timestamp" } }),
+          "[1,2,3]",
+          "null",
+          good,
+        ]),
+      ],
+      W,
+    )[0]!.buckets[13]!;
     expect(b.prompts).toBe(1);
     expect(b.activeMin).toBe(5);
   });
@@ -45,13 +50,23 @@ describe("noise in transcripts", () => {
   });
 
   test("bookkeeping records are ignored", () => {
-    const b = analyze([transcript([
-      JSON.stringify({ type: "last-prompt", leafUuid: "x", sessionId: S }),
-      JSON.stringify({ type: "custom-title", customTitle: "t", sessionId: S }),
-      JSON.stringify({ type: "file-history-snapshot", messageId: "m", snapshot: {}, isSnapshotUpdate: false }),
-      JSON.stringify({ type: "attachment", sessionId: S, timestamp: at("00"), attachment: { type: "hook_success" } }),
-      JSON.stringify({ type: "system", subtype: "informational", sessionId: S, timestamp: at("00"), content: "x" }),
-    ])], W)[0]!.buckets[13]!;
+    const b = analyze(
+      [
+        transcript([
+          JSON.stringify({ type: "last-prompt", leafUuid: "x", sessionId: S }),
+          JSON.stringify({ type: "custom-title", customTitle: "t", sessionId: S }),
+          JSON.stringify({ type: "file-history-snapshot", messageId: "m", snapshot: {}, isSnapshotUpdate: false }),
+          JSON.stringify({
+            type: "attachment",
+            sessionId: S,
+            timestamp: at("00"),
+            attachment: { type: "hook_success" },
+          }),
+          JSON.stringify({ type: "system", subtype: "informational", sessionId: S, timestamp: at("00"), content: "x" }),
+        ]),
+      ],
+      W,
+    )[0]!.buckets[13]!;
     expect(b.sessions).toBe(0);
   });
 
@@ -68,11 +83,14 @@ describe("headless runs", () => {
   const U = "33333333-1111-4111-8111-111111111111";
 
   test("claude -p and Agent SDK sessions count nothing beside the human's session", () => {
-    const b = analyze([
-      transcript([prompt(at("00"), S), assistant(at("01"), S), prompt(at("30"), S)], "p/s.jsonl"),
-      transcript([sdk(prompt(at("10"), T)), sdk(assistant(at("11"), T))], "p/t.jsonl"),
-      transcript([sdk(prompt(at("12"), U), "sdk-ts"), sdk(assistant(at("13"), U), "sdk-ts")], "p/u.jsonl"),
-    ], W)[0]!.buckets[13]!;
+    const b = analyze(
+      [
+        transcript([prompt(at("00"), S), assistant(at("01"), S), prompt(at("30"), S)], "p/s.jsonl"),
+        transcript([sdk(prompt(at("10"), T)), sdk(assistant(at("11"), T))], "p/t.jsonl"),
+        transcript([sdk(prompt(at("12"), U), "sdk-ts"), sdk(assistant(at("13"), U), "sdk-ts")], "p/u.jsonl"),
+      ],
+      W,
+    )[0]!.buckets[13]!;
     expect(b.sessions).toBe(1);
     expect(b.prompts).toBe(2);
     expect(b.contextSwitches).toBe(0);

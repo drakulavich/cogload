@@ -1,18 +1,31 @@
 import { describe, expect, test } from "bun:test";
 import { analyze } from "../../src/lib/metrics/index.ts";
-import { assistantText, assistantTokensLiteral, assistantToolUseOnly, bashInput, bashStdout, compactSummary, crossSession, meta, monitorEvent, peer, pluginMessage, prompt, slashCommand, slashStdout, taskNotification, teammate, transcript } from "../helpers/transcript.ts";
+import {
+  assistantText,
+  assistantTokensLiteral,
+  assistantToolUseOnly,
+  bashInput,
+  bashStdout,
+  compactSummary,
+  crossSession,
+  meta,
+  monitorEvent,
+  peer,
+  pluginMessage,
+  prompt,
+  slashCommand,
+  slashStdout,
+  taskNotification,
+  teammate,
+  transcript,
+} from "../helpers/transcript.ts";
 
 const S = "11111111-1111-4111-8111-111111111111";
 const W = { to: "2026-09-14", days: 1 };
 const at = (hhmm: string) => `2026-09-14T${hhmm}:00.000Z`;
 
 describe("inbound agent messages are reports, never prompts", () => {
-  const t = transcript([
-    teammate(at("13:00"), S),
-    crossSession(at("13:01"), S),
-    taskNotification(at("13:02"), S),
-    prompt(at("13:03"), S),
-  ]);
+  const t = transcript([teammate(at("13:00"), S), crossSession(at("13:01"), S), taskNotification(at("13:02"), S), prompt(at("13:03"), S)]);
   const day = analyze([t], W)[0]!;
   const b = day.buckets[13]!;
 
@@ -29,11 +42,7 @@ describe("inbound agent messages are reports, never prompts", () => {
   });
 
   test("an hour of reports and no prompt is a live session with no presence", () => {
-    const b2 = analyze([transcript([
-      teammate(at("09:00"), S),
-      crossSession(at("09:20"), S),
-      taskNotification(at("09:40"), S),
-    ])], W)[0]!.buckets[9]!;
+    const b2 = analyze([transcript([teammate(at("09:00"), S), crossSession(at("09:20"), S), taskNotification(at("09:40"), S)])], W)[0]!.buckets[9]!;
     expect(b2.sessions).toBe(1);
     expect(b2.reports).toBe(3);
     expect(b2.activeMin).toBe(0);
@@ -64,14 +73,19 @@ describe("records Claude Code writes itself are not prompts (#221)", () => {
   const T = "22222222-2222-4222-8222-222222222222";
 
   test("a person who typed once and left has one prompt and no streak", () => {
-    const day = analyze([transcript([
-      prompt(at("10:00"), S),
-      compactSummary(at("10:09"), S),
-      pluginMessage(at("10:18"), S),
-      bashStdout(at("10:27"), S),
-      slashStdout(at("10:36"), S),
-      monitorEvent(at("10:45"), S),
-    ])], W)[0]!;
+    const day = analyze(
+      [
+        transcript([
+          prompt(at("10:00"), S),
+          compactSummary(at("10:09"), S),
+          pluginMessage(at("10:18"), S),
+          bashStdout(at("10:27"), S),
+          slashStdout(at("10:36"), S),
+          monitorEvent(at("10:45"), S),
+        ]),
+      ],
+      W,
+    )[0]!;
     const b = day.buckets[10]!;
     expect(b.prompts).toBe(1);
     expect(b.reports).toBe(2);
@@ -92,10 +106,10 @@ describe("records Claude Code writes itself are not prompts (#221)", () => {
   });
 
   test("a plugin message in another session is no context switch", () => {
-    const b = analyze([
-      transcript([prompt(at("13:00"), S), prompt(at("13:02"), S)], "p/a.jsonl"),
-      transcript([pluginMessage(at("13:01"), T)], "p/b.jsonl"),
-    ], W)[0]!.buckets[13]!;
+    const b = analyze(
+      [transcript([prompt(at("13:00"), S), prompt(at("13:02"), S)], "p/a.jsonl"), transcript([pluginMessage(at("13:01"), T)], "p/b.jsonl")],
+      W,
+    )[0]!.buckets[13]!;
     expect(b.prompts).toBe(2);
     expect(b.contextSwitches).toBe(0);
   });
@@ -139,10 +153,7 @@ describe("output tokens are summed once per requestId per file", () => {
   });
 
   test("distinct requestIds each contribute their own tokens", () => {
-    const t = transcript([
-      assistantText(at("13:00"), S, 100, "req_a"),
-      assistantText(at("13:01"), S, 200, "req_b"),
-    ]);
+    const t = transcript([assistantText(at("13:00"), S, 100, "req_a"), assistantText(at("13:01"), S, 200, "req_b")]);
     const day = analyze([t], W)[0]!;
     expect(day.buckets[13]!.outputTokens).toBe(300);
   });
@@ -166,10 +177,7 @@ describe("output tokens are summed once per requestId per file", () => {
     // The first record of req_mixed has no text block and must not emit; the
     // dedupe set must therefore stay empty for req_mixed until the second
     // record (which does have a text block) emits and marks it seen.
-    const t = transcript([
-      assistantToolUseOnly(at("13:00"), S, 300, "req_mixed"),
-      assistantText(at("13:00"), S, 300, "req_mixed"),
-    ]);
+    const t = transcript([assistantToolUseOnly(at("13:00"), S, 300, "req_mixed"), assistantText(at("13:00"), S, 300, "req_mixed")]);
     const day = analyze([t], W)[0]!;
     expect(day.buckets[13]!.outputTokens).toBe(300);
   });
@@ -209,10 +217,7 @@ describe("reports and output tokens enter the index through supervision and read
   // lonely: supervision 0 -> index round(0.75) = 1.
   // busy: supervision 30*(0 + 9 + 0)/45 = 6.0 -> index round(0.75 + 6) = 7.
   const lonely = analyze([transcript([prompt(at("13:00"), S)])], W)[0]!.buckets[13]!;
-  const busy = analyze(
-    [transcript([prompt(at("13:00"), S), ...Array.from({ length: 9 }, () => teammate(at("13:00"), S))])],
-    W,
-  )[0]!.buckets[13]!;
+  const busy = analyze([transcript([prompt(at("13:00"), S), ...Array.from({ length: 9 }, () => teammate(at("13:00"), S))])], W)[0]!.buckets[13]!;
 
   test("9 reports add exactly 30*9/45 = 6.0 supervision points and nothing else", () => {
     expect(lonely.reports).toBe(0);
@@ -232,14 +237,8 @@ describe("reports and output tokens enter the index through supervision and read
   // away from 0, so this is the pair that pins the reading component.
   // withTokens: reading 10*(40000/80000) = 5.0 -> index round(0.75 + 5) = 6.
   // withoutTokens: reading 0 -> index round(0.75) = 1.
-  const withTokens = analyze(
-    [transcript([prompt(at("15:00"), S), assistantText(at("15:00"), S, 40_000, "req_tok_a")])],
-    W,
-  )[0]!.buckets[15]!;
-  const withoutTokens = analyze(
-    [transcript([prompt(at("15:00"), S), assistantToolUseOnly(at("15:00"), S, 40_000, "req_tok_b")])],
-    W,
-  )[0]!.buckets[15]!;
+  const withTokens = analyze([transcript([prompt(at("15:00"), S), assistantText(at("15:00"), S, 40_000, "req_tok_a")])], W)[0]!.buckets[15]!;
+  const withoutTokens = analyze([transcript([prompt(at("15:00"), S), assistantToolUseOnly(at("15:00"), S, 40_000, "req_tok_b")])], W)[0]!.buckets[15]!;
 
   test("40 000 output tokens add exactly 10*40000/80000 = 5.0 reading points and nothing else", () => {
     expect(withTokens.outputTokens).toBe(40_000);

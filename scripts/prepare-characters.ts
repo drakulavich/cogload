@@ -12,9 +12,6 @@ if (src === undefined) {
   process.exit(2);
 }
 const out = resolve(import.meta.dir, "..", "assets", "characters.webp");
-const bytes = await new Bun.Image(await Bun.file(resolve(src)).bytes())
-  .resize(1024, 1024, { fit: "fill" })
-  .webp({ quality: 85 })
-  .bytes();
+const bytes = await new Bun.Image(await Bun.file(resolve(src)).bytes()).resize(1024, 1024, { fit: "fill" }).webp({ quality: 85 }).bytes();
 await Bun.write(out, bytes);
 console.log(`wrote characters.webp: ${bytes.length} bytes`);

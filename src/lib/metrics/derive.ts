@@ -37,16 +37,42 @@ export function windowBounds(w: Window): { startMs: number; endMs: number; cutof
 }
 
 const emptyMetrics = (): Metrics => ({
-  sessions: 0, prompts: 0, reports: 0, outputTokens: 0, interrupts: 0, rejects: 0, questions: 0, plans: 0, modeSwitches: 0,
-  decisions: 0, contextSwitches: 0, activeMin: 0, streakMin: 0, lateNight: false,
+  sessions: 0,
+  prompts: 0,
+  reports: 0,
+  outputTokens: 0,
+  interrupts: 0,
+  rejects: 0,
+  questions: 0,
+  plans: 0,
+  modeSwitches: 0,
+  decisions: 0,
+  contextSwitches: 0,
+  activeMin: 0,
+  streakMin: 0,
+  lateNight: false,
 });
 
 // Presence is the human's own actions only: agent records and the agent's asks
 // are never presence, because presence answers "is it time to rest?".
 const PRESENCE: ReadonlySet<EventKind> = new Set<EventKind>(["prompt", "interrupt", "reject", "answer"]);
 
-type Acc = { m: Metrics; sessions: Set<string>; slots: Set<number>; lastPromptSession: string | null; maxStreakMs: number; lastPresence: { ts: number; streakStart: number } | null };
-const newAcc = (): Acc => ({ m: emptyMetrics(), sessions: new Set(), slots: new Set(), lastPromptSession: null, maxStreakMs: 0, lastPresence: null });
+type Acc = {
+  m: Metrics;
+  sessions: Set<string>;
+  slots: Set<number>;
+  lastPromptSession: string | null;
+  maxStreakMs: number;
+  lastPresence: { ts: number; streakStart: number } | null;
+};
+const newAcc = (): Acc => ({
+  m: emptyMetrics(),
+  sessions: new Set(),
+  slots: new Set(),
+  lastPromptSession: null,
+  maxStreakMs: 0,
+  lastPresence: null,
+});
 
 // Inside a streak the human sat through the gap, so a pair of actions covers
 // every slot between them; an action that starts a streak covers only its own.
@@ -74,13 +100,27 @@ function accumulate(a: Acc, e: Event, streakStart: number): void {
       if (a.lastPromptSession !== null && a.lastPromptSession !== e.sessionId) a.m.contextSwitches++;
       a.lastPromptSession = e.sessionId;
       break;
-    case "report": a.m.reports++; break;
-    case "output": a.m.outputTokens += e.tokens ?? 0; break;
-    case "interrupt": a.m.interrupts++; break;
-    case "reject": a.m.rejects++; break;
-    case "question": a.m.questions++; break;
-    case "plan_review": a.m.plans++; break;
-    case "mode_change": a.m.modeSwitches++; break;
+    case "report":
+      a.m.reports++;
+      break;
+    case "output":
+      a.m.outputTokens += e.tokens ?? 0;
+      break;
+    case "interrupt":
+      a.m.interrupts++;
+      break;
+    case "reject":
+      a.m.rejects++;
+      break;
+    case "question":
+      a.m.questions++;
+      break;
+    case "plan_review":
+      a.m.plans++;
+      break;
+    case "mode_change":
+      a.m.modeSwitches++;
+      break;
   }
 }
 
@@ -107,7 +147,10 @@ function foldEvents(sorted: Event[], startMs: number): { acc: Map<string, Acc>; 
   };
   const get = (k: string): Acc => {
     let a = acc.get(k);
-    if (!a) { a = newAcc(); acc.set(k, a); }
+    if (!a) {
+      a = newAcc();
+      acc.set(k, a);
+    }
     return a;
   };
 
@@ -184,19 +227,43 @@ function buildDay(date: string, acc: Map<string, Acc>): Day {
     buckets.push({ ...finish(a ?? newAcc(), LATE_HOURS.has(hour)), hour });
   }
   const scored = buckets.filter((b) => b.score !== null);
-  const totals: Totals = buckets.reduce((t, b) => ({
-    prompts: t.prompts + b.prompts, reports: t.reports + b.reports, outputTokens: t.outputTokens + b.outputTokens,
-    interrupts: t.interrupts + b.interrupts, rejects: t.rejects + b.rejects,
-    questions: t.questions + b.questions, plans: t.plans + b.plans, modeSwitches: t.modeSwitches + b.modeSwitches,
-    decisions: t.decisions + b.decisions, contextSwitches: t.contextSwitches + b.contextSwitches,
-    maxSessions: Math.max(t.maxSessions, b.sessions),
-  }), { prompts: 0, reports: 0, outputTokens: 0, interrupts: 0, rejects: 0, questions: 0, plans: 0, modeSwitches: 0, decisions: 0, contextSwitches: 0, maxSessions: 0 });
+  const totals: Totals = buckets.reduce(
+    (t, b) => ({
+      prompts: t.prompts + b.prompts,
+      reports: t.reports + b.reports,
+      outputTokens: t.outputTokens + b.outputTokens,
+      interrupts: t.interrupts + b.interrupts,
+      rejects: t.rejects + b.rejects,
+      questions: t.questions + b.questions,
+      plans: t.plans + b.plans,
+      modeSwitches: t.modeSwitches + b.modeSwitches,
+      decisions: t.decisions + b.decisions,
+      contextSwitches: t.contextSwitches + b.contextSwitches,
+      maxSessions: Math.max(t.maxSessions, b.sessions),
+    }),
+    {
+      prompts: 0,
+      reports: 0,
+      outputTokens: 0,
+      interrupts: 0,
+      rejects: 0,
+      questions: 0,
+      plans: 0,
+      modeSwitches: 0,
+      decisions: 0,
+      contextSwitches: 0,
+      maxSessions: 0,
+    },
+  );
   return {
     date,
     peak: scored.length ? Math.max(...scored.map((b) => b.score!.index)) : null,
     mean: scored.length ? Math.round(scored.reduce((s, b) => s + b.score!.index, 0) / scored.length) : null,
     activeMin: buckets.reduce((s, b) => s + b.activeMin, 0),
-    presence: lastPresence && { lastAt: new Date(lastPresence.ts).toISOString(), streakStartAt: new Date(lastPresence.streakStart).toISOString() },
+    presence: lastPresence && {
+      lastAt: new Date(lastPresence.ts).toISOString(),
+      streakStartAt: new Date(lastPresence.streakStart).toISOString(),
+    },
     totals,
     buckets,
   };
@@ -226,7 +293,10 @@ export function derive(events: Event[], w: Window): Day[] {
   // and only into `presence`: no bucket, total or active minute crosses back.
   const first = days[0];
   if (first && first.presence === null && carried) {
-    first.presence = { lastAt: new Date(carried.ts).toISOString(), streakStartAt: new Date(carried.streakStart).toISOString() };
+    first.presence = {
+      lastAt: new Date(carried.ts).toISOString(),
+      streakStartAt: new Date(carried.streakStart).toISOString(),
+    };
   }
   for (const d of days) {
     if (d.presence) d.presence.streakStartAt = new Date(traceBack(Date.parse(d.presence.streakStartAt), earlier)).toISOString();

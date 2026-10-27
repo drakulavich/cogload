@@ -122,7 +122,10 @@ describe("week grid", () => {
   });
 
   test("the totals line uses the singular for exactly one", () => {
-    const one = analyze([transcript([prompt("2026-09-14T13:00:00.000Z", "aaaaaaaa-1111-4111-8111-111111111111")])], { to: "2026-09-14", days: 1 });
+    const one = analyze([transcript([prompt("2026-09-14T13:00:00.000Z", "aaaaaaaa-1111-4111-8111-111111111111")])], {
+      to: "2026-09-14",
+      days: 1,
+    });
     const totals = renderWeek(one, false).split("\n")[4]!;
     expect(totals).toMatch(/ active   1 prompt   0 reports   0 decisions   1 session at once$/);
   });
@@ -131,16 +134,74 @@ describe("week grid", () => {
     // Mutation this pins: dropping formatCount from any of the four counts
     // (prompts, reports, decisions, sessions at once) in the totals line.
     const emptyBucket = (hour: number): HourBucket => ({
-      hour, score: null, sessions: 0, prompts: 0, reports: 0, outputTokens: 0, interrupts: 0, rejects: 0,
-      questions: 0, plans: 0, modeSwitches: 0, decisions: 0, contextSwitches: 0, activeMin: 0, streakMin: 0, lateNight: false,
+      hour,
+      score: null,
+      sessions: 0,
+      prompts: 0,
+      reports: 0,
+      outputTokens: 0,
+      interrupts: 0,
+      rejects: 0,
+      questions: 0,
+      plans: 0,
+      modeSwitches: 0,
+      decisions: 0,
+      contextSwitches: 0,
+      activeMin: 0,
+      streakMin: 0,
+      lateNight: false,
     });
     const emptyBuckets = (): HourBucket[] => Array.from({ length: 24 }, (_, h) => emptyBucket(h));
-    const emptyDay = (date: string): Day => ({ date, peak: null, mean: null, activeMin: 0, presence: null, buckets: emptyBuckets(), totals: { prompts: 0, reports: 0, outputTokens: 0, interrupts: 0, rejects: 0, questions: 0, plans: 0, modeSwitches: 0, decisions: 0, contextSwitches: 0, maxSessions: 0 } });
+    const emptyDay = (date: string): Day => ({
+      date,
+      peak: null,
+      mean: null,
+      activeMin: 0,
+      presence: null,
+      buckets: emptyBuckets(),
+      totals: {
+        prompts: 0,
+        reports: 0,
+        outputTokens: 0,
+        interrupts: 0,
+        rejects: 0,
+        questions: 0,
+        plans: 0,
+        modeSwitches: 0,
+        decisions: 0,
+        contextSwitches: 0,
+        maxSessions: 0,
+      },
+    });
     // One day carries every huge value; the other six stay empty, so the week
     // sums (prompts, reports, decisions) equal that day's totals exactly and
     // maxSessions (a max, not a sum) is unaffected by how many days hold it.
-    const hugeDay: Day = { ...emptyDay("2026-09-14"), activeMin: 999_999, totals: { prompts: 999_999_999, reports: 999_999_999, outputTokens: 0, interrupts: 0, rejects: 0, questions: 0, plans: 0, modeSwitches: 0, decisions: 999_999_999, contextSwitches: 0, maxSessions: 999_999_999 } };
-    const hugeDays = [hugeDay, emptyDay("2026-09-15"), emptyDay("2026-09-16"), emptyDay("2026-09-17"), emptyDay("2026-09-18"), emptyDay("2026-09-19"), emptyDay("2026-09-20")];
+    const hugeDay: Day = {
+      ...emptyDay("2026-09-14"),
+      activeMin: 999_999,
+      totals: {
+        prompts: 999_999_999,
+        reports: 999_999_999,
+        outputTokens: 0,
+        interrupts: 0,
+        rejects: 0,
+        questions: 0,
+        plans: 0,
+        modeSwitches: 0,
+        decisions: 999_999_999,
+        contextSwitches: 0,
+        maxSessions: 999_999_999,
+      },
+    };
+    const hugeDays = [
+      hugeDay,
+      emptyDay("2026-09-15"),
+      emptyDay("2026-09-16"),
+      emptyDay("2026-09-17"),
+      emptyDay("2026-09-18"),
+      emptyDay("2026-09-19"),
+      emptyDay("2026-09-20"),
+    ];
     const hugeLines = renderWeek(hugeDays, false).split("\n");
     expect(hugeLines[9]).toBe("  ░ calm   ▒ warming   ▓ heating   █ fried");
     expect(hugeLines[10]).toBe("  16666h39 active   999M prompts   999M reports   999M decisions   999M sessions at once");
@@ -229,15 +290,7 @@ describe("day table", () => {
       ],
       "a/s.jsonl",
     );
-    const tb = transcript(
-      [
-        mode(B, "auto"),
-        prompt(at("13:06"), B),
-        assistant(at("13:07"), B),
-        teammate(at("13:08"), B),
-      ],
-      "b/s.jsonl",
-    );
+    const tb = transcript([mode(B, "auto"), prompt(at("13:06"), B), assistant(at("13:07"), B), teammate(at("13:08"), B)], "b/s.jsonl");
     const day = analyze([ta, tb], { to: "2026-09-14", days: 1 })[0]!;
     const lines = renderDay(day, { explain: false, color: false }).split("\n");
     expect(lines[0]).toBe("hour   index  level    sess  prompts  rep  intr  rej  quest  plan  mode  ctx-sw  streak  out-tok");
