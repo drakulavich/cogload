@@ -31,7 +31,8 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
   or last line of a prompt. Sent on its own, it lifts the rest and brings the
   held prompts back into the box. You get five skips a calendar week, from
   Monday 00:00 local time; during a rest the band shows how many are left, and
-  with none left the rest runs out on its own.
+  with none left a skip gets `The powerbank is empty until Monday: 5 skips
+  this week.` and the rest runs out on its own.
 - **From your phone.** A prompt sent through Remote Control is not held; it
   carries a visible note, and Claude's reply begins by saying it went past the
   rest.
