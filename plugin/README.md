@@ -23,13 +23,16 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
 - **The band.** A dot in the level's colour (Calm, Warming, Heating, Fried),
   the streak, and when a rest is due or how long it has left.
 - **`/cogload`.** Names what drives the last sixty minutes in counts, and the
-  week's rests taken and skipped.
+  week's rests taken and skipped, and the skips left.
 - **The rest.** After a 40-minute streak, or once an hour when the hour reads
   Fried, the prompts you type are held for ten minutes, each with a short idea
   for the break. A held prompt goes back into the box.
 - **Going on anyway.** Add `skip: <reason>` (three words or more) as the first
   or last line of a prompt. Sent on its own, it lifts the rest and brings the
-  held prompts back into the box.
+  held prompts back into the box. You get five skips a calendar week, from
+  Monday 00:00 local time; during a rest the band shows how many are left, and
+  with none left a skip gets `The powerbank is empty until Monday: 5 skips
+  this week.` and the rest runs out on its own.
 - **From your phone.** A prompt sent through Remote Control is not held; it
   carries a visible note, and Claude's reply begins by saying it went past the
   rest.
@@ -52,7 +55,7 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
   when the current rest ends, which streak's rest was taken, when the last
   Fried rest began, the start of each rest for seven days, which
   break idea comes next, which one-time notices it has shown, and the time and
-  reason of each skip for seven days. The skip reason is the only text it
+  reason of each skip this calendar week. The skip reason is the only text it
   writes to disk.
 
 ## Programs, hooks and what leaves the plugin

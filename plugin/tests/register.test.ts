@@ -441,7 +441,7 @@ describe("rest", () => {
   test("a rest lasts restMin minutes", async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40, restMin: 7 }) }]);
     await start($);
-    expect(await band($)).toBe(`● Heating · rest until ${hhmm(NOW + 7 * 60_000)} (7 min)`);
+    expect(await band($)).toBe(`● Heating · rest until ${hhmm(NOW + 7 * 60_000)} (7 min) · 5 skips left`);
     await clock.advance(7 * 60_000);
     expect(await typed($, "next")).toEqual({ text: "next" });
   });
@@ -478,7 +478,7 @@ describe("rest", () => {
   test("a Fried reading at streak 37 starts the rest with no warning", async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 37, level: "Fried", index: 90 }) }]);
     await start($);
-    expect(await band($)).toBe(`● Fried · rest until ${hhmm(NOW + REST_MS)} (10 min)`);
+    expect(await band($)).toBe(`● Fried · rest until ${hhmm(NOW + REST_MS)} (10 min) · 5 skips left`);
   });
 
   test("each held composer prompt gets the next phrase, the minutes left, that it is back in the box and the way out", async ($, on) => {
@@ -594,21 +594,21 @@ describe("rest", () => {
     expect(await typed($, "next")).toEqual(DROP(clock.now() + REST_MS));
   });
 
-  for (const [columns, surface] of [
-    [120, "terminal"],
-    [40, "desktop"],
+  for (const [columns, surface, tail] of [
+    [120, "terminal", " · 5 skips left"],
+    [40, "desktop", ""],
   ] as const) {
     test(`the band says when the rest ends (${columns} columns)`, async ($, on) => {
       engine(on, [{ stdout: line({ streakMin: 40 }) }]);
       await start($);
-      expect(await band($, { bodyColumns: columns }, surface)).toBe(`● Heating · rest until ${hhmm(NOW + REST_MS)} (10 min)`);
+      expect(await band($, { bodyColumns: columns }, surface)).toBe(`● Heating · rest until ${hhmm(NOW + REST_MS)} (10 min)${tail}`);
     });
   }
 
   test("a rest draws the band while Calm", async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 45, level: "Calm", index: 20 }) }]);
     await start($);
-    expect(await band($)).toBe(`● Calm · rest until ${hhmm(NOW + REST_MS)} (10 min)`);
+    expect(await band($)).toBe(`● Calm · rest until ${hhmm(NOW + REST_MS)} (10 min) · 5 skips left`);
   });
 });
 
@@ -786,6 +786,74 @@ describe("override", () => {
   }
 });
 
+// Local time, as the plugin counts the week: NOW is Saturday 2026-10-03 in any zone from UTC-10 to UTC+13.
+const MONDAY = new Date(2026, 8, 28).getTime();
+const HOUR = 60 * 60_000;
+const skipsAt = (...ats: number[]) => ats.map((at) => ({ at, reason: "prod is down" }));
+const FIVE = skipsAt(...[1, 2, 3, 4, 5].map((h) => MONDAY + h * HOUR));
+const EMPTY = (until: number) => ({
+  drop: `The powerbank is empty until Monday: 5 skips this week. ${Math.ceil((until - clock.now()) / 60_000)} min left. Your prompt is back in the box.`,
+});
+
+describe("powerbank", () => {
+  for (const prompt of ["skip: prod is down now", "override: prod is down now", "fix it\nskip: prod is down now"]) {
+    test(`five skips since Monday: ${JSON.stringify(prompt)} keeps the rest`, async ($, on) => {
+      const store: Record<string, unknown> = { overrides: [...FIVE] };
+      engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store);
+      await start($);
+      expect(await typed($, prompt)).toEqual(EMPTY(NOW + REST_MS));
+      expect(store.overrides).toEqual(FIVE);
+      expect(store.restUntil).toBe(NOW + REST_MS);
+    });
+  }
+
+  test("five skips since Monday and a short reason: the powerbank, not the reason", async ($, on) => {
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], { overrides: [...FIVE] });
+    await start($);
+    expect(await typed($, "skip: no")).toEqual(EMPTY(NOW + REST_MS));
+  });
+
+  test("five skips before Monday: the week starts over and the skip lifts the rest", async ($, on) => {
+    const before = skipsAt(...[1, 2, 3, 4, 5].map((h) => MONDAY - h * HOUR));
+    const store: Record<string, unknown> = { overrides: before };
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store);
+    await start($);
+    expect(await typed($, "skip: prod is down now")).toEqual({ text: "skip: prod is down now", context: [LIFTED] });
+    expect(store.overrides).toEqual([{ at: NOW, reason: "prod is down now" }]);
+  });
+
+  test("an empty powerbank lets a bridge prompt through with its note and spends nothing", async ($, on) => {
+    const store: Record<string, unknown> = { overrides: [...FIVE] };
+    engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store);
+    await start($);
+    expect(await typed($, "skip: prod is down now", "bridge")).toEqual({
+      text: "skip: prod is down now",
+      context: [PAST(NOW + REST_MS)],
+    });
+    expect(store.overrides).toEqual(FIVE);
+    expect(store.restUntil).toBe(NOW + REST_MS);
+  });
+
+  for (const [overrides, shown] of [
+    [skipsAt(MONDAY + HOUR, MONDAY + 2 * HOUR), "3 skips left"],
+    [FIVE.slice(1), "1 skip left"],
+    [FIVE, "no skips left"],
+    [skipsAt(...[1, 2, 3, 4].map((h) => MONDAY - h * HOUR), MONDAY), "4 skips left"],
+  ] as const) {
+    test(`during a rest the band says ${shown}`, async ($, on) => {
+      engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], { overrides });
+      await start($);
+      expect(await band($)).toBe(`● Heating · rest until ${hhmm(NOW + REST_MS)} (10 min) · ${shown}`);
+    });
+  }
+
+  test("outside a rest the band shows no skips", async ($, on) => {
+    engine(on, [{ stdout: line() }], [], [], { overrides: [...FIVE] });
+    await start($);
+    expect(await band($, { bodyColumns: 120 })).toBe(`● Heating · ${restAt(20)}`);
+  });
+});
+
 describe("store", () => {
   test("a started rest adds its start to rests and drops one eight days old", async ($, on) => {
     const store: Record<string, unknown> = { rests: [NOW - 8 * DAY_MS, NOW - 6 * DAY_MS] };
@@ -794,18 +862,19 @@ describe("store", () => {
     expect(store.rests).toEqual([NOW - 6 * DAY_MS, NOW]);
   });
 
-  test("an override drops the ones older than seven days", async ($, on) => {
+  // A week that ends daylight saving runs 169 hours, past a seven-day trim; Monday is the trim's edge.
+  test("an override drops the ones before Monday, even those under seven days old", async ($, on) => {
     const store: Record<string, unknown> = {
       overrides: [
-        { at: NOW - 8 * DAY_MS, reason: "old one here" },
-        { at: NOW - 6 * DAY_MS, reason: "deploy went wrong" },
+        { at: NOW - 7 * DAY_MS + HOUR, reason: "old one here" },
+        { at: MONDAY, reason: "deploy went wrong" },
       ],
     };
     engine(on, [{ stdout: line({ streakMin: 40 }) }], [], [], store);
     await start($);
     await typed($, "override: prod is down");
     expect(store.overrides).toEqual([
-      { at: NOW - 6 * DAY_MS, reason: "deploy went wrong" },
+      { at: MONDAY, reason: "deploy went wrong" },
       { at: NOW, reason: "prod is down" },
     ]);
   });
@@ -930,7 +999,7 @@ describe("/cogload", () => {
         ],
       },
     );
-    expect(text).toBe('Nothing scored this hour.\nThis week: 1 rest taken, 1 skipped (last: "prod is down, fixing it").');
+    expect(text).toBe('Nothing scored this hour.\nThis week: 1 rest taken, 1 skipped (last: "prod is down, fixing it"), 4 skips left.');
   });
 
   test("an override whose rest fell out of the week leaves the rests taken alone", async ($, on) => {
@@ -943,7 +1012,7 @@ describe("/cogload", () => {
         overrides: [{ at: NOW - 7 * DAY_MS + 60_000, reason: "prod is down" }],
       },
     );
-    expect(text).toBe("Nothing scored this hour.\nThis week: 1 rest taken.");
+    expect(text).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 5 skips left.");
   });
 
   test("two overrides quote the newest reason", async ($, on) => {
@@ -959,7 +1028,17 @@ describe("/cogload", () => {
         ],
       },
     );
-    expect(text).toBe('Nothing scored this hour.\nThis week: 0 rests taken, 2 skipped (last: "prod is down").');
+    expect(text).toBe('Nothing scored this hour.\nThis week: 0 rests taken, 2 skipped (last: "prod is down"), 3 skips left.');
+  });
+
+  test("the week starts Monday: a rest on Sunday is last week", async ($, on) => {
+    const text = await explain($, on, { stdout: today(null) }, { rests: [MONDAY - 12 * HOUR, NOW - DAY_MS] });
+    expect(text).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 5 skips left.");
+  });
+
+  test("a Sunday rest skipped on Monday counts the skip alone", async ($, on) => {
+    const text = await explain($, on, { stdout: today(null) }, { rests: [MONDAY - 5 * 60_000], overrides: [{ at: MONDAY + 60_000, reason: "prod is down" }] });
+    expect(text).toBe('Nothing scored this hour.\nThis week: 0 rests taken, 1 skipped (last: "prod is down"), 4 skips left.');
   });
 
   test("no rests or overrides, one line", async ($, on) => {
@@ -1071,9 +1150,9 @@ describe("every minute", () => {
   test("the band counts down the rest", async ($, on) => {
     engine(on, [live(() => NOW - 40 * 60_000)]);
     await start($);
-    expect(await band($)).toBe(`● Heating · rest until ${hhmm(NOW + REST_MS)} (10 min)`);
+    expect(await band($)).toBe(`● Heating · rest until ${hhmm(NOW + REST_MS)} (10 min) · 5 skips left`);
     await clock.advance(3 * 60_000);
-    expect(await band($)).toBe(`● Heating · rest until ${hhmm(NOW + REST_MS)} (7 min)`);
+    expect(await band($)).toBe(`● Heating · rest until ${hhmm(NOW + REST_MS)} (7 min) · 5 skips left`);
   });
 
   test("the band drops the rest once it is over", async ($, on) => {
@@ -1180,7 +1259,7 @@ describe("cogload in ~/.bun/bin", () => {
     await start($);
     const text = await cogload($);
     expectNoHome([text, ...logs, ...toasts]);
-    expect(text).toBe("Heating 80 this hour, at the cap: 5 sessions at once.\nThis week: 1 rest taken.");
+    expect(text).toBe("Heating 80 this hour, at the cap: 5 sessions at once.\nThis week: 1 rest taken, 5 skips left.");
     expect(calls).toEqual([STATUS, TODAY, [BIN, "today", "--json"]]);
   });
 
