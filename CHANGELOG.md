@@ -5,6 +5,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-29
+
+### Added
+- You get five skips a calendar week, from Monday 00:00 local time. With
+  none left, a skip no longer lifts the rest. During a rest the band shows
+  how many are left, and `/cogload` counts the week from Monday. A session
+  started before the update ignores the limit until it is restarted. (#234)
+
 ## [0.14.2] - 2026-10-17
 
 ### Fixed
