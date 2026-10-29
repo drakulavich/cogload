@@ -19,5 +19,6 @@ jobs:
       - run: bun run test
         env:
           COGLOAD_REQUIRE_WEBVIEW: "1"
+      - run: bun tests/fixtures/busy-week.ts && git status --porcelain -- tests/fixtures/busy-week | (! grep .)
       - run: npm install -g @anthropic-ai/claude-code
       - run: claude plugin validate . && claude plugin validate plugin && claude plugin test plugin
