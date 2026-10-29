@@ -19,28 +19,36 @@ After this change:
 
 1. A calendar week holds five skips. It starts Monday 00:00 in the local
    time zone of the machine the plugin runs on.
-2. During a rest, a prompt with a `skip:` line, first or last, when five
-   skips are already recorded since Monday, does not lift the rest, whatever
-   its reason. It is dropped with
+2. "A skip line" below is what `SKIP` matches today: `skip:` or its older
+   spelling `override:`, first or last in the prompt. During a rest, a typed
+   prompt with a skip line, when five skips are already recorded since
+   Monday, does not lift the rest, whatever its reason. It is dropped with
    `The powerbank is empty until Monday: 5 skips this week. 7 min left. Your prompt is back in the box.`
    The minutes are counted as for a held prompt. The prompts the rest held
    stay held, and `phrase` does not advance.
-3. With skips left, a `skip:` line behaves as today: a short reason gets
+3. With skips left, a skip line behaves as today: a short reason gets
    `A skip needs a reason of three words or more.`, and a long one lifts the
-   rest and spends one skip.
-4. During a rest the band shows the skips left after the countdown:
+   rest and spends one skip. That includes a Remote Control prompt, which
+   today lifts the rest and records a skip like a typed one.
+4. A Remote Control prompt is never dropped. With an empty powerbank its
+   skip line lifts nothing and records nothing: the prompt goes through with
+   the note every Remote Control prompt gets during a rest, as it does today
+   without a skip line.
+5. During a rest the band shows the skips left after the countdown:
    `● Heating · rest until 14:32 (7 min) · 3 skips left`, and
    `1 skip left`, `no skips left`. Outside a rest the band does not show
    them.
-5. The `/cogload` week line counts from Monday 00:00 local, not over the
+6. The `/cogload` week line counts from Monday 00:00 local, not over the
    last seven days, and ends with the skips left:
    `This week: 1 rest taken, 1 skipped (last: "prod is down, fixing it"), 4 skips left.`
-   `skipped` is every skip since Monday; `taken` stays the rests since
-   Monday minus the skips that followed one of them. The line appears when
-   there is a rest or a skip since Monday, and is left out otherwise.
-6. Nothing else changes: a `skip:` line outside a rest is ordinary text, a
-   Remote Control prompt still passes a rest with its note and spends
-   nothing, and a lifted rest stays lifted until that streak ends.
+   `skipped` is every skip since Monday, also one that lifted a rest begun
+   before Monday; `taken` stays the rests since Monday minus the skips that
+   followed one of them. The line appears when there is a rest or a skip
+   since Monday, and is left out otherwise, so a Sunday rest skipped at
+   Monday 00:01 gives `This week: 0 rests taken, 1 skipped (last: "…"), 4 skips left.`
+   where today the line is left out.
+7. Nothing else changes: a skip line outside a rest is ordinary text, and a
+   lifted rest stays lifted until that streak ends.
 
 Not in scope: a rest that runs to the end earning a skip back (a rest, skip,
 rest, skip loop makes skips cheap again; it would also need when each rest
@@ -52,19 +60,27 @@ empty powerbank (turning the plugin off in `/plugin` is that).
 
 No store key is added or changes type (`CLAUDE.md`: a key keeps its type).
 The count is read from `overrides`, the existing list of `{ at, reason }`:
-skips left = `5 - (entries with at >= Monday 00:00 local)`, never below 0.
+skips left = `5 - (entries with at >= weekStart(now))`, never below 0. Every
+reader of the week (the limit, the band, the week line) uses this one
+`>=` predicate; a skip at exactly Monday 00:00 belongs to the new week.
 
-`overrides` is already trimmed on each skip to the last seven days. Monday
-00:00 of the current week is at most 6 days 23:59 back, so the trim never
-drops a skip of the current week. At five skips a week the list holds at
-most ten entries (this week's and the tail of the last one), about 60 bytes
-each, under 1 KB. Reading it is one `store.get` per prompt during a rest and
+Today each skip trims `overrides` to `at > now - WEEK_MS`. A calendar week
+can be longer than `WEEK_MS`: the week that ends daylight saving has 169
+hours, so on its last Sunday evening the rolling trim would drop the skips
+of its first Monday hour and let a sixth skip through. The write therefore
+trims to `at >= weekStart(now)` instead, and the rests list keeps its
+seven-day trim (the week line reads rests since `weekStart(now)`, which a
+169-hour week can also outrun by one hour; a rest in that hour is left out
+of `taken`, which is acceptable for a count that only informs). The list
+then holds at most five entries, about 60 bytes each. Reading it is one `store.get` per prompt during a rest and
 per band render during a rest, as the countdown already does for
 `restUntil`.
 
 A session started before the update runs the old code: it lets a sixth skip
-through and records it, and an updated session counts that record. The limit
-holds once every session is restarted. The CHANGELOG line says so.
+through and records it, and an updated session counts that record. Its
+seven-day trim keeps more than the new one, never less, except in the
+169-hour week above. The limit holds once every session is restarted. The
+CHANGELOG line says so.
 
 Monday is computed from `$.clock.now()` with the local `Date` methods
 (`setHours(0, 0, 0, 0)`, then back `(getDay() + 6) % 7` days), the same
@@ -85,7 +101,8 @@ claude plugin test plugin
 ## Project Structure
 
 ```
-plugin/hooks/register.ts      SKIPS_PER_WEEK, weekStart(), skipsLeft(); prompt.submit,
+plugin/hooks/register.ts      SKIPS_PER_WEEK, weekStart(), skipsLeft(); the overrides trim;
+                              prompt.submit,
                               AbovePrompt and the /cogload week line use them
 plugin/tests/register.test.ts cases below
 README.md                     the rest paragraph names the limit
@@ -118,20 +135,38 @@ zone the suite runs in.
 
 1. Five skips since Monday, a rest running, `skip: prod is down now` →
    dropped with the empty-powerbank text, `restUntil` unchanged,
-   `overrides` unchanged. Fails on main, which lifts the rest.
+   `overrides` unchanged. The same with `override: prod is down now`.
+   Both fail on main, which lifts the rest.
 2. Five skips, all before Monday 00:00 of this week, the same prompt → the
    rest is lifted and `overrides` gains one entry. Pins that the week
    resets on Monday, not seven days after each skip.
-3. Two skips since Monday, a rest running → the band reads
-   `rest until … · 3 skips left`. Fails on main.
-4. No rest running → the band shows no skips, five skips since Monday or
+3. Four skips before Monday and one at exactly Monday 00:00 → 4 skips left.
+   Pins the `>=`.
+4. With the plugin's clock in `America/New_York` (`TZ` set for the case):
+   one skip at Monday 2026-10-26 00:30 EDT, three more that week, and a
+   skip on Sunday 2026-11-01 23:30 EST → it lifts the rest; a sixth after
+   it is refused, and `overrides` still holds the Monday 00:30 entry. Fails
+   with the rolling trim.
+5. A Remote Control prompt `skip: prod is down now` with five skips since
+   Monday → passes with the Remote Control note, `restUntil` and
+   `overrides` unchanged. Fails with a check that drops before the bridge
+   branch.
+6. Two skips since Monday, a rest running → the band reads
+   `rest until … · 3 skips left`; four skips → `1 skip left`; five →
+   `no skips left`. Fails on main.
+7. No rest running → the band shows no skips, five skips since Monday or
    not.
-5. A rest on Sunday and the week line on Saturday six days later → the
+8. A rest on Sunday and the week line on Saturday six days later → the
    Sunday rest is left out of `taken`. Fails on main, whose seven-day window
    still holds it.
-6. The week line ends with `, 4 skips left.` after one skip. Fails on main.
-7. Five skips since Monday and `skip: no` → the empty-powerbank text, not the
-   short-reason one.
+9. A rest on Sunday and its skip at Monday 00:01 → the week line reads
+   `This week: 0 rests taken, 1 skipped (last: "…"), 4 skips left.` Fails
+   on main, which leaves the line out.
+10. Five skips since Monday and `skip: no` → the empty-powerbank text, not
+    the short-reason one.
+
+If the engine's test harness cannot set the time zone per case, case 4 runs
+as a separate test file under `TZ=America/New_York`, and the PR says how.
 
 The existing skip and week-line tests stay green with only their expected
 week line gaining the skips-left tail.
@@ -147,8 +182,9 @@ week line gaining the skips-left tail.
 
 ## Definition of Done
 
-- Cases 1 to 7 pass under `claude plugin test plugin`; cases 1, 3, 5, 6 and
-  7 fail on main.
+- Cases 1 to 10 pass under `claude plugin test plugin`; cases 1, 6, 8, 9
+  and 10 fail on main, case 3 fails with `>`, case 4 with the rolling trim,
+  case 5 with the limit checked before the bridge branch.
 - `bun run check` passes.
 - README, `plugin/README.md` and `docs/reference.md` name the five-skip
   week, the Monday reset, the empty-powerbank text and the band's skips
@@ -165,4 +201,7 @@ week line gaining the skips-left tail.
 - The band says `3 skips left` rather than the `skips 3/5` of the idea
   draft: `3/5` reads as used or as left.
 - The empty-powerbank check runs before the reason check, so a short reason
-  on an empty powerbank learns the real obstacle first.
+  on an empty powerbank learns the real obstacle first. For a Remote Control
+  prompt it routes to the bridge branch instead of dropping.
+- A Remote Control skip keeps spending a skip, as it records one today; only
+  an empty powerbank changes what it does.
