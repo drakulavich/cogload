@@ -16,6 +16,7 @@ const HELD: readonly string[] = ["composer", "bridge"];
 const WEEK_MS = 7 * 24 * 60 * 60_000;
 const HOUR_MS = 60 * 60_000;
 const SKIP = /^(?:skip|override):(.*)$/i;
+const SKIPS_PER_WEEK = 5;
 const PHRASES = [
   "Stand up and stretch.",
   "Water, then a window.",
@@ -27,6 +28,7 @@ const PHRASES = [
   "The code will wait.",
 ];
 const SHORT = "A skip needs a reason of three words or more.";
+const EMPTY = `The powerbank is empty until Monday: ${SKIPS_PER_WEEK} skips this week.`;
 const BACK = 'Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.';
 const WELCOME = "Keep your head cold. The dot above the prompt shows how hot this hour runs.";
 const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload";
@@ -142,9 +144,23 @@ const restUntil = async ($: EngineInterface, now: number): Promise<number | null
   return typeof until === "number" && now < until ? until : null;
 };
 
-const overridesSince = async ($: EngineInterface, since: number): Promise<Override[]> => {
+// Monday 00:00 in local time, as the band shows clock times.
+const weekStart = (now: number): number => {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.getTime();
+};
+
+const skipsThisWeek = async ($: EngineInterface, now: number): Promise<Override[]> => {
   const list = await $.store.get("overrides");
-  return Array.isArray(list) ? (list as Override[]).filter((o) => o.at > since) : [];
+  const since = weekStart(now);
+  return Array.isArray(list) ? (list as Override[]).filter((o) => o.at >= since) : [];
+};
+
+const skipsLeft = (spent: number): string => {
+  const n = Math.max(0, SKIPS_PER_WEEK - spent);
+  return n === 0 ? "no skips left" : `${plural(n, "skip")} left`;
 };
 
 const restsSince = async ($: EngineInterface, since: number): Promise<number[]> => {
@@ -181,12 +197,14 @@ const REFRESH_MS = 60_000;
 const STALE_MS = 5 * 60_000;
 
 const weekLine = async ($: EngineInterface, now: number): Promise<string | null> => {
-  const rests = await restsSince($, now - WEEK_MS);
-  if (rests.length === 0) return null;
-  const pushed = (await overridesSince($, now - WEEK_MS)).filter((o) => rests.some((at) => at <= o.at));
+  const rests = await restsSince($, weekStart(now) - 1);
+  const skips = await skipsThisWeek($, now);
+  if (rests.length === 0 && skips.length === 0) return null;
+  const pushed = skips.filter((o) => rests.some((at) => at <= o.at));
   const taken = `This week: ${plural(rests.length - pushed.length, "rest")} taken`;
-  const newest = pushed.at(-1);
-  return newest === undefined ? `${taken}.` : `${taken}, ${pushed.length} skipped (last: "${newest.reason}").`;
+  const newest = skips.at(-1);
+  const skipped = newest === undefined ? "" : `, ${skips.length} skipped (last: "${newest.reason}")`;
+  return `${taken}${skipped}, ${skipsLeft(skips.length)}.`;
 };
 
 const spawn = async ($: EngineInterface, argv: string[], env?: Record<string, string>) => {
@@ -300,9 +318,11 @@ export const register: Register = (on) => {
     const last = lines.length > 1 ? SKIP.exec(lines.at(-1) ?? "") : null;
     const skip = first ?? last;
     const reason = skip?.[1]?.trim() ?? "";
-    if (reason.split(/\s+/).length >= 3) {
+    const skips = await skipsThisWeek($, now);
+    const isEmpty = skip !== null && skips.length >= SKIPS_PER_WEEK;
+    if (!isEmpty && reason.split(/\s+/).length >= 3) {
       await $.store.delete("restUntil");
-      await $.store.set("overrides", [...(await overridesSince($, now - WEEK_MS)), { at: now, reason }]);
+      await $.store.set("overrides", [...skips, { at: now, reason }]);
       const text = lines
         .slice(first ? 1 : 0, last ? -1 : undefined)
         .join("\n")
@@ -315,6 +335,7 @@ export const register: Register = (on) => {
       return next({ ...e, context: [...(e.context ?? []), LIFTED] });
     }
     if (e.origin.kind === "bridge") return next({ ...e, context: [...(e.context ?? []), past(until)] });
+    if (isEmpty) return { drop: `${EMPTY} ${Math.ceil((until - now) / 60_000)} min left. Your prompt is back in the box.` };
     if (skip !== null) return { drop: `${SHORT} Your prompt is back in the box.` };
     const phrase = await $.store.get("phrase");
     const n = typeof phrase === "number" ? phrase : 0;
@@ -332,8 +353,10 @@ export const register: Register = (on) => {
     const until = await restUntil($, now);
     const isAhead = until === null && s.restAt !== null && Date.parse(s.restAt) > Date.parse(s.asOf) && !(await isSpent($, s));
     const parts: string[] = [];
-    if (until !== null) parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`);
-    else if (isAhead && s.restAt !== null) parts.push(`rest at ${clockTime(Date.parse(s.restAt))}`);
+    if (until !== null) {
+      parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`);
+      if (e.props.bodyColumns >= NARROW) parts.push(skipsLeft((await skipsThisWeek($, now)).length));
+    } else if (isAhead && s.restAt !== null) parts.push(`rest at ${clockTime(Date.parse(s.restAt))}`);
     else if (e.props.bodyColumns >= NARROW && s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`);
     const { Box, Text } = $.ui.resolve(e);
     const head = Text({ color: COLOR[s.level], children: `● ${s.level}` });

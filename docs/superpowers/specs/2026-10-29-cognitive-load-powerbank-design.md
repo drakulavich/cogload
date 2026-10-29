@@ -36,8 +36,9 @@ After this change:
    without a skip line.
 5. During a rest the band shows the skips left after the countdown:
    `● Heating · rest until 14:32 (7 min) · 3 skips left`, and
-   `1 skip left`, `no skips left`. Outside a rest the band does not show
-   them.
+   `1 skip left`, `no skips left`, from 50 columns, where the band also
+   shows the streak; narrower, the rest countdown alone. Outside a rest the
+   band does not show them.
 6. The `/cogload` week line counts from Monday 00:00 local, not over the
    last seven days, and ends with the skips left:
    `This week: 1 rest taken, 1 skipped (last: "prod is down, fixing it"), 4 skips left.`
@@ -142,11 +143,13 @@ zone the suite runs in.
    resets on Monday, not seven days after each skip.
 3. Four skips before Monday and one at exactly Monday 00:00 → 4 skips left.
    Pins the `>=`.
-4. With the plugin's clock in `America/New_York` (`TZ` set for the case):
-   one skip at Monday 2026-10-26 00:30 EDT, three more that week, and a
-   skip on Sunday 2026-11-01 23:30 EST → it lifts the rest; a sixth after
-   it is refused, and `overrides` still holds the Monday 00:30 entry. Fails
-   with the rolling trim.
+4. A skip on Saturday with a stored skip from the previous Saturday, under
+   seven days old, and one at Monday 00:00 → `overrides` keeps the Monday
+   one and drops the other. Fails with the rolling trim, which keeps both.
+   This pins the trim's edge, not a daylight-saving week itself: `claude
+   plugin test` runs in the machine's zone and ignores `TZ`, and its
+   environment has no `process` to set it from (checked on Claude Code
+   2.1.312).
 5. A Remote Control prompt `skip: prod is down now` with five skips since
    Monday → passes with the Remote Control note, `restUntil` and
    `overrides` unchanged. Fails with a check that drops before the bridge
@@ -165,11 +168,8 @@ zone the suite runs in.
 10. Five skips since Monday and `skip: no` → the empty-powerbank text, not
     the short-reason one.
 
-If the engine's test harness cannot set the time zone per case, case 4 runs
-as a separate test file under `TZ=America/New_York`, and the PR says how.
-
-The existing skip and week-line tests stay green with only their expected
-week line gaining the skips-left tail.
+The existing tests stay green with only their expected week line, and the
+band during a rest from 50 columns, gaining the skips-left tail.
 
 ## Boundaries
 
