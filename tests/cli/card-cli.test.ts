@@ -34,7 +34,7 @@ async function runWith(env: Record<string, string>, ...args: string[]): Promise<
   const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
   return { code, out, err };
 }
-const files = () => readdir(cwd);
+const files = async () => (await readdir(cwd)).sort();
 const downloads = () => readdir(join(home, "Downloads"));
 
 // Warmed once: macOS checks a fresh executable for ~400 ms before running it.
