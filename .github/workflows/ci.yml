@@ -8,7 +8,16 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
     steps:
+      - if: github.event_name == 'pull_request'
+        uses: drakulavich/bite-the-diff@v1.1.0
+        with:
+          exclude: |
+            tests/fixtures/busy-week/**
       - uses: actions/checkout@v4.4.0
       - uses: oven-sh/setup-bun@v2.2.0
         with:
