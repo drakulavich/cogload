@@ -16,7 +16,6 @@ jobs:
       - if: github.event_name == 'pull_request'
         uses: drakulavich/bite-the-diff@v1.1.0
         with:
-          thresholds: 1:fail
           exclude: |
             tests/fixtures/busy-week/**
       - uses: actions/checkout@v4.4.0
