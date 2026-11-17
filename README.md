@@ -98,11 +98,11 @@ Heating 80 this hour, at the cap: 16 decisions and 13 context switches, 32 promp
 This week: 1 rest taken, 1 skipped (last: "prod is down, fixing it"), 4 skips left.
 ```
 
-It also makes you rest. After 40 minutes of work without a ten-minute gap, or in a Fried hour, it holds your prompts for ten minutes. Each held prompt gets the next short idea for the break, the minutes left and the way out: `Stand up and stretch. 7 min left. Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.` A `skip: <reason>` line at the start or the end of the prompt, the reason three words or more, lifts the rest. You get five skips a calendar week, from Monday 00:00 local time. With none left, a skip gets `The powerbank is empty until Monday: 5 skips this week.` and the rest runs out on its own.
+It also makes you rest. After 40 minutes of work without a ten-minute gap, or in a Fried hour, it holds your prompts for ten minutes. A prompt you send then stays in the box and goes when the rest ends, with the next short idea for the break and the minutes left: `Queued for 14:32. Stand up and stretch. 7 min left. It stays in the box, and goes as it reads then.` Until then you can edit it or delete it; text typed without Enter stays a draft. A `skip: <reason>` line at the start or the end of the prompt, the reason three words or more, lifts the rest. You get five skips a calendar week, from Monday 00:00 local time. With none left, a skip gets `The powerbank is empty until Monday: 5 skips this week.` and the rest runs out on its own.
 
 ## Privacy
 
-cogload reads `~/.claude/projects` on your machine and sends nothing anywhere. It keeps, writes and prints no message text, prompt length, file path or session title: what survives from a transcript is timestamps, session ids, event kinds and token counts. The plugin writes one piece of text to disk, the reason you give for a skip, and holds a prompt it delays in memory until the rest is over. [The reference](docs/reference.md#privacy) lists every file cogload and the plugin write, and [PRIVACY.md](PRIVACY.md) is the privacy policy.
+cogload reads `~/.claude/projects` on your machine and sends nothing anywhere. It keeps, writes and prints no message text, prompt length, file path or session title: what survives from a transcript is timestamps, session ids, event kinds and token counts. The plugin writes one piece of text to disk, the reason you give for a skip, and holds a prompt it delays in memory until the rest is over. When a rest you pressed Enter in ends, it reads the prompt box once to send it. [The reference](docs/reference.md#privacy) lists every file cogload and the plugin write, and [PRIVACY.md](PRIVACY.md) is the privacy policy.
 
 ## More
 

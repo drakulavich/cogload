@@ -26,7 +26,10 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
   week's rests taken and skipped, and the skips left.
 - **The rest.** After a 40-minute streak, or once an hour when the hour reads
   Fried, the prompts you type are held for ten minutes, each with a short idea
-  for the break. A held prompt goes back into the box.
+  for the break. A held prompt stays in the box, and when the rest ends the
+  plugin sends the box as it reads then: edit it or delete it meanwhile. Text
+  typed without Enter stays a draft, and a prompt with an image or a file
+  attached is not sent.
 - **Going on anyway.** Add `skip: <reason>` (three words or more) as the first
   or last line of a prompt. Sent on its own, it lifts the rest and brings the
   held prompts back into the box. You get five skips a calendar week, from
@@ -48,7 +51,8 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
   or session title.
 - Nothing is sent over the network, by the plugin or by cogload.
 - The plugin reads the prompts you type only to hold them during a rest and to
-  find a `skip:` line. While a rest lasts, the held prompts' text stays in the
+  find a `skip:` line. It reads the box once, when a rest you pressed Enter in
+  ends, to send it. While a rest lasts, the held prompts' text stays in the
   session's memory, never on disk, until the rest is lifted or the first prompt
   after it ends.
 - Its store, a JSON file under Claude Code's configuration directory, keeps
@@ -72,8 +76,9 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
   untouched.
 - **What leaves it.** Nothing goes over the network. The only text it adds to
   your conversation with Claude is a visible note on a phone prompt during a
-  rest, saying it went past the rest, and a note on a `skip:` sent alone,
-  asking Claude to say in one line that the rest is lifted. Everything else
+  rest, saying it went past the rest, a note on a `skip:` sent alone,
+  asking Claude to say in one line that the rest is lifted, and the box you
+  queued during a rest, sent when it ends as a message from the plugin. Everything else
   stays on your screen: the band, toasts and `/cogload`'s answer.
 
 [How the numbers are made](https://github.com/drakulavich/cogload/blob/main/docs/how-the-numbers-are-made.md)

@@ -31,8 +31,8 @@ on screen to come back and check.
    If the box holds text, the plugin awaits
    `$.prompt.submit({ text })` with that text exactly, then
    empties the box with `$.prompt.fill({ text: "", mode: "replace" })` from
-   `$.clock.after(0, …)`, as the skip path fills it. An empty box sends
-   nothing.
+   `$.clock.after(0, …)`, as the skip path fills it. An empty or blank box
+   sends nothing: Claude Code refuses a blank prompt itself.
 4. Text typed without Enter during the rest is not sent: the session is
    queued only by a held Enter.
 5. A prompt the person sends after the rest ended goes through as typed and
@@ -113,7 +113,6 @@ const sendQueued = async ($: EngineInterface) => {
   if (!(await read($, queued)) || (await restUntil($, await $.clock.now())) !== null) return;
   await update($, queued, () => false);
   const { text } = await $.prompt.read();
-  if (text.trim() === "") return;
   await $.prompt.submit({ text });
   $.clock.after(0, () => void $.prompt.fill({ text: "", mode: "replace" }));
 };

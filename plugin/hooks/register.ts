@@ -6,6 +6,7 @@ import type { Level, Status } from "../types";
 const status = atom({ plugin: "cognitive-load", key: "status" } as const, null);
 const lastToast = atom({ plugin: "cognitive-load", key: "lastToast" } as const, 0);
 const held = atom({ plugin: "cognitive-load", key: "held" } as const, [] as string[]);
+const queued = atom({ plugin: "cognitive-load", key: "queued" } as const, false);
 
 const LEVELS = ["Calm", "Warming", "Heating", "Fried"] as const;
 const COLOR: Record<Level, string> = { Calm: "success", Warming: "warning", Heating: "#ff8700", Fried: "red" };
@@ -30,6 +31,7 @@ const PHRASES = [
 const SHORT = "A skip needs a reason of three words or more.";
 const EMPTY = `The powerbank is empty until Monday: ${SKIPS_PER_WEEK} skips this week.`;
 const BACK = 'Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.';
+const QUEUED = "It stays in the box, and goes as it reads then.";
 const WELCOME = "Keep your head cold. The dot above the prompt shows how hot this hour runs.";
 const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload";
 const NO_READING = "cogload gave no reading.";
@@ -183,7 +185,7 @@ const startRestIfDue = async ($: EngineInterface, s: Status) => {
   await $.store.set("rests", [...(await restsSince($, now - WEEK_MS)), now]);
   await $.store.set("spent", s.restAt);
   if (isFried) await $.store.set("friedAt", now);
-  await toast($, `Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}.`);
+  await toast($, `Rest until ${clockTime(until)}. Streak ${formatMinutes(s.streakMin)}, ${s.level} ${s.index}. Press Enter now to send when it ends.`);
 };
 
 const toastOnce = async ($: EngineInterface, key: string, text: string) => {
@@ -256,6 +258,14 @@ const refresh = async ($: EngineInterface) => {
   return true;
 };
 
+const sendQueued = async ($: EngineInterface) => {
+  if (!(await read($, queued)) || (await restUntil($, await $.clock.now())) !== null) return;
+  await update($, queued, () => false);
+  const { text } = await $.prompt.read();
+  await $.prompt.submit({ text });
+  $.clock.after(0, () => void $.prompt.fill({ text: "", mode: "replace" }));
+};
+
 const tick = async ($: EngineInterface) => {
   const reading = (await $.store.get("reading")) as Status | undefined;
   const age = reading === undefined ? Number.POSITIVE_INFINITY : (await $.clock.now()) - Date.parse(reading.asOf);
@@ -278,7 +288,10 @@ export const register: Register = (on) => {
       .then(() => refresh($))
       .catch(() => {});
     $.clock.every(REFRESH_MS, () => {
-      tick($).catch(() => {});
+      sendQueued($)
+        .catch(() => {})
+        .then(() => tick($))
+        .catch(() => {});
     });
     return result;
   });
@@ -311,6 +324,7 @@ export const register: Register = (on) => {
     const until = await restUntil($, now);
     if (until === null) {
       await update($, held, () => []);
+      await update($, queued, () => false);
       return next(e);
     }
     const lines = e.text.trimEnd().split("\n");
@@ -320,6 +334,7 @@ export const register: Register = (on) => {
     const reason = skip?.[1]?.trim() ?? "";
     const skips = await skipsThisWeek($, now);
     const isEmpty = skip !== null && skips.length >= SKIPS_PER_WEEK;
+    if (skip !== null) await update($, queued, () => false);
     if (!isEmpty && reason.split(/\s+/).length >= 3) {
       await $.store.delete("restUntil");
       await $.store.set("overrides", [...skips, { at: now, reason }]);
@@ -341,8 +356,10 @@ export const register: Register = (on) => {
     const n = typeof phrase === "number" ? phrase : 0;
     await $.store.set("phrase", (n + 1) % PHRASES.length);
     await update($, held, (list) => [...list, e.text]);
-    const left = `${Math.ceil((until - now) / 60_000)} min left`;
-    return { drop: `${PHRASES[n % PHRASES.length]} ${left}. ${BACK}` };
+    const body = `${PHRASES[n % PHRASES.length]} ${Math.ceil((until - now) / 60_000)} min left`;
+    if ((e.attachments ?? []).length > 0) return { drop: `${body}. ${BACK}` };
+    await update($, queued, () => true);
+    return { drop: `Queued for ${clockTime(until)}. ${body}. ${QUEUED}` };
   });
 
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
