@@ -31,9 +31,11 @@ After this change:
 5. A prompt is not handed off, and is held as today, when it carries an
    attachment (`e.attachments` present) or an `@` mention (a word starting
    with `@`): the plugin's own submission expands neither.
-6. A prompt with a skip line is a skip, not a hand-off: the skip rules run
-   first, unchanged. A Remote Control (`bridge`) prompt passes with its note
-   as today and does not use the hand-off.
+6. A prompt with a skip line, whatever its reason (long, short, empty, or an
+   empty powerbank), is never handed off: every skip branch and the Remote
+   Control (`bridge`) branch return before the hand-off, which sits right
+   before the phrase and the hold. A bridge prompt passes with its note as
+   today and does not use the hand-off.
 7. The toast that starts a rest gains ` Your next prompt goes to the agent.`:
    `Rest until 14:32. Streak 40m, Heating 68. Your next prompt goes to the agent.`
 
@@ -43,7 +45,20 @@ hand-off sent when the rest ends, re-sending prompts with attachments.
 ## Data and cost
 
 One new store key, `handoff`: a number, the `restUntil` of the rest whose
-hand-off was used. A rest has a hand-off left when `handoff !== restUntil`.
+hand-off was used. The hook compares it with the `until` it already read at
+its start, which is a number there; it reads `restUntil` no second time, so a
+skip in another session cannot make it store anything else.
+
+The check and the write are two store calls, with no lock between sessions.
+Two prompts typed in two sessions within the same few milliseconds can both
+be handed off; one rest then sends two prompts instead of one. That needs two
+Enters at once, and its cost is one extra prompt sent, so it is accepted
+rather than locked.
+
+`$.prompt.submit` raises `prompt.submit` through every hook but the calling
+one, with `origin.kind: "plugin"` (the engine's types); the plugin's own hook
+does not see its re-submission, and would pass it anyway, since it holds only
+`composer` and `bridge` origins. A rest has a hand-off left when `handoff !== restUntil`.
 No existing key changes type (`CLAUDE.md`). Eight bytes plus the key name; it
 is overwritten, never grows. No text is stored: the handed-off prompt goes
 straight to `$.prompt.submit` and is kept nowhere.
@@ -91,14 +106,16 @@ docs/reference.md             rest paragraph and store paragraph
 
 ```ts
 const MENTION = /(^|\s)@\S/;
+const SENT = "Sent to the agent; the rest goes on.";
 
-// in prompt.submit, after the skip and bridge branches, before holding:
-const until = await restUntil($, now);
+// in prompt.submit, after `if (skip !== null) return …`, before the phrase;
+// `until` is the number the hook read at its start.
 if ((await $.store.get("handoff")) !== until && !e.attachments && !MENTION.test(e.text)) {
   await $.store.set("handoff", until);
+  // The drop puts the text back in the box after this hook returns, so the clear waits for it.
   $.clock.after(0, () => void $.prompt.fill({ text: "", mode: "replace" }));
   void $.prompt.submit({ text: e.text, asUser: true });
-  return { drop: `${SENT} ${left}.` };
+  return { drop: `${SENT} ${Math.ceil((until - now) / 60_000)} min left.` };
 }
 ```
 
@@ -108,9 +125,10 @@ if ((await $.store.get("handoff")) !== until && !e.attachments && !MENTION.test(
 fake clock and store, as `register.test.ts` does today.
 
 1. A rest running, a composer prompt → dropped with the hand-off text, one
-   `prompt.submit` from the plugin with the same text and `asUser`, one
-   `prompt.fill` with an empty draft, `handoff` set to `restUntil`. Fails on
-   main, which holds it.
+   `prompt.submit` from the plugin with the same text and `asUser`, and,
+   after `clock.advance(0)`, one `prompt.fill` with an empty draft;
+   `handoff` set to `restUntil`, `held` still empty, `phrase` unchanged.
+   Fails on main, which holds it.
 2. A second prompt in the same rest → held with the phrase text, no submit.
 3. `handoff` already equal to `restUntil` (another session's hand-off) → the
    first prompt in this session is held.
@@ -118,8 +136,12 @@ fake clock and store, as `register.test.ts` does today.
    first prompt is handed off.
 5. A prompt with an attachment, and one with `see @src/x.ts` → held, `handoff`
    unset. Fails with the checks removed.
-6. `skip: prod is down now` during a rest → lifts the rest as today, `handoff`
-   unset. A bridge prompt → passes with its note, `handoff` unset.
+6. During a rest with the hand-off unused: `skip: prod is down now` lifts the
+   rest as today; `skip: no` gets the short-reason text; with five skips
+   spent, `skip: prod is down now` gets the empty-powerbank text; a bridge
+   prompt passes with its note. In each, no plugin submit and `handoff`
+   unset. The `skip: no` case fails with the hand-off placed before the
+   short-reason return.
 7. The rest's toast ends with ` Your next prompt goes to the agent.` Fails on
    main.
 
