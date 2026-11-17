@@ -24,12 +24,15 @@ on screen to come back and check.
    box, as today; the plugin leaves it there. The session marks itself
    queued (`queued`, a boolean in `$.state`).
 2. The person may edit the text in the box until the rest ends, or delete it.
-3. On the first minute tick (`REFRESH_MS`, already running) at which the
-   session is queued and no rest is running, the plugin reads the box
-   (`$.prompt.read()`) and clears `queued`. If the box holds text, the plugin
-   sends that text exactly (`$.prompt.submit({ text, asUser: true })`) and
-   then empties the box (`$.prompt.fill({ text: "", mode: "replace" })`).
-   An empty box sends nothing.
+3. On the first minute callback (`$.clock.every(REFRESH_MS, …)`, already
+   running) at which the session is queued and no rest is running, the
+   plugin reads the box (`$.prompt.read()`) and clears `queued`. This runs
+   in the callback itself, before `tick`, whose early returns would skip it.
+   If the box holds text, the plugin awaits
+   `$.prompt.submit({ text, asUser: true })` with that text exactly, then
+   empties the box with `$.prompt.fill({ text: "", mode: "replace" })` from
+   `$.clock.after(0, …)`, as the skip path fills it. An empty box sends
+   nothing.
 4. Text typed without Enter during the rest is not sent: the session is
    queued only by a held Enter.
 5. A prompt the person sends after the rest ended but before that tick goes
@@ -40,10 +43,12 @@ on screen to come back and check.
    the box. The same holds when the held prompt carried attachments
    (`e.attachments`): `queued` is not set and the answer is today's held
    text.
-7. A skip during the rest works as today and clears `queued`. A Remote
+7. Any prompt with a skip line during the rest clears `queued`: one that
+   lifts the rest, a short reason and an empty powerbank alike, so the tick
+   never sends a skip line. Each answers as today. A Remote
    Control (`bridge`) prompt passes with its note as today and does not queue.
-8. The toast that starts a rest gains ` Press Enter now to send at 14:32.`:
-   `Rest until 14:32. Streak 40m, Heating 68. Press Enter now to send at 14:32.`
+8. The toast that starts a rest gains ` Press Enter now to send when it ends.`:
+   `Rest until 14:32. Streak 40m, Heating 68. Press Enter now to send when it ends.`
 
 Not in scope: sending during the rest (dropped after the hand-off draft), a
 queue that remembers text the box no longer shows, sending prompts with
@@ -52,10 +57,12 @@ mentions or attachments, a queue marker in the band.
 ## Data and cost
 
 No store key is added or changed. One boolean, `queued`, in the session's
-`$.state`, in memory only. No prompt text is kept by the plugin at all: the
-text lives in the box, where Claude Code already keeps it, and the plugin
-reads it once, at the tick, to send it. The privacy line in `CLAUDE.md` does
-not change. `held` (#208) works as today for a skip.
+`$.state`, in memory only, typed beside `held` in `PluginState`
+(`plugin/types/index.d.ts`). The text to send lives in the box, where Claude
+Code already keeps it, and the plugin reads it once, at the tick, to send it.
+A held prompt is still added to `held` (#208), so a skip without text brings
+it back into the box as today; `held` keeps text no longer than the privacy
+line in `CLAUDE.md` already allows, which does not change.
 
 Each session queues and sends from its own box, so sessions do not race.
 Closing a session during the rest loses its box, as it does today.
@@ -96,7 +103,8 @@ bun run stats              # step 1: the queued send's record shape
 ## Project Structure
 
 ```
-plugin/hooks/register.ts      queued flag, queue text, send from the box on tick, toast line
+plugin/hooks/register.ts      queued flag, queue text, send from the box in the minute callback, toast line
+plugin/types/index.d.ts       `queued: boolean` in PluginState
 plugin/tests/register.test.ts cases below
 README.md                     the rest paragraph names Enter-to-queue
 plugin/README.md              "The rest" names it
@@ -109,15 +117,15 @@ docs/reference.md             rest paragraph
 const queued = atom({ plugin: "cognitive-load", key: "queued" } as const, false);
 const MENTION = /(^|\s)@\S/;
 
-// tick, every minute
-if ((await read($, queued)) && (await restUntil($, now)) === null) {
+// in the clock.every(REFRESH_MS) callback, before tick($)
+const sendQueued = async ($: EngineInterface) => {
+  if (!(await read($, queued)) || (await restUntil($, await $.clock.now())) !== null) return;
   await update($, queued, () => false);
   const { text } = await $.prompt.read();
-  if (text.trim() !== "" && !MENTION.test(text)) {
-    void $.prompt.submit({ text, asUser: true });
-    void $.prompt.fill({ text: "", mode: "replace" });
-  }
-}
+  if (text.trim() === "" || MENTION.test(text)) return;
+  await $.prompt.submit({ text, asUser: true });
+  $.clock.after(0, () => void $.prompt.fill({ text: "", mode: "replace" }));
+};
 ```
 
 ## Testing Strategy
@@ -137,12 +145,15 @@ fake clock and store, as `register.test.ts` does today.
    `next` passes as typed; the tick sends nothing.
 6. A box with `see @src/x.ts` at the tick → nothing sent, no fill. A held
    prompt with an attachment → today's held text, the tick sends nothing.
-7. `skip: prod is down now` in a queued session → lifts the rest as today;
-   the tick sends nothing. A bridge prompt → passes with its note and does
+7. `skip: prod is down now` in a queued session → lifts the rest and fills
+   the box from `held` as today; the tick sends nothing. `skip: no` in a
+   queued session → the short-reason text, and the tick after the rest sends
+   nothing. A bridge prompt → passes with its note and does
    not queue.
-8. A queued session; another session lifts the rest with a skip → the next
-   tick here sends the box, before the original end of the rest.
-9. The rest's toast ends with ` Press Enter now to send at <until>.` Fails on
+8. A queued session whose `reading` is fresh (so `tick` returns early);
+   another session lifts the rest with a skip → the next minute callback here
+   sends the box, before the original end of the rest.
+9. The rest's toast ends with ` Press Enter now to send when it ends.` Fails on
    main.
 
 ## Boundaries
