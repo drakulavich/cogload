@@ -357,8 +357,9 @@ export const register: Register = (on) => {
     await $.store.set("phrase", (n + 1) % PHRASES.length);
     await update($, held, (list) => [...list, e.text]);
     const body = `${PHRASES[n % PHRASES.length]} ${Math.ceil((until - now) / 60_000)} min left`;
-    if ((e.attachments ?? []).length > 0) return { drop: `${body}. ${BACK}` };
-    await update($, queued, () => true);
+    const isQueued = (e.attachments ?? []).length === 0;
+    await update($, queued, () => isQueued);
+    if (!isQueued) return { drop: `${body}. ${BACK}` };
     return { drop: `Queued for ${clockTime(until)}. ${body}. ${QUEUED}` };
   });
 

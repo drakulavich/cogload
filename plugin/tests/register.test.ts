@@ -1487,6 +1487,17 @@ describe("queued prompts", () => {
     expect(sent).toEqual([]);
   });
 
+  test("a prompt with an attachment after a queued one unqueues the box", async ($, on) => {
+    const { box, enter } = setup(on);
+    await start($);
+    await enter($, "first plan");
+    const attachments = [{ type: "image", mediaType: "image/png" }] as const;
+    await $.prompt.submit({ text: "see this", wait: false, origin: { kind: "composer" }, attachments });
+    box.text = "see this";
+    await clock.advance(REST_MS);
+    expect(sent).toEqual([]);
+  });
+
   test("a skip that lifts the rest fills the box from what was held, and the tick sends nothing", async ($, on) => {
     const { fills, enter } = setup(on);
     await start($);

@@ -38,8 +38,9 @@ on screen to come back and check.
 5. A prompt the person sends after the rest ended goes through as typed and
    clears `queued`; the box is then empty, so the tick has nothing to send
    either way, and a new draft started after it is not sent.
-6. A held prompt with attachments (`e.attachments`) does not queue: the
-   plugin's submission cannot carry them. It gets today's held text. An `@`
+6. A held prompt with attachments (`e.attachments`) does not queue and
+   clears `queued`, since the box now holds it: the plugin's submission
+   cannot carry them. It gets today's held text. An `@`
    mention is sent as typed: the plugin's submission does not expand it, and
    the agent reads the path with its own tools.
 7. Any prompt with a skip line during the rest clears `queued`: one that
