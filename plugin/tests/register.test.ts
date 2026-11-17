@@ -148,6 +148,7 @@ const mount = ($: Engine, props: { bodyColumns?: number; hasSurvey?: boolean } =
     component: "AbovePrompt",
     props: {
       hasSurvey: false,
+      isCollapsed: false,
       isWorking: false,
       maxRows: 3,
       bodyColumns: 100,
