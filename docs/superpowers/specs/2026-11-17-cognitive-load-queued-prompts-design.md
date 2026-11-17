@@ -136,6 +136,9 @@ fake clock and store, as `register.test.ts` does today.
    bridge prompt passes with its note and queues nothing.
 6. The rest's toast ends with the queue line. Fails on main.
 7. No rest has run and `held` is empty → ticks send nothing.
+8. Two queued prompts in this session; another session lifts the rest with a
+   skip (the store loses `restUntil` while this session has no prompt) → the
+   next tick here sends the queue, before the original end of the rest.
 
 ## Boundaries
 
@@ -147,7 +150,7 @@ fake clock and store, as `register.test.ts` does today.
 
 ## Definition of Done
 
-- Cases 1 to 7 pass under `claude plugin test plugin`; cases 1, 2, 3 and 6
+- Cases 1 to 8 pass under `claude plugin test plugin`; cases 1, 2, 3 and 6
   fail on main.
 - `bun run check` passes.
 - The PR quotes the `bun run stats` line for one real queued send and says
