@@ -271,20 +271,20 @@ contract.
 
 ## 9. Why 40 minutes and ten
 
-The 40-minute streak and the ten-minute rest are product choices, not
-constants measured for supervising agents; no study has measured that work.
-The research on rest breaks during mental work points to the same range:
+The 40-minute streak and the ten-minute rest are product choices. No study
+has measured how long people can supervise agents before they need a break.
+Studies of rest breaks during other mental work point to the same range:
 
 - Performance in continuous mental work drops early: within 10 to 20 minutes
   in vigilance tasks and 30 to 60 minutes in mental arithmetic. For 30 to 120
-  minutes of such work, rest breaks of 3 to 10 minutes work best; a longer one
-  costs a restart to get back up to speed ([Schumann et al. 2022, a
+  minutes of such work, rest breaks of 3 to 10 minutes work best; after a
+  longer one, people need time to warm up again ([Schumann et al. 2022, a
   review](https://pmc.ncbi.nlm.nih.gov/articles/PMC9010884/)).
 - Breaks of ten minutes or less reduce fatigue (d = 0.35) and raise vigor
-  (d = 0.36) across 22 samples and 2,335 people. Performance after a
-  cognitive task did not improve with breaks that short, and longer breaks
-  helped performance more, so ten minutes is the lower end, not a generous
-  one ([Albulescu et al. 2022, a
+  (d = 0.36) across 22 samples and 2,335 people. Breaks that short did not
+  improve performance on a cognitive task, and longer breaks helped
+  performance more, so ten minutes is the short end of what helps ([Albulescu
+  et al. 2022, a
   meta-analysis](https://journals.plos.org/plosone/article?id=10.1371%2Fjournal.pone.0272460)).
 - How tired people feel is a poor guide to how much they slowed down. After 20
   minutes of a vigilance task, self-rated fatigue rose but did not track the
@@ -292,8 +292,8 @@ The research on rest breaks during mental work points to the same range:
   2010](https://pmc.ncbi.nlm.nih.gov/articles/PMC2830749/)). That is why the
   plugin counts minutes rather than asking how you feel.
 
-Ten minutes is also the gap that ends a streak (section 4), so the rest you
-take is the gap that starts the next streak at zero.
+Ten minutes is also the gap that ends a streak (section 4), so a rest that
+runs to the end starts the next streak at zero.
 
 ## Where to read next
 
