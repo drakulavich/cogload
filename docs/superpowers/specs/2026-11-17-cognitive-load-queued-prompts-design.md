@@ -137,9 +137,8 @@ fake clock and store, as `register.test.ts` does today.
    nothing.
 6. `skip: prod is down now` in a queued session → lifts the rest and fills
    the box from `held` as today; the tick sends nothing. `skip: no` in a
-   queued session → the short-reason text, and the tick after the rest sends
-   nothing. A bridge prompt → passes with its note and does
-   not queue.
+   queued session, or a bridge prompt during a rest → the tick after the
+   rest sends nothing. Their answers are pinned already.
 7. A queued session whose `reading` is fresh (so `tick` returns early);
    another session lifts the rest with a skip → the next minute callback here
    sends the box, before the original end of the rest.
@@ -176,3 +175,6 @@ fake clock and store, as `register.test.ts` does today.
 - Without `asUser` (the author): the shape cogload already counts as a
   report, so no measurement is needed before the code.
 - Mentions are sent as typed (the author): the agent can read the path.
+- `$.prompt.read()` is in the engine API (Claude Code 2.1.326 types): it
+  returns `{ text, cursor }`, `{ text: "", cursor: 0 }` where no box is drawn,
+  and is the `prompt.read` event, so tests answer it with `on("prompt.read")`.
