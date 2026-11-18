@@ -23,7 +23,8 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
 - **The band.** A dot in the level's colour (Calm, Warming, Heating, Fried),
   the streak, and when a rest is due or how long it has left.
 - **`/cogload`.** Names what drives the last sixty minutes in counts, and the
-  week's rests taken and skipped, and the skips left.
+  week's rests taken, the queued prompts sent when a rest ended, the skips
+  and the skips left.
 - **The rest.** After a 40-minute streak, or once an hour when the hour reads
   Fried, the prompts you type are held for ten minutes, each with a short idea
   for the break. A held prompt stays in the box, and when the rest ends the

@@ -165,10 +165,12 @@ const skipsLeft = (spent: number): string => {
   return n === 0 ? "no skips left" : `${plural(n, "skip")} left`;
 };
 
-const restsSince = async ($: EngineInterface, since: number): Promise<number[]> => {
-  const list = await $.store.get("rests");
+const timesSince = async ($: EngineInterface, key: "rests" | "queueSends", since: number): Promise<number[]> => {
+  const list = await $.store.get(key);
   return Array.isArray(list) ? (list as number[]).filter((at) => at > since) : [];
 };
+
+const restsSince = ($: EngineInterface, since: number) => timesSince($, "rests", since);
 
 const isSpent = async ($: EngineInterface, s: Status): Promise<boolean> => s.restAt !== null && (await $.store.get("spent")) === s.restAt;
 
@@ -203,7 +205,9 @@ const weekLine = async ($: EngineInterface, now: number): Promise<string | null>
   const skips = await skipsThisWeek($, now);
   if (rests.length === 0 && skips.length === 0) return null;
   const pushed = skips.filter((o) => rests.some((at) => at <= o.at));
-  const taken = `This week: ${plural(rests.length - pushed.length, "rest")} taken`;
+  const sends = await timesSince($, "queueSends", weekStart(now) - 1);
+  const queuedSent = sends.length === 0 ? "" : `, ${plural(sends.length, "queued prompt")} sent`;
+  const taken = `This week: ${plural(rests.length - pushed.length, "rest")} taken${queuedSent}`;
   const newest = skips.at(-1);
   const skipped = newest === undefined ? "" : `, ${skips.length} skipped (last: "${newest.reason}")`;
   return `${taken}${skipped}, ${skipsLeft(skips.length)}.`;
@@ -262,6 +266,9 @@ const sendQueued = async ($: EngineInterface) => {
   if (!(await read($, queued)) || (await restUntil($, await $.clock.now())) !== null) return;
   await update($, queued, () => false);
   const { text } = await $.prompt.read();
+  if (text.trim() === "") return;
+  const now = await $.clock.now();
+  await $.store.set("queueSends", [...(await timesSince($, "queueSends", now - WEEK_MS)), now]);
   await $.prompt.submit({ text });
   $.clock.after(0, () => void $.prompt.fill({ text: "", mode: "replace" }));
 };

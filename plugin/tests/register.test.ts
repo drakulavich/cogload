@@ -1452,6 +1452,8 @@ describe("queued prompts", () => {
     box.text = " \n ";
     await clock.advance(REST_MS);
     expect(sent).toEqual([]);
+    todayRuns = [{ stdout: today(null) }];
+    expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 5 skips left.");
   });
 
   test("a prompt sent after the rest ends goes as typed, and the draft after it stays", async ($, on) => {
@@ -1537,5 +1539,15 @@ describe("queued prompts", () => {
     delete store.restUntil;
     await clock.advance(30_000);
     expect(sent).toEqual(["plan"]);
+  });
+
+  test("a queued box sent at the rest's end is counted in the week line", async ($, on) => {
+    const { enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    await clock.advance(REST_MS);
+    expect(sent).toEqual(["plan"]);
+    todayRuns = [{ stdout: today(null) }];
+    expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 1 queued prompt sent, 5 skips left.");
   });
 });

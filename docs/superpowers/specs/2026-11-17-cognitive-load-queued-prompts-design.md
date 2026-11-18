@@ -53,9 +53,8 @@ on screen to come back and check.
    numbers, kept for a week, as `rests` is). The `/cogload` week line counts
    this week's sends after the rests taken, only when there is one:
    `This week: 2 rests taken, 1 queued prompt sent, 5 skips left.` The count
-   is the evidence for keeping the queue after two weeks of use.
-10. A box that holds only whitespace at the tick is not sent; the plugin
-   checks it, without relying on the engine to drop a blank prompt.
+   is the evidence for keeping the queue after two weeks of use. A blank box
+   is neither sent nor counted.
 
 Not in scope: sending during the rest (dropped after the hand-off draft), a
 queue that remembers text the box no longer shows, sending attachments, a queue marker in the band.
@@ -156,8 +155,6 @@ fake clock and store, as `register.test.ts` does today.
 9. A queued box sent at the rest's end, then `/cogload` → its week line
    reads `1 queued prompt sent`. With no send this week the line is as
    today. Fails on main.
-10. A queued box of ` \n ` at the tick → nothing sent; fails with the check
-    removed, when the engine passes a blank prompt to the hooks.
 
 ## Boundaries
 
@@ -170,7 +167,7 @@ fake clock and store, as `register.test.ts` does today.
 
 ## Definition of Done
 
-- Cases 1 to 10 pass under `claude plugin test plugin`; cases 1, 2, 8 and 9
+- Cases 1 to 9 pass under `claude plugin test plugin`; cases 1, 2, 8 and 9
   fail on main, case 4 fails with the `queued` check removed.
 - `bun run check` passes.
 - README, `plugin/README.md` and `docs/reference.md` describe Enter during a
