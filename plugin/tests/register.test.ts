@@ -1048,6 +1048,11 @@ describe("/cogload", () => {
     expect(text).toBe('Nothing scored this hour.\nThis week: 0 rests taken, 1 skipped (last: "prod is down"), 4 skips left.');
   });
 
+  test("a Sunday rest whose queued prompt went on Monday counts the send alone", async ($, on) => {
+    const text = await explain($, on, { stdout: today(null) }, { rests: [MONDAY - 5 * 60_000], queueSends: [MONDAY + 5 * 60_000] });
+    expect(text).toBe("Nothing scored this hour.\nThis week: 0 rests taken, 1 queued prompt sent, 5 skips left.");
+  });
+
   test("no rests or overrides, one line", async ($, on) => {
     expect(await explain($, on, { stdout: today(null) }, { rests: [NOW - 8 * DAY_MS] })).toBe("Nothing scored this hour.");
   });

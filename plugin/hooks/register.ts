@@ -203,9 +203,9 @@ const STALE_MS = 5 * 60_000;
 const weekLine = async ($: EngineInterface, now: number): Promise<string | null> => {
   const rests = await restsSince($, weekStart(now) - 1);
   const skips = await skipsThisWeek($, now);
-  if (rests.length === 0 && skips.length === 0) return null;
-  const pushed = skips.filter((o) => rests.some((at) => at <= o.at));
   const sends = await timesSince($, "queueSends", weekStart(now) - 1);
+  if (rests.length === 0 && skips.length === 0 && sends.length === 0) return null;
+  const pushed = skips.filter((o) => rests.some((at) => at <= o.at));
   const queuedSent = sends.length === 0 ? "" : `, ${plural(sends.length, "queued prompt")} sent`;
   const taken = `This week: ${plural(rests.length - pushed.length, "rest")} taken${queuedSent}`;
   const newest = skips.at(-1);
