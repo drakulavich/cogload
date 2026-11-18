@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-18
+
+### Added
+- Enter during a rest now sends the prompt when the rest ends. It stays in
+  the box until then, so you can edit or delete it. A prompt with an
+  attachment is not queued. `/cogload` counts the queued prompts sent this
+  week. A session started before the update holds prompts as before until it
+  is restarted. (#247)
+- The docs explain where the 40-minute streak and the ten-minute rest come
+  from, with the studies behind them. (#244)
+
 ## [0.15.0] - 2026-10-29
 
 ### Added
