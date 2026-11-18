@@ -52,6 +52,7 @@ let todayRuns: Run[] = [];
 let binRuns: Run[] = [];
 let calls: string[][] = [];
 let paths: (string | undefined)[] = [];
+let sent: string[] = [];
 
 // The engine beneath the plugin: each queued answer is one `cogload status` run, or one `cogload today --json` from todayRuns; binRuns answers BIN.
 const engine = (
@@ -70,6 +71,7 @@ const engine = (
   binRuns = [];
   calls = [];
   paths = [];
+  sent = [];
   on("store.get", (_$, e) => ({ value: store[e.key] }));
   on("store.set", (_$, e) => {
     store[e.key] = e.value;
@@ -79,7 +81,10 @@ const engine = (
     delete store[e.key];
     return { value: undefined };
   });
-  on("prompt.submit", (_$, e) => (e.context ? { text: e.text, context: e.context } : { text: e.text }));
+  on("prompt.submit", (_$, e) => {
+    if (e.origin.kind === "plugin") sent.push(e.text);
+    return e.context ? { text: e.text, context: e.context } : { text: e.text };
+  });
   on("command.register", (_$, e) => {
     commands.push(e.name);
     return { value: { command: e.name } };
@@ -143,6 +148,7 @@ const mount = ($: Engine, props: { bodyColumns?: number; hasSurvey?: boolean } =
     component: "AbovePrompt",
     props: {
       hasSurvey: false,
+      isCollapsed: false,
       isWorking: false,
       maxRows: 3,
       bodyColumns: 100,
@@ -396,10 +402,11 @@ const PHRASES = [
   "The code will wait.",
 ];
 const DROP = (until: number, { n = 0 }: { n?: number } = {}) => ({
-  drop: `${PHRASES[n]} ${Math.ceil((until - clock.now()) / 60_000)} min left. ${BACK}`,
+  drop: `Queued for ${hhmm(until)}. ${PHRASES[n]} ${Math.ceil((until - clock.now()) / 60_000)} min left. ${QUEUED}`,
 });
 const SHORT = "A skip needs a reason of three words or more.";
 const BACK = 'Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.';
+const QUEUED = "It stays in the box, and goes as it reads then.";
 const PAST = (until: number) =>
   `The person is on a rest until ${hhmm(until)}. This prompt came from their phone through Remote Control, which the rest lets through. Begin your reply with one short line saying it went past the rest, then answer as usual.`;
 const LIFTED = "The person just lifted their rest with this skip line, and nothing else was sent. Reply with one short line saying the rest is lifted.";
@@ -421,7 +428,7 @@ describe("rest", () => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }], [], toasts, { welcomed: true });
     await start($);
     expect(await typed($, "next")).toEqual(DROP(NOW + REST_MS));
-    expect(toasts).toEqual([`Rest until ${hhmm(NOW + REST_MS)}. Streak 40m, Heating 68.`]);
+    expect(toasts).toEqual([`Rest until ${hhmm(NOW + REST_MS)}. Streak 40m, Heating 68. Press Enter now to send when it ends.`]);
   });
 
   test("a rest starts when asOf reaches restAt, whatever the streak", async ($, on) => {
@@ -481,15 +488,15 @@ describe("rest", () => {
     expect(await band($)).toBe(`● Fried · rest until ${hhmm(NOW + REST_MS)} (10 min) · 5 skips left`);
   });
 
-  test("each held composer prompt gets the next phrase, the minutes left, that it is back in the box and the way out", async ($, on) => {
+  test("each held composer prompt gets when it goes, the next phrase, the minutes left and that it stays in the box", async ($, on) => {
     engine(on, [{ stdout: line({ streakMin: 40 }) }]);
     await start($);
     expect(await typed($, "next task")).toEqual({
-      drop: `Stand up and stretch. 10 min left. ${BACK}`,
+      drop: `Queued for ${hhmm(NOW + REST_MS)}. Stand up and stretch. 10 min left. ${QUEUED}`,
     });
     await clock.advance(3 * 60_000);
     expect(await typed($, "next task")).toEqual({
-      drop: `Water, then a window. 7 min left. ${BACK}`,
+      drop: `Queued for ${hhmm(NOW + REST_MS)}. Water, then a window. 7 min left. ${QUEUED}`,
     });
   });
 
@@ -1041,6 +1048,11 @@ describe("/cogload", () => {
     expect(text).toBe('Nothing scored this hour.\nThis week: 0 rests taken, 1 skipped (last: "prod is down"), 4 skips left.');
   });
 
+  test("a Sunday rest whose queued prompt went on Monday counts the send alone", async ($, on) => {
+    const text = await explain($, on, { stdout: today(null) }, { rests: [MONDAY - 5 * 60_000], queueSends: [MONDAY + 5 * 60_000] });
+    expect(text).toBe("Nothing scored this hour.\nThis week: 0 rests taken, 1 queued prompt sent, 5 skips left.");
+  });
+
   test("no rests or overrides, one line", async ($, on) => {
     expect(await explain($, on, { stdout: today(null) }, { rests: [NOW - 8 * DAY_MS] })).toBe("Nothing scored this hour.");
   });
@@ -1099,7 +1111,7 @@ describe("first meeting", () => {
     await clock.advance(2099);
     expect(toasts).toEqual([WELCOME]);
     await clock.advance(1);
-    expect(toasts).toEqual([WELCOME, `Rest until ${hhmm(NOW + REST_MS)}. Streak 40m, Heating 68.`]);
+    expect(toasts).toEqual([WELCOME, `Rest until ${hhmm(NOW + REST_MS)}. Streak 40m, Heating 68. Press Enter now to send when it ends.`]);
   });
 
   test("a run that cannot start shows the missing toast once, and a good run does not reset it", async ($, on) => {
@@ -1392,5 +1404,155 @@ describe("held prompts come back after a bare skip", () => {
     await skip($);
     seen.push(JSON.stringify(store), ...toasts, await band($), ...logs, ...telemetry);
     expect(seen.filter((s) => s.includes("zebra-7731"))).toEqual([]);
+  });
+});
+
+describe("queued prompts", () => {
+  // The box as Claude Code keeps it: a dropped prompt goes back in, an entered one leaves it empty, a fill replaces it.
+  const setup = (on: On, runs: Run[] = [{ stdout: line({ streakMin: 40 }) }], store: Record<string, unknown> = {}) => {
+    const box = { text: "" };
+    const fills: string[] = [];
+    engine(on, runs, [], [], store);
+    on("prompt.read", () => ({ value: { text: box.text, cursor: box.text.length } }));
+    on("prompt.fill", (_$, e) => {
+      fills.push(e.text);
+      box.text = e.text;
+      return { isFilled: true };
+    });
+    const enter = async ($: Engine, text: string) => {
+      const r = await typed($, text);
+      box.text = r.drop === undefined ? "" : text;
+      return r;
+    };
+    return { box, fills, enter };
+  };
+
+  test("a composer prompt during a rest is queued for its end and left in the box", async ($, on) => {
+    const { fills, enter } = setup(on);
+    await start($);
+    expect(await enter($, "next task")).toEqual({
+      drop: `Queued for ${hhmm(NOW + REST_MS)}. Stand up and stretch. 10 min left. It stays in the box, and goes as it reads then.`,
+    });
+    await clock.advance(0);
+    expect(fills).toEqual([]);
+  });
+
+  test("when the rest ends, the box goes as it reads then, once, and is emptied", async ($, on) => {
+    const { box, fills, enter } = setup(on);
+    await start($);
+    await enter($, "plan A");
+    box.text = "plan B";
+    await clock.advance(REST_MS);
+    expect(sent).toEqual(["plan B"]);
+    expect(fills).toEqual([""]);
+    box.text = "draft";
+    await clock.advance(60_000);
+    expect(sent).toEqual(["plan B"]);
+  });
+
+  test("a queued box emptied before the rest ends sends nothing", async ($, on) => {
+    const { box, enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    box.text = " \n ";
+    await clock.advance(REST_MS);
+    expect(sent).toEqual([]);
+    todayRuns = [{ stdout: today(null) }];
+    expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 5 skips left.");
+  });
+
+  test("a prompt sent after the rest ends goes as typed, and the draft after it stays", async ($, on) => {
+    const { box, enter } = setup(on, [{ stdout: line() }, { stdout: line({ streakMin: 40 }) }]);
+    await start($);
+    await clock.advance(30_000);
+    await turn($);
+    await enter($, "plan");
+    await clock.advance(REST_MS + 10_000);
+    expect(await enter($, "next")).toEqual({ text: "next" });
+    box.text = "draft";
+    await clock.advance(60_000);
+    expect(sent).toEqual([]);
+  });
+
+  test("text typed during a rest without Enter is not sent", async ($, on) => {
+    const { box } = setup(on);
+    await start($);
+    box.text = "draft";
+    await clock.advance(REST_MS);
+    expect(sent).toEqual([]);
+  });
+
+  test("a held prompt with an attachment is not queued", async ($, on) => {
+    const { box } = setup(on);
+    await start($);
+    const attachments = [{ type: "image", mediaType: "image/png" }] as const;
+    expect(await $.prompt.submit({ text: "see this", wait: false, origin: { kind: "composer" }, attachments })).toEqual({
+      drop: `Stand up and stretch. 10 min left. ${BACK}`,
+    });
+    box.text = "see this";
+    await clock.advance(REST_MS);
+    expect(sent).toEqual([]);
+  });
+
+  test("a prompt with an attachment after a queued one unqueues the box", async ($, on) => {
+    const { box, enter } = setup(on);
+    await start($);
+    await enter($, "first plan");
+    const attachments = [{ type: "image", mediaType: "image/png" }] as const;
+    await $.prompt.submit({ text: "see this", wait: false, origin: { kind: "composer" }, attachments });
+    box.text = "see this";
+    await clock.advance(REST_MS);
+    expect(sent).toEqual([]);
+  });
+
+  test("a skip that lifts the rest fills the box from what was held, and the tick sends nothing", async ($, on) => {
+    const { fills, enter } = setup(on);
+    await start($);
+    await enter($, "fix the bug");
+    expect(await enter($, "skip: prod is down now")).toEqual({ text: "skip: prod is down now", context: [LIFTED] });
+    await clock.advance(0);
+    expect(fills).toEqual(["fix the bug"]);
+    await clock.advance(60_000);
+    expect(sent).toEqual([]);
+  });
+
+  test("a short skip in a queued session leaves nothing to send at the end", async ($, on) => {
+    const { enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    await enter($, "skip: no");
+    await clock.advance(REST_MS);
+    expect(sent).toEqual([]);
+  });
+
+  test("a bridge prompt during a rest does not queue the box", async ($, on) => {
+    const { box } = setup(on);
+    await start($);
+    box.text = "draft";
+    await typed($, "from the phone", "bridge");
+    await clock.advance(REST_MS);
+    expect(sent).toEqual([]);
+  });
+
+  test("a rest another session lifts sends the queued box at the next minute, with a fresh reading", async ($, on) => {
+    const store: Record<string, unknown> = {};
+    const { enter } = setup(on, [live(() => NOW - 40 * 60_000)], store);
+    await start($);
+    await enter($, "plan");
+    await clock.advance(90_000);
+    await turn($);
+    delete store.restUntil;
+    await clock.advance(30_000);
+    expect(sent).toEqual(["plan"]);
+  });
+
+  test("a queued box sent at the rest's end is counted in the week line", async ($, on) => {
+    const { enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    await clock.advance(REST_MS);
+    expect(sent).toEqual(["plan"]);
+    todayRuns = [{ stdout: today(null) }];
+    expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 1 queued prompt sent, 5 skips left.");
   });
 });
