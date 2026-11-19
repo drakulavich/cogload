@@ -5,6 +5,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-11-19
+
+### Fixed
+- A skill or slash command sent during a rest now runs when the rest ends.
+  Claude Code refuses a plugin's prompt that begins with `/`, so before this
+  fix the queued command never went. A queued prompt that Claude Code or a
+  hook refuses now stays in the box, and a toast says so once. (#249)
+
 ## [0.16.0] - 2026-11-18
 
 ### Added
