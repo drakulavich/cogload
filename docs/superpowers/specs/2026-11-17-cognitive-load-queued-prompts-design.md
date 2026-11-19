@@ -32,7 +32,19 @@ on screen to come back and check.
    `$.prompt.submit({ text })` with that text exactly, then
    empties the box with `$.prompt.fill({ text: "", mode: "replace" })` from
    `$.clock.after(0, …)`, as the skip path fills it. An empty or blank box
-   sends nothing: Claude Code refuses a blank prompt itself.
+   sends nothing: Claude Code refuses a blank prompt itself. A box that
+   begins with `/` runs as that command, `$.command.run({ command, args })`:
+   Claude Code rejects a plugin's prompt that begins with `/` ("a text
+   beginning with / would run a command as the user"), and on 2026-11-19
+   two queued skills were lost to that rejection. A submit the
+   engine drops or rejects leaves the box as it is, sets `queued` again
+   and toasts `Your queued prompt did not go: a hook dropped it. It stays
+   in the box, and goes at the next minute.` (`Claude Code rejected it`
+   for a rejection). The engine's own reason stays out: it can echo the
+   prompt. The toast comes once per queued box
+   (`refusalShown` in `$.state`, cleared by the Enter that queues it), so a
+   refusal that lasts does not toast every minute; it is not counted as
+   sent.
 4. Text typed without Enter during the rest is not sent: the session is
    queued only by a held Enter.
 5. A prompt the person sends after the rest ended goes through as typed and

@@ -53,6 +53,8 @@ let binRuns: Run[] = [];
 let calls: string[][] = [];
 let paths: (string | undefined)[] = [];
 let sent: string[] = [];
+// What the engine answers the plugin's next own prompt with, in place of entering it.
+let refusals: (string | Error)[] = [];
 
 // The engine beneath the plugin: each queued answer is one `cogload status` run, or one `cogload today --json` from todayRuns; binRuns answers BIN.
 const engine = (
@@ -72,6 +74,7 @@ const engine = (
   calls = [];
   paths = [];
   sent = [];
+  refusals = [];
   on("store.get", (_$, e) => ({ value: store[e.key] }));
   on("store.set", (_$, e) => {
     store[e.key] = e.value;
@@ -82,6 +85,9 @@ const engine = (
     return { value: undefined };
   });
   on("prompt.submit", (_$, e) => {
+    const refusal = e.origin.kind === "plugin" ? refusals.shift() : undefined;
+    if (refusal instanceof Error) throw refusal;
+    if (refusal !== undefined) return { drop: refusal };
     if (e.origin.kind === "plugin") sent.push(e.text);
     return e.context ? { text: e.text, context: e.context } : { text: e.text };
   });
@@ -1408,11 +1414,18 @@ describe("held prompts come back after a bare skip", () => {
 });
 
 describe("queued prompts", () => {
+  const REFUSED = "Your queued prompt did not go: a hook dropped it. It stays in the box, and goes at the next minute.";
   // The box as Claude Code keeps it: a dropped prompt goes back in, an entered one leaves it empty, a fill replaces it.
   const setup = (on: On, runs: Run[] = [{ stdout: line({ streakMin: 40 }) }], store: Record<string, unknown> = {}) => {
     const box = { text: "" };
     const fills: string[] = [];
-    engine(on, runs, [], [], store);
+    const toasts: string[] = [];
+    const ran: string[] = [];
+    engine(on, runs, [], toasts, store);
+    on("command.run", (_$, e) => {
+      if (e.origin.kind === "plugin") ran.push(`${e.command}|${e.args}`);
+      return { text: "" };
+    });
     on("prompt.read", () => ({ value: { text: box.text, cursor: box.text.length } }));
     on("prompt.fill", (_$, e) => {
       fills.push(e.text);
@@ -1424,7 +1437,7 @@ describe("queued prompts", () => {
       box.text = r.drop === undefined ? "" : text;
       return r;
     };
-    return { box, fills, enter };
+    return { box, fills, toasts, ran, enter };
   };
 
   test("a composer prompt during a rest is queued for its end and left in the box", async ($, on) => {
@@ -1554,5 +1567,70 @@ describe("queued prompts", () => {
     expect(sent).toEqual(["plan"]);
     todayRuns = [{ stdout: today(null) }];
     expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 1 queued prompt sent, 5 skips left.");
+  });
+
+  test("a queued slash command runs as a command when the rest ends", async ($, on) => {
+    const { fills, ran, enter } = setup(on);
+    await start($);
+    await enter($, "/worth-it 249");
+    await clock.advance(REST_MS);
+    expect(ran).toEqual(["worth-it|249"]);
+    expect(sent).toEqual([]);
+    expect(fills).toEqual([""]);
+    todayRuns = [{ stdout: today(null) }];
+    expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 1 queued prompt sent, 5 skips left.");
+  });
+
+  test("a queued box the engine refuses stays in the box, says why, and goes at the next minute", async ($, on) => {
+    const { fills, toasts, enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    refusals = ["blocked: plan"];
+    await clock.advance(REST_MS);
+    expect(sent).toEqual([]);
+    expect(fills).toEqual([]);
+    expect(toasts.at(-1)).toBe("Your queued prompt did not go: a hook dropped it. It stays in the box, and goes at the next minute.");
+    await clock.advance(60_000);
+    expect(sent).toEqual(["plan"]);
+    expect(fills).toEqual([""]);
+    todayRuns = [{ stdout: today(null) }];
+    expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 1 queued prompt sent, 5 skips left.");
+  });
+
+  test("a queued box refused minute after minute says why once", async ($, on) => {
+    const { toasts, enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    refusals = ["a hook blocked it", "a hook blocked it"];
+    await clock.advance(REST_MS + 60_000);
+    expect(toasts.filter((t) => t === REFUSED)).toHaveLength(1);
+    await clock.advance(60_000);
+    expect(sent).toEqual(["plan"]);
+  });
+
+  test("a box queued in the next rest says why again when refused", async ($, on) => {
+    const store: Record<string, unknown> = {};
+    const { toasts, enter } = setup(on, undefined, store);
+    await start($);
+    await enter($, "plan");
+    refusals = ["a hook blocked it"];
+    await clock.advance(REST_MS + 60_000);
+    expect(sent).toEqual(["plan"]);
+    store.restUntil = NOW + 2 * REST_MS + 60_000;
+    await enter($, "plan 2");
+    refusals = ["a hook blocked it"];
+    await clock.advance(REST_MS);
+    expect(toasts.filter((t) => t === REFUSED)).toHaveLength(2);
+  });
+
+  test("a queued box whose submit throws stays queued and says why", async ($, on) => {
+    const { toasts, enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    refusals = [new Error("could not submit plan")];
+    await clock.advance(REST_MS);
+    expect(toasts.at(-1)).toBe("Your queued prompt did not go: Claude Code rejected it. It stays in the box, and goes at the next minute.");
+    await clock.advance(60_000);
+    expect(sent).toEqual(["plan"]);
   });
 });

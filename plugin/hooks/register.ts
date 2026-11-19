@@ -7,6 +7,7 @@ const status = atom({ plugin: "cognitive-load", key: "status" } as const, null);
 const lastToast = atom({ plugin: "cognitive-load", key: "lastToast" } as const, 0);
 const held = atom({ plugin: "cognitive-load", key: "held" } as const, [] as string[]);
 const queued = atom({ plugin: "cognitive-load", key: "queued" } as const, false);
+const refusalShown = atom({ plugin: "cognitive-load", key: "refusalShown" } as const, false);
 
 const LEVELS = ["Calm", "Warming", "Heating", "Fried"] as const;
 const COLOR: Record<Level, string> = { Calm: "success", Warming: "warning", Heating: "#ff8700", Fried: "red" };
@@ -267,9 +268,23 @@ const sendQueued = async ($: EngineInterface) => {
   await update($, queued, () => false);
   const { text } = await $.prompt.read();
   if (text.trim() === "") return;
+  // Claude Code refuses a plugin's prompt that begins with /; a command runs through command.run.
+  const command = /^\/(\S+)\s?([\s\S]*)$/.exec(text);
+  const entering = command ? $.command.run({ command: command[1] ?? "", args: command[2] ?? "" }) : $.prompt.submit({ text });
+  // The engine's reason can echo the prompt, so the toast names only who refused it.
+  const r = await entering.then(
+    (entered) => ("drop" in entered && entered.drop !== undefined ? "a hook dropped it" : null),
+    () => "Claude Code rejected it",
+  );
+  if (r !== null) {
+    await update($, queued, () => true);
+    if (await read($, refusalShown)) return;
+    await update($, refusalShown, () => true);
+    await toast($, `Your queued prompt did not go: ${r}. It stays in the box, and goes at the next minute.`);
+    return;
+  }
   const now = await $.clock.now();
   await $.store.set("queueSends", [...(await timesSince($, "queueSends", now - WEEK_MS)), now]);
-  await $.prompt.submit({ text });
   $.clock.after(0, () => void $.prompt.fill({ text: "", mode: "replace" }));
 };
 
@@ -366,6 +381,7 @@ export const register: Register = (on) => {
     const body = `${PHRASES[n % PHRASES.length]} ${Math.ceil((until - now) / 60_000)} min left`;
     const isQueued = (e.attachments ?? []).length === 0;
     await update($, queued, () => isQueued);
+    await update($, refusalShown, () => false);
     if (!isQueued) return { drop: `${body}. ${BACK}` };
     return { drop: `Queued for ${clockTime(until)}. ${body}. ${QUEUED}` };
   });
