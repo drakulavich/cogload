@@ -1420,7 +1420,12 @@ describe("queued prompts", () => {
     const box = { text: "" };
     const fills: string[] = [];
     const toasts: string[] = [];
+    const ran: string[] = [];
     engine(on, runs, [], toasts, store);
+    on("command.run", (_$, e) => {
+      if (e.origin.kind === "plugin") ran.push(`${e.command}|${e.args}`);
+      return { text: "" };
+    });
     on("prompt.read", () => ({ value: { text: box.text, cursor: box.text.length } }));
     on("prompt.fill", (_$, e) => {
       fills.push(e.text);
@@ -1432,7 +1437,7 @@ describe("queued prompts", () => {
       box.text = r.drop === undefined ? "" : text;
       return r;
     };
-    return { box, fills, toasts, enter };
+    return { box, fills, toasts, ran, enter };
   };
 
   test("a composer prompt during a rest is queued for its end and left in the box", async ($, on) => {
@@ -1560,6 +1565,18 @@ describe("queued prompts", () => {
     await enter($, "plan");
     await clock.advance(REST_MS);
     expect(sent).toEqual(["plan"]);
+    todayRuns = [{ stdout: today(null) }];
+    expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 1 queued prompt sent, 5 skips left.");
+  });
+
+  test("a queued slash command runs as a command when the rest ends", async ($, on) => {
+    const { fills, ran, enter } = setup(on);
+    await start($);
+    await enter($, "/worth-it 249");
+    await clock.advance(REST_MS);
+    expect(ran).toEqual(["worth-it|249"]);
+    expect(sent).toEqual([]);
+    expect(fills).toEqual([""]);
     todayRuns = [{ stdout: today(null) }];
     expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 1 queued prompt sent, 5 skips left.");
   });

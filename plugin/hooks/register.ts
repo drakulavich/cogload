@@ -268,9 +268,12 @@ const sendQueued = async ($: EngineInterface) => {
   await update($, queued, () => false);
   const { text } = await $.prompt.read();
   if (text.trim() === "") return;
+  // Claude Code refuses a plugin's prompt that begins with /; a command runs through command.run.
+  const command = /^\/(\S+)\s?([\s\S]*)$/.exec(text);
+  const entering = command ? $.command.run({ command: command[1] ?? "", args: command[2] ?? "" }) : $.prompt.submit({ text });
   // The engine's reason can echo the prompt, so the toast names only who refused it.
-  const r = await $.prompt.submit({ text }).then(
-    (entered) => (entered.drop === undefined ? null : "a hook dropped it"),
+  const r = await entering.then(
+    (entered) => ("drop" in entered && entered.drop !== undefined ? "a hook dropped it" : null),
     () => "Claude Code rejected it",
   );
   if (r !== null) {
