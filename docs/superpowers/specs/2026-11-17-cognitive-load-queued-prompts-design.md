@@ -35,7 +35,9 @@ on screen to come back and check.
    sends nothing: Claude Code refuses a blank prompt itself. A submit the
    engine drops or rejects leaves the box as it is, sets `queued` again
    and toasts `Your queued prompt did not go: <the engine's reason>. It
-   stays in the box, and goes at the next minute.`; it is not counted as
+   stays in the box, and goes at the next minute.`, once per queued box
+   (`refusalShown` in `$.state`, cleared by the Enter that queues it), so a
+   refusal that lasts does not toast every minute; it is not counted as
    sent. On 2026-11-19 two of three sessions' sends vanished with no
    reason recorded.
 4. Text typed without Enter during the rest is not sent: the session is

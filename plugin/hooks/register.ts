@@ -7,6 +7,7 @@ const status = atom({ plugin: "cognitive-load", key: "status" } as const, null);
 const lastToast = atom({ plugin: "cognitive-load", key: "lastToast" } as const, 0);
 const held = atom({ plugin: "cognitive-load", key: "held" } as const, [] as string[]);
 const queued = atom({ plugin: "cognitive-load", key: "queued" } as const, false);
+const refusalShown = atom({ plugin: "cognitive-load", key: "refusalShown" } as const, false);
 
 const LEVELS = ["Calm", "Warming", "Heating", "Fried"] as const;
 const COLOR: Record<Level, string> = { Calm: "success", Warming: "warning", Heating: "#ff8700", Fried: "red" };
@@ -270,6 +271,8 @@ const sendQueued = async ($: EngineInterface) => {
   const r = await $.prompt.submit({ text }).catch((err: unknown) => ({ drop: err instanceof Error ? err.message : String(err) }));
   if (r.drop !== undefined) {
     await update($, queued, () => true);
+    if (await read($, refusalShown)) return;
+    await update($, refusalShown, () => true);
     await toast($, `Your queued prompt did not go: ${r.drop}. It stays in the box, and goes at the next minute.`);
     return;
   }
@@ -371,6 +374,7 @@ export const register: Register = (on) => {
     const body = `${PHRASES[n % PHRASES.length]} ${Math.ceil((until - now) / 60_000)} min left`;
     const isQueued = (e.attachments ?? []).length === 0;
     await update($, queued, () => isQueued);
+    await update($, refusalShown, () => false);
     if (!isQueued) return { drop: `${body}. ${BACK}` };
     return { drop: `Queued for ${clockTime(until)}. ${body}. ${QUEUED}` };
   });

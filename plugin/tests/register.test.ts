@@ -1414,6 +1414,7 @@ describe("held prompts come back after a bare skip", () => {
 });
 
 describe("queued prompts", () => {
+  const REFUSED = "Your queued prompt did not go: a hook blocked it. It stays in the box, and goes at the next minute.";
   // The box as Claude Code keeps it: a dropped prompt goes back in, an entered one leaves it empty, a fill replaces it.
   const setup = (on: On, runs: Run[] = [{ stdout: line({ streakMin: 40 }) }], store: Record<string, unknown> = {}) => {
     const box = { text: "" };
@@ -1577,6 +1578,32 @@ describe("queued prompts", () => {
     expect(fills).toEqual([""]);
     todayRuns = [{ stdout: today(null) }];
     expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 1 queued prompt sent, 5 skips left.");
+  });
+
+  test("a queued box refused minute after minute says why once", async ($, on) => {
+    const { toasts, enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    refusals = ["a hook blocked it", "a hook blocked it"];
+    await clock.advance(REST_MS + 60_000);
+    expect(toasts.filter((t) => t === REFUSED)).toHaveLength(1);
+    await clock.advance(60_000);
+    expect(sent).toEqual(["plan"]);
+  });
+
+  test("a box queued in the next rest says why again when refused", async ($, on) => {
+    const store: Record<string, unknown> = {};
+    const { toasts, enter } = setup(on, undefined, store);
+    await start($);
+    await enter($, "plan");
+    refusals = ["a hook blocked it"];
+    await clock.advance(REST_MS + 60_000);
+    expect(sent).toEqual(["plan"]);
+    store.restUntil = NOW + 2 * REST_MS + 60_000;
+    await enter($, "plan 2");
+    refusals = ["a hook blocked it"];
+    await clock.advance(REST_MS);
+    expect(toasts.filter((t) => t === REFUSED)).toHaveLength(2);
   });
 
   test("a queued box whose submit throws stays queued and says why", async ($, on) => {
