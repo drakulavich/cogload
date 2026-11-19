@@ -268,12 +268,16 @@ const sendQueued = async ($: EngineInterface) => {
   await update($, queued, () => false);
   const { text } = await $.prompt.read();
   if (text.trim() === "") return;
-  const r = await $.prompt.submit({ text }).catch((err: unknown) => ({ drop: err instanceof Error ? err.message : String(err) }));
-  if (r.drop !== undefined) {
+  // The engine's reason can echo the prompt, so the toast names only who refused it.
+  const r = await $.prompt.submit({ text }).then(
+    (entered) => (entered.drop === undefined ? null : "a hook dropped it"),
+    () => "Claude Code rejected it",
+  );
+  if (r !== null) {
     await update($, queued, () => true);
     if (await read($, refusalShown)) return;
     await update($, refusalShown, () => true);
-    await toast($, `Your queued prompt did not go: ${r.drop}. It stays in the box, and goes at the next minute.`);
+    await toast($, `Your queued prompt did not go: ${r}. It stays in the box, and goes at the next minute.`);
     return;
   }
   const now = await $.clock.now();

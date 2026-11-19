@@ -1414,7 +1414,7 @@ describe("held prompts come back after a bare skip", () => {
 });
 
 describe("queued prompts", () => {
-  const REFUSED = "Your queued prompt did not go: a hook blocked it. It stays in the box, and goes at the next minute.";
+  const REFUSED = "Your queued prompt did not go: a hook dropped it. It stays in the box, and goes at the next minute.";
   // The box as Claude Code keeps it: a dropped prompt goes back in, an entered one leaves it empty, a fill replaces it.
   const setup = (on: On, runs: Run[] = [{ stdout: line({ streakMin: 40 }) }], store: Record<string, unknown> = {}) => {
     const box = { text: "" };
@@ -1568,11 +1568,11 @@ describe("queued prompts", () => {
     const { fills, toasts, enter } = setup(on);
     await start($);
     await enter($, "plan");
-    refusals = ["a hook blocked it"];
+    refusals = ["blocked: plan"];
     await clock.advance(REST_MS);
     expect(sent).toEqual([]);
     expect(fills).toEqual([]);
-    expect(toasts.at(-1)).toBe("Your queued prompt did not go: a hook blocked it. It stays in the box, and goes at the next minute.");
+    expect(toasts.at(-1)).toBe("Your queued prompt did not go: a hook dropped it. It stays in the box, and goes at the next minute.");
     await clock.advance(60_000);
     expect(sent).toEqual(["plan"]);
     expect(fills).toEqual([""]);
@@ -1610,9 +1610,9 @@ describe("queued prompts", () => {
     const { toasts, enter } = setup(on);
     await start($);
     await enter($, "plan");
-    refusals = [new Error("session closed")]; // the test kit answers a hook that throws with its own error
+    refusals = [new Error("could not submit plan")];
     await clock.advance(REST_MS);
-    expect(toasts.at(-1)).toBe("Your queued prompt did not go: no implementation for prompt.submit. It stays in the box, and goes at the next minute.");
+    expect(toasts.at(-1)).toBe("Your queued prompt did not go: Claude Code rejected it. It stays in the box, and goes at the next minute.");
     await clock.advance(60_000);
     expect(sent).toEqual(["plan"]);
   });

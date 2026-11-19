@@ -34,8 +34,10 @@ on screen to come back and check.
    `$.clock.after(0, …)`, as the skip path fills it. An empty or blank box
    sends nothing: Claude Code refuses a blank prompt itself. A submit the
    engine drops or rejects leaves the box as it is, sets `queued` again
-   and toasts `Your queued prompt did not go: <the engine's reason>. It
-   stays in the box, and goes at the next minute.`, once per queued box
+   and toasts `Your queued prompt did not go: a hook dropped it. It stays
+   in the box, and goes at the next minute.` (`Claude Code rejected it`
+   for a rejection). The engine's own reason stays out: it can echo the
+   prompt. The toast comes once per queued box
    (`refusalShown` in `$.state`, cleared by the Enter that queues it), so a
    refusal that lasts does not toast every minute; it is not counted as
    sent. On 2026-11-19 two of three sessions' sends vanished with no
