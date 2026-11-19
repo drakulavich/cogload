@@ -53,6 +53,8 @@ let binRuns: Run[] = [];
 let calls: string[][] = [];
 let paths: (string | undefined)[] = [];
 let sent: string[] = [];
+// What the engine answers the plugin's next own prompt with, in place of entering it.
+let refusals: (string | Error)[] = [];
 
 // The engine beneath the plugin: each queued answer is one `cogload status` run, or one `cogload today --json` from todayRuns; binRuns answers BIN.
 const engine = (
@@ -72,6 +74,7 @@ const engine = (
   calls = [];
   paths = [];
   sent = [];
+  refusals = [];
   on("store.get", (_$, e) => ({ value: store[e.key] }));
   on("store.set", (_$, e) => {
     store[e.key] = e.value;
@@ -82,6 +85,9 @@ const engine = (
     return { value: undefined };
   });
   on("prompt.submit", (_$, e) => {
+    const refusal = e.origin.kind === "plugin" ? refusals.shift() : undefined;
+    if (refusal instanceof Error) throw refusal;
+    if (refusal !== undefined) return { drop: refusal };
     if (e.origin.kind === "plugin") sent.push(e.text);
     return e.context ? { text: e.text, context: e.context } : { text: e.text };
   });
@@ -1412,7 +1418,8 @@ describe("queued prompts", () => {
   const setup = (on: On, runs: Run[] = [{ stdout: line({ streakMin: 40 }) }], store: Record<string, unknown> = {}) => {
     const box = { text: "" };
     const fills: string[] = [];
-    engine(on, runs, [], [], store);
+    const toasts: string[] = [];
+    engine(on, runs, [], toasts, store);
     on("prompt.read", () => ({ value: { text: box.text, cursor: box.text.length } }));
     on("prompt.fill", (_$, e) => {
       fills.push(e.text);
@@ -1424,7 +1431,7 @@ describe("queued prompts", () => {
       box.text = r.drop === undefined ? "" : text;
       return r;
     };
-    return { box, fills, enter };
+    return { box, fills, toasts, enter };
   };
 
   test("a composer prompt during a rest is queued for its end and left in the box", async ($, on) => {
@@ -1554,5 +1561,32 @@ describe("queued prompts", () => {
     expect(sent).toEqual(["plan"]);
     todayRuns = [{ stdout: today(null) }];
     expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 1 queued prompt sent, 5 skips left.");
+  });
+
+  test("a queued box the engine refuses stays in the box, says why, and goes at the next minute", async ($, on) => {
+    const { fills, toasts, enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    refusals = ["a hook blocked it"];
+    await clock.advance(REST_MS);
+    expect(sent).toEqual([]);
+    expect(fills).toEqual([]);
+    expect(toasts.at(-1)).toBe("Your queued prompt did not go: a hook blocked it. It stays in the box, and goes at the next minute.");
+    await clock.advance(60_000);
+    expect(sent).toEqual(["plan"]);
+    expect(fills).toEqual([""]);
+    todayRuns = [{ stdout: today(null) }];
+    expect(await cogload($)).toBe("Nothing scored this hour.\nThis week: 1 rest taken, 1 queued prompt sent, 5 skips left.");
+  });
+
+  test("a queued box whose submit throws stays queued and says why", async ($, on) => {
+    const { toasts, enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    refusals = [new Error("session closed")]; // the test kit answers a hook that throws with its own error
+    await clock.advance(REST_MS);
+    expect(toasts.at(-1)).toBe("Your queued prompt did not go: no implementation for prompt.submit. It stays in the box, and goes at the next minute.");
+    await clock.advance(60_000);
+    expect(sent).toEqual(["plan"]);
   });
 });

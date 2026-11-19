@@ -32,7 +32,12 @@ on screen to come back and check.
    `$.prompt.submit({ text })` with that text exactly, then
    empties the box with `$.prompt.fill({ text: "", mode: "replace" })` from
    `$.clock.after(0, …)`, as the skip path fills it. An empty or blank box
-   sends nothing: Claude Code refuses a blank prompt itself.
+   sends nothing: Claude Code refuses a blank prompt itself. A submit the
+   engine drops or rejects leaves the box as it is, sets `queued` again
+   and toasts `Your queued prompt did not go: <the engine's reason>. It
+   stays in the box, and goes at the next minute.`; it is not counted as
+   sent. On 2026-11-19 two of three sessions' sends vanished with no
+   reason recorded.
 4. Text typed without Enter during the rest is not sent: the session is
    queued only by a held Enter.
 5. A prompt the person sends after the rest ended goes through as typed and

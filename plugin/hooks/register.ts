@@ -267,9 +267,14 @@ const sendQueued = async ($: EngineInterface) => {
   await update($, queued, () => false);
   const { text } = await $.prompt.read();
   if (text.trim() === "") return;
+  const r = await $.prompt.submit({ text }).catch((err: unknown) => ({ drop: err instanceof Error ? err.message : String(err) }));
+  if (r.drop !== undefined) {
+    await update($, queued, () => true);
+    await toast($, `Your queued prompt did not go: ${r.drop}. It stays in the box, and goes at the next minute.`);
+    return;
+  }
   const now = await $.clock.now();
   await $.store.set("queueSends", [...(await timesSince($, "queueSends", now - WEEK_MS)), now]);
-  await $.prompt.submit({ text });
   $.clock.after(0, () => void $.prompt.fill({ text: "", mode: "replace" }));
 };
 
