@@ -16,21 +16,29 @@ bun add -g @drakulavich/cogload
 /plugin install cognitive-load@cogload
 ```
 
-cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
+cogload 0.18.0 or newer, with [Bun](https://bun.sh) on the machine.
 
 ## Use it
 
 - **The band.** A dot in the level's colour (Calm, Warming, Heating, Fried),
-  the streak, and when a rest is due or how long it has left.
+  the streak, and when a rest is due or how long it has left, or how long a
+  fourth session's first prompt still waits.
 - **`/cogload`.** Names what drives the last sixty minutes in counts, and the
-  week's rests taken, the queued prompts sent when a rest ended, the skips
-  and the skips left.
+  week's rests taken, the queued prompts sent when a rest ended, the
+  fourth-session holds, the skips and the skips left.
 - **The rest.** After a 40-minute streak, or once an hour when the hour reads
   Fried, the prompts you type are held for ten minutes, each with a short idea
   for the break. A held prompt stays in the box, and when the rest ends the
   plugin sends the box as it reads then: edit it or delete it meanwhile. Text
   typed without Enter stays a draft, and a prompt with an image or a file
   attached is not sent.
+- **The fourth session.** When three other sessions ran in the last sixty
+  minutes, the first prompt of a new session waits ten minutes, held as during
+  a rest, and the band shows `4th session until 14:52 (7 min)`. The other
+  sessions keep working. A `skip:` line lifts the wait and spends one of the
+  five skips. After a hold, the next one comes only after an hour with fewer
+  than four sessions. A resumed session and a prompt from your phone are never
+  held, and with cogload 0.13.0 to 0.17 there is no hold at all.
 - **Going on anyway.** Add `skip: <reason>` (three words or more) as the first
   or last line of a prompt. Sent on its own, it lifts the rest and brings the
   held prompts back into the box. You get five skips a calendar week, from
@@ -51,15 +59,16 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
   minutes. It keeps, writes and prints no message text, prompt length, file path
   or session title.
 - Nothing is sent over the network, by the plugin or by cogload.
-- The plugin reads the prompts you type only to hold them during a rest and to
-  find a `skip:` line. It reads the box once, when a rest you pressed Enter in
+- The plugin reads the prompts you type only to hold them during a rest or a
+  fourth session's wait and to find a `skip:` line. It reads the box once, when a rest you pressed Enter in
   ends, to send it. While a rest lasts, the held prompts' text stays in the
   session's memory, never on disk, until the rest is lifted or the first prompt
   after it ends.
 - Its store, a JSON file under Claude Code's configuration directory, keeps
   when the current rest ends, which streak's rest was taken, when the last
-  Fried rest began, the start of each rest for seven days, which
-  break idea comes next, which one-time notices it has shown, and the time and
+  Fried rest began, the start of each rest for seven days, when four
+  sessions last ran in one hour, the start of each fourth-session hold for
+  seven days, which break idea comes next, which one-time notices it has shown, and the time and
   reason of each skip this calendar week. The skip reason is the only text it
   writes to disk.
 
@@ -72,7 +81,7 @@ cogload 0.13.0 or newer, with [Bun](https://bun.sh) on the machine.
 - **Hooks.** `session.start` and `turn.complete` refresh the reading;
   `ui.render` draws the band above the prompt; `command.run` answers only
   `/cogload`; `prompt.submit` sees the prompts you type or send from your
-  phone, to hold them during a rest, find a `skip:` line and add the notes
+  phone, to hold them during a rest or a fourth session's wait, find a `skip:` line and add the notes
   below. Prompts from other plugins, notifications or scheduled tasks pass
   untouched.
 - **What leaves it.** Nothing goes over the network. The only text it adds to
