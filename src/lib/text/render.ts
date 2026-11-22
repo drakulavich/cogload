@@ -14,8 +14,8 @@ const hm = (min: number) => `${Math.floor(min / 60)}h${String(min % 60).padStart
 const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 // Marks the snapshot time on the open day, so two runs minutes apart are
 // explained rather than silently disagreeing.
-const snapshotLine = (d: Day | undefined, color: boolean): string[] =>
-  d?.asOf ? [dim(`  as of ${hhmm(new Date(d.asOf))}, this hour is still running`, color)] : [];
+const snapshotLine = (asOf: string | undefined, color: boolean): string[] =>
+  asOf ? [dim(`  as of ${hhmm(new Date(asOf))}, this hour is still running`, color)] : [];
 // The weekday of the calendar date, in UTC: a date the local zone skipped
 // has no local midnight to ask.
 const label = (date: string) => {
@@ -49,17 +49,7 @@ export function renderWeek(days: Day[], color: boolean): string {
     color,
   );
   // Today need not be the last row: --to may name a later day.
-  return [
-    header,
-    ...rows,
-    "",
-    legend,
-    totals,
-    ...snapshotLine(
-      days.find((d) => d.asOf),
-      color,
-    ),
-  ].join("\n");
+  return [header, ...rows, "", legend, totals, ...snapshotLine(days.find((d) => d.asOf)?.asOf, color)].join("\n");
 }
 
 const fmtTokens = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
@@ -120,7 +110,7 @@ export function renderDay(day: Day, opts: { explain: boolean; color: boolean }):
   const active = day.buckets.filter((b) => b.score !== null);
   // The snapshot line still shows on an empty open day, or a run at 09:00 and
   // one at 18:00 would print the identical line.
-  if (active.length === 0) return [`no activity on ${day.date}`, ...snapshotLine(day, opts.color)].join("\n");
+  if (active.length === 0) return [`no activity on ${day.date}`, ...snapshotLine(day.asOf, opts.color)].join("\n");
 
   const visible = cols.filter(([name, , f]) => !EVENT_COLS.has(name) || active.some((b) => f(b) !== "0"));
   const leftOut = cols.filter((col) => EVENT_COLS.has(col[0]) && !visible.includes(col));
@@ -140,7 +130,7 @@ export function renderDay(day: Day, opts: { explain: boolean; color: boolean }):
     const note = `  no ${leftOut.map(([name]) => FULL_NAME[name]).join(", ")} today`;
     lines.push(dim(note, opts.color));
   }
-  lines.push(...snapshotLine(day, opts.color));
+  lines.push(...snapshotLine(day.asOf, opts.color));
   return lines.join("\n");
 }
 
