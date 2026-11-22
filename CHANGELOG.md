@@ -5,6 +5,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-22
+
+### Added
+- The plugin now holds the first prompt of a session that becomes the fourth
+  live one for ten minutes. It applies when the last reading shows three
+  sessions and no fourth one was seen in the past hour. The hold ends on its
+  own; a skip lifts it and comes from the same five a week as a rest's. The
+  band shows `4th session until 14:52 (7 min)`, and the week line counts the
+  holds. Plugin 0.14.0, needs cogload 0.18.0. (#259)
+- `cogload status` JSON carries `sessions`, the number of sessions in the
+  live bucket. (#259)
+
 ## [0.17.0] - 2026-11-22
 
 ### Added
