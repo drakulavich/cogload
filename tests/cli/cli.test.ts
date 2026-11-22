@@ -105,48 +105,44 @@ describe("cli", () => {
     expect(JSON.parse(r.out)[0].peak).toBeNull();
   });
 
-  test("a usage error is one line and a hint, exit 2, nothing on stdout", async () => {
-    for (const args of [
-      ["2026-13-40"],
-      ["2026-02-30"],
-      ["14.09.2026"],
-      ["month"],
-      ["week"],
-      ["day"],
-      ["--days", "0"],
-      ["--days", "91"],
-      ["--bogus"],
-      ["--projects", "--json"],
-      ["--to", "--days", "3"],
-      ["--days"],
-      ["--explain"],
-      ["today", "--days", "3"],
-      ["yesterday", "--to", "2026-09-14"],
-      ["--from", "2026-09-10", "--days", "3"],
-      ["--from", "2026-09-20", "--to", "2026-09-14"],
-      ["--from", "2026-06-01", "--to", "2026-09-14"],
-      ["--to", "tomorrow"],
-      ["--json=1"],
-      ["today", "card"],
-    ]) {
-      const r = await run(...args);
-      expect([args.join(" "), r.code, r.out]).toEqual([args.join(" "), 2, ""]);
-      const lines = r.err.trimEnd().split("\n");
-      expect(lines).toHaveLength(2);
-      expect(lines[0]!.startsWith("cogload: ")).toBe(true);
-      expect(lines[1]).toBe("run 'cogload --help' for usage");
-    }
-    // The window rules each have their own line.
-    const line = async (...args: string[]) => (await first(...args))[1];
-    expect(await line("--from", "2026-09-10", "--days", "3")).toBe("cogload: --from sets the length; drop --days");
-    expect(await line("--from", "2026-09-20", "--to", "2026-09-14")).toBe("cogload: --from 2026-09-20 is after --to 2026-09-14");
-    expect(await line("--from", "2026-06-01", "--to", "2026-09-14")).toBe("cogload: --from 2026-06-01 to 2026-09-14 is 106 days; the most is 90");
-    expect(await line("today", "--days", "3")).toBe("cogload: --days, --from and --to do not apply to a named day");
-    expect(await line("week")).toBe("cogload: unknown command week (try today, yesterday, a date, card, trend or status)");
-    for (const args of [["2099-01-01"], ["--to", "2099-01-01"], ["--from", "2099-01-01"], ["card", "--to", "2099-01-01"]]) {
-      expect([args.join(" "), ...(await first(...args))]).toEqual([args.join(" "), 2, "cogload: 2099-01-01 is in the future"]);
-    }
+  test.each<{ args: string[]; line?: string }>([
+    { args: ["2026-13-40"] },
+    { args: ["2026-02-30"] },
+    { args: ["14.09.2026"] },
+    { args: ["month"] },
+    { args: ["week"], line: "cogload: unknown command week (try today, yesterday, a date, card, trend or status)" },
+    { args: ["day"] },
+    { args: ["--days", "0"] },
+    { args: ["--days", "91"] },
+    { args: ["--bogus"] },
+    { args: ["--projects", "--json"] },
+    { args: ["--to", "--days", "3"] },
+    { args: ["--days"] },
+    { args: ["--explain"] },
+    { args: ["today", "--days", "3"], line: "cogload: --days, --from and --to do not apply to a named day" },
+    { args: ["yesterday", "--to", "2026-09-14"] },
+    { args: ["--from", "2026-09-10", "--days", "3"], line: "cogload: --from sets the length; drop --days" },
+    { args: ["--from", "2026-09-20", "--to", "2026-09-14"], line: "cogload: --from 2026-09-20 is after --to 2026-09-14" },
+    { args: ["--from", "2026-06-01", "--to", "2026-09-14"], line: "cogload: --from 2026-06-01 to 2026-09-14 is 106 days; the most is 90" },
+    { args: ["--to", "tomorrow"] },
+    { args: ["--json=1"] },
+    { args: ["today", "card"] },
+  ])("a usage error is one line and a hint, exit 2, nothing on stdout: $args", async ({ args, line }) => {
+    const r = await run(...args);
+    expect([r.code, r.out]).toEqual([2, ""]);
+    const lines = r.err.trimEnd().split("\n");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]!.startsWith("cogload: ")).toBe(true);
+    expect(lines[1]).toBe("run 'cogload --help' for usage");
+    if (line !== undefined) expect(lines[0]).toBe(line);
   });
+
+  test.each([{ args: ["2099-01-01"] }, { args: ["--to", "2099-01-01"] }, { args: ["--from", "2099-01-01"] }, { args: ["card", "--to", "2099-01-01"] }])(
+    "a date in the future is a usage error: $args",
+    async ({ args }) => {
+      expect(await first(...args)).toEqual([2, "cogload: 2099-01-01 is in the future"]);
+    },
+  );
 
   test("a usage error never echoes a path or an escape, only a short plain value", async () => {
     const line = async (...args: string[]) => (await first(...args))[1];
