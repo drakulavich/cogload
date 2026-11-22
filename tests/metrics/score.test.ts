@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { score, levelOf } from "../../src/lib/metrics/index.ts";
+import { join } from "node:path";
+import { levelOf, overOf, score } from "../../src/lib/metrics/index.ts";
+import { report } from "../../src/lib/report/index.ts";
 import type { Level, Metrics } from "../../src/lib/types.ts";
 
 const base: Metrics = {
@@ -148,5 +150,15 @@ describe("score", () => {
     // Without the late-night flag the index tops out at 90, which is inside the
     // 85-100 Fried band: a full daytime hour is not merely Heating.
     expect(score(m({ sessions: 5, prompts: 20, decisions: 15, outputTokens: 80_000, streakMin: 40 }))?.level).toBe("Fried");
+  });
+});
+
+describe("overOf", () => {
+  test("names the parts at their cap, late aside, with their raw value over the norm", async () => {
+    const days = await report({ projects: join(import.meta.dir, "../fixtures/busy-week/projects"), to: "2026-09-20", days: 7 });
+    const hours = days.flatMap((d) => d.buckets.filter((b) => b.score !== null));
+    for (const b of hours) expect(Object.keys(overOf(b)).sort()).toEqual(b.score!.capped.filter((p) => p !== "late").sort());
+    // Monday 12:00: 5 sessions, 55 prompts, 25 decisions and 54 switches, a 235-minute streak.
+    expect(overOf(days[0]!.buckets[12]!)).toEqual({ parallel: 1, pace: 2.75, supervision: 129 / 45, streak: 235 / 40 });
   });
 });

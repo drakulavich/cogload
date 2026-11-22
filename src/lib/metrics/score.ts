@@ -45,6 +45,8 @@ function rawOf(m: Metrics): Record<Exclude<Part, "late">, number> {
   };
 }
 
+export const overOf = (m: Metrics): Partial<Record<Exclude<Part, "late">, number>> => Object.fromEntries(Object.entries(rawOf(m)).filter(([, x]) => x >= 1));
+
 export function fractionsOf(m: Metrics): Fractions {
   const r = rawOf(m);
   return {

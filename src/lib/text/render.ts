@@ -1,6 +1,6 @@
 import { formatCount, plural } from "./format.ts";
-import { levelOf } from "../metrics/index.ts";
-import type { Day, HourBucket, Level } from "../types.ts";
+import { levelOf, overOf } from "../metrics/index.ts";
+import type { Day, HourBucket, Level, Part } from "../types.ts";
 
 const GLYPH: Record<Level, string> = { Calm: "░", Warming: "▒", Heating: "▓", Fried: "█" };
 const ANSI: Record<Level, string> = { Calm: "32", Warming: "33", Heating: "38;5;208", Fried: "31" };
@@ -83,14 +83,22 @@ const COLS: Col[] = [
   ["streak", 8, (b) => `${b.streakMin}m`],
   ["out-tok", 9, (b) => fmtTokens(b.outputTokens)],
 ];
+const partCell =
+  (part: Exclude<Part, "late">) =>
+  (b: HourBucket): string => {
+    const points = String(b.score?.parts[part] ?? "");
+    const over = overOf(b)[part];
+    return over === undefined ? points : `${points} ${(Math.round(over * 10) / 10).toFixed(1)}×`;
+  };
 const EXPLAIN: Col[] = [
-  ["par", 5, (b) => String(b.score?.parts.parallel ?? "")],
-  ["pace", 6, (b) => String(b.score?.parts.pace ?? "")],
-  ["sup", 6, (b) => String(b.score?.parts.supervision ?? "")],
-  ["read", 6, (b) => String(b.score?.parts.reading ?? "")],
-  ["strk", 6, (b) => String(b.score?.parts.streak ?? "")],
+  ["par", 10, partCell("parallel")],
+  ["pace", 10, partCell("pace")],
+  ["sup", 10, partCell("supervision")],
+  ["read", 10, partCell("reading")],
+  ["strk", 10, partCell("streak")],
   ["late", 6, (b) => String(b.score?.parts.late ?? "")],
 ];
+const OVER_LEGEND = "  N× beside a part: it is at its cap, with N times what fills it";
 // Left out of the table for a day where every active bucket reads zero; the
 // other columns always show, so two days still line up.
 const EVENT_COLS = new Set(["rep", "intr", "rej", "quest", "plan", "mode", "ctx-sw"]);
@@ -140,6 +148,7 @@ export function renderDay(day: Day, opts: { explain: boolean; color: boolean }):
     const note = `  no ${leftOut.map(([name]) => FULL_NAME[name]).join(", ")} today`;
     lines.push(dim(note, opts.color));
   }
+  if (opts.explain && active.some((b) => Object.keys(overOf(b)).length > 0)) lines.push(dim(OVER_LEGEND, opts.color));
   lines.push(...snapshotLine(day, opts.color));
   return lines.join("\n");
 }
