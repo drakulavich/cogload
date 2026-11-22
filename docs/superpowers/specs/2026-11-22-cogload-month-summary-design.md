@@ -463,40 +463,41 @@ status file is. `HOME` comes from the environment, as for the status file. A
 line is one JSON object with two keys:
 
 ```
-{"at":"2026-11-12T08:00:00.000Z","event":"since"}
 {"at":"2026-11-12T08:00:00.000Z","event":"start"}
-{"at":"2026-11-16T10:00:00.000Z","event":"start"}
 {"at":"2026-11-16T10:04:00.000Z","event":"lift"}
+{"at":"2026-11-16T10:00:00.000Z","event":"start"}
 {"at":"2026-11-18T15:00:00.000Z","event":"start"}
+{"at":"2026-11-18T15:00:02.310Z","event":"start"}
 {"at":"2026-11-20T11:00:00.000Z","event":"start"}
 ```
 
-- `at` is an ISO 8601 UTC instant; `event` is `since`, `start` or `lift`.
-- The first line is always one `since`: the instant from which the file is
-  complete. The command that creates the file writes `since` with its own
-  `--at` first, then its event, so the file above began recording on
-  2026-11-12 08:00 UTC, at a rest's start.
-- Lines are appended with `O_APPEND`, one `write` each, so two sessions
-  writing at once do not interleave. When the `since` line is more than 91
-  days old, the command rewrites the file, through a temporary file and a
-  rename as the status file is written: a `since` line at the run's time
-  minus 90 days, then the lines from that instant on. An append from another
-  session during that rename can be lost; at most one rewrite a day makes it
-  rare, and a lost line is one rest counted as taken.
+- `at` is an ISO 8601 UTC instant; `event` is `start` or `lift`.
+- The file is only ever appended to: opened with `O_APPEND`, one `write` per
+  line, so two sessions writing at once do not interleave. Nothing rewrites,
+  trims or renames it, so no append can be lost to a rewrite. The first
+  command creates it; two first commands at once both append to the one
+  file.
+- Line order carries no meaning. The plugin's calls are not awaited, so a
+  `lift` can land before the `start` it lifts, as on lines 2 and 3 above.
+  The reader sorts by `at` (3d).
 - `--at` must match the plugin's `ISO_INSTANT` and be at most 60 seconds
   ahead of the clock, else usage error `--at must be an ISO 8601 instant`,
   exit 2; the value is not echoed. `start` or `lift` is required, else
   `rest needs start or lift`. A failed write exits 1 with
   `cannot write the rest log`, with no path. Success prints nothing.
+- The reader skips a line that does not parse or whose `at` or `event` is
+  not one of the above, as the transcript parser skips a malformed line.
 
 Size: 50 bytes a line with its newline. A rest taken is one line, a skipped
 one two. The work Mac had 93 hours with a streak of 40 minutes or more in the
 30 days, and 77 Fried hours; a rest starts at most once per streak and, for
-Fried, at most once an hour, so the month held at most about 170 rests: under
-17 KB a month, 51 KB kept for 90 days, the longest window the CLI takes. This
-is an upper bound from hour counts. `trend` reads the file once a run.
+Fried, at most once an hour, so the month held at most about 170 rests. That
+is under 17 KB a month: at most about 200 KB after one year and 1 MB after
+five, upper bounds from hour counts. The file is never trimmed. `trend`
+reads it whole once a run and keeps the lines inside its window; parsing
+1 MB of JSON lines is a few milliseconds next to the 0.15 s report.
 
-Privacy: a line holds a time and one of three words. No reason, prompt,
+Privacy: a line holds a time and one of two words. No reason, prompt,
 session id or path is written or printed, so the rule in `CLAUDE.md` holds as
 written and needs no new exception. The skip's reason stays where it is, in
 the plugin's store. The Privacy paragraph of `docs/reference.md` adds the
@@ -508,24 +509,35 @@ new file name.
 
 ### 3d. What the records mean
 
-- **A rest** is a `start` line. It belongs to the `trend` week whose days
-  hold its start's local date.
-- **Skipped**: a rest with a `lift` line after it and before the next
-  `start`. A `lift` belongs to the latest `start` before it; a second `lift`
-  for the same start counts once.
-- **Taken**: a rest with no `lift`, a rest still running included, as
-  `/cogload` counts it today.
-- **Skips left** is `5 − lift lines since Monday 00:00 local time of the
-  current calendar week`, never below 0: the powerbank's week and limit.
-- **Recorded**: a week is recorded when the `since` instant is at or before
-  local 00:00 of its first day. The current calendar week is recorded when
-  `since` is at or before its Monday 00:00. A week that is not recorded says
-  `not recorded`, never 0, and so does a window with no file.
+The reader sorts every valid line by `at`; at the same instant a `start`
+sorts before a `lift`. Then:
 
-The CLI's counts can be lower than the plugin's while a session started
-before the update still runs the old code: its skips reach `overrides` and
-not the file, so those rests count as taken. They agree once every session
-has been restarted after the update; the CHANGELOG line says so.
+- **A rest** is a `start`, except that a `start` less than 10 minutes
+  (`restMin`) after the previous one is the same rest. Two sessions that read
+  the same due rest at once each start it, milliseconds apart (lines 4 and 5
+  above); a genuine second rest cannot start within ten minutes of the first,
+  since a rest lasts ten minutes and a lifted one is not started again for
+  that streak. A rest's time is its first `start`, and it belongs to the
+  `trend` week whose days hold that time's local date.
+- **Skipped**: a rest with at least one `lift` at or after its time and
+  before the next rest's time.
+- **Taken**: a rest with no such `lift`, a rest still running included, as
+  `/cogload` counts it today.
+- **A `lift` with no rest before it** (its `start` never reached the file)
+  makes nothing skipped, and still counts toward the skips left.
+- **Skips left** is `5 − lift lines with at since Monday 00:00 local time of
+  the current calendar week`, never below 0: the powerbank's week and limit.
+  Every `lift` line counts, as every skip the plugin records in `overrides`
+  counts.
+- **Recorded**: the file is complete from its earliest `at` on. A week is
+  recorded when that instant is at or before local 00:00 of its first day;
+  the current calendar week, when it is at or before its Monday 00:00. A
+  week that is not recorded says `not recorded`, never 0, and so does a
+  window with no file or no valid line.
+
+With the six lines of 3c: the earliest `at` is 2026-11-12 08:00 UTC; the
+rests are 11-12 (taken), 11-16 10:00 (skipped by the 10:04 lift), 11-18 15:00
+(two starts, one rest, taken) and 11-20 (taken).
 
 ### 3e. Where the CLI prints them
 
@@ -551,42 +563,84 @@ not hold today. An empty window prints neither (1b).
 
 In the JSON each week gains `"rests": { "taken": 2, "skipped": 1 }`, or
 `"rests": null` when it is not recorded. The top level gains
-`"restsSince": "2026-11-12T08:00:00.000Z"`, `null` with no file, and, only
-when the window holds today, `"skipsLeft": 4`, `null` when the week is not
-recorded.
+`"restsSince": "2026-11-12T08:00:00.000Z"`, the earliest `at`, `null` with no
+file, and, only when the window holds today, `"skipsLeft": 4`, `null` when
+the week is not recorded.
 
-### 3f. Not in this section
+### 3f. What the log misses, and when
+
+Walked as two sessions acting at the same moment, and the cases that leave
+no line:
+
+| Case | What the log holds | What `trend` prints |
+|---|---|---|
+| Two sessions start the same due rest | two `start` lines milliseconds apart, in either order | one rest (3d) |
+| A start and its lift, appended out of order | both lines, the `lift` first | sorted by `at`: one skipped rest |
+| A start and a lift at the same millisecond | both lines | the `start` sorts first: one skipped rest |
+| The first two writes ever, at once | two lines in one new file | as any two lines; the earliest `at` is where recording starts |
+| Claude Code quits during a rest | the `start` line only; a rest has no end record | taken, as `/cogload` counts it |
+| Claude Code quits before `cogload rest start` writes | nothing for that rest | the rest is missing from its week |
+| `cogload rest` not found, timed out or failing | nothing; the plugin logs the reason to debug | the rest, or its lift, is missing |
+| A session started before the update starts a rest | nothing: the old code writes only the store | the rest is missing from its week |
+| A session started before the update lifts a rest | the `start` only | that rest counts as taken, and the skips left are one too many |
+
+The last two last until every session started before the update has ended:
+an updated session appends, an old one does not, and the file cannot tell a
+week with an old session in it from a quiet one. Until then `trend` prints
+the counts as the log holds them, which can be low: fewer rests, fewer
+skipped, more skips left than the band shows. The CHANGELOG line asks to
+restart every session after the update. The plugin store is not read to fill
+the gap.
+
+### 3g. Not in this section
 
 No reader of the plugin store from the CLI, and no change to the store. No
-estimate of rests before the file began. No change to `/cogload`'s week line,
-the powerbank or the rest. No record of a rest's end: a rest without a lift
-ran its ten minutes. The plugin does not write `since` before its first rest,
-so the days between the update and that rest show `not recorded`.
+estimate of rests before the file began, and no backfill. No trim or rewrite
+of the file. No change to `/cogload`'s week line, the powerbank or the rest.
+No record of a rest's end: a rest without a lift ran its ten minutes. The
+days between the update and the first rest show `not recorded`, since the
+file starts with that rest.
 
-### 3g. Definition of Done
+### 3h. Definition of Done
 
 - `H=$(mktemp -d); HOME=$H bun src/cli/index.ts rest start --at 2026-11-22T10:00:00.000Z; echo $?; cat $H/.claude/cogload/rests.jsonl`
-  prints `0`, then
-  `{"at":"2026-11-22T10:00:00.000Z","event":"since"}` and
-  `{"at":"2026-11-22T10:00:00.000Z","event":"start"}`. Today it exits 2 with
-  `cogload: unknown flag --at` and writes no file.
+  prints `0`, then `{"at":"2026-11-22T10:00:00.000Z","event":"start"}`.
+  Today it exits 2 with `cogload: unknown flag --at` and writes no file.
 - `HOME=$(mktemp -d) bun src/cli/index.ts rest start --at yesterday`
   exits 2 with `cogload: --at must be an ISO 8601 instant`. Today it exits 2
   with `cogload: unknown flag --at`.
-- CLI tests: a `lift` after a `start` appends one line; a file whose `since`
-  is 92 days old is rewritten with `since` at 90 days; the 3e block and its
-  JSON from a file the test writes with the 3c lines shifted to the run's
-  own week, so the window holds today; no file gives `not recorded` for every week and
-  `"restsSince": null`. Each fails on main.
+- CLI tests, each from a `rests.jsonl` fixture the test writes, each failing
+  on main:
+  1. `rest lift` after `rest start` leaves the file as before plus one line.
+  2. A file whose lines are 200 days old gets one appended line and keeps
+     every old byte; `trend` over the last 30 days does not count them.
+  3. The 3e block and its JSON from the six 3c lines, shifted to the run's
+     own week so the window holds today.
+  4. A `lift` line written before its `start` line, with a later `at` →
+     1 skipped.
+  5. A `start` and a `lift` with the same `at` → 1 skipped.
+  6. Two `start` lines 2 s apart, in reverse order → 1 rest; two 11 minutes
+     apart → 2 rests.
+  7. A `lift` with no `start` before it → 0 skipped, and one skip fewer left.
+  8. A line that does not parse, and one with `"event":"since"`, are skipped.
+  9. No file, and a file of only invalid lines → `not recorded` for every
+     week and `"restsSince": null`.
 - Plugin cases under `claude plugin test plugin`: a rest that starts runs
   `["cogload", "rest", "start", "--at", <its start>]` once; a skip of three
   words during a rest runs `["cogload", "rest", "lift", "--at", <now>]` once;
   a short reason and an empty powerbank run no `rest`; a `rest` that exits 2
   logs `exit 2` to debug and the rest runs on. The first two fail on main.
   Not run: the cases do not exist yet.
+- Not testable, with the reason: two processes appending at the same instant
+  (`O_APPEND` keeps whole lines on a local file system; a test of the race
+  would pass or fail by timing); a session on the old plugin code beside an
+  updated one (`claude plugin test` runs one version of the plugin); Claude
+  Code quitting between a rest's start and the write (the engine's fake has
+  no process that outlives the hook). Their outcomes are the rows of 3f.
 - `docs/reference.md` (Privacy, the commands table, `trend`) and
-  `plugin/README.md` name the file and what it holds; `--help` lists
-  `cogload rest start|lift --at <instant>` as the plugin's.
+  `plugin/README.md` name the file and what it holds, and that it is never
+  trimmed; `--help` lists `cogload rest start|lift --at <instant>` as the
+  plugin's.
 
 ## 4. The session count in the band
 
@@ -769,8 +823,9 @@ export const overOf = (m: Metrics): Partial<Record<Exclude<Part, "late">, number
 - The ratio shows in `--explain` only; the plain day view is unchanged (the
   author).
 - Rests are recorded by the plugin through `cogload rest` into
-  `rests.jsonl`, times only, 90 days (the author, option B of the first
-  draft). Reading the plugin store from the CLI, a longer store key shown in
+  `rests.jsonl`, times only, appended and never trimmed (the author, option
+  B of the first draft; the first design's 90-day rewrite could lose an
+  append). Reading the plugin store from the CLI, a longer store key shown in
   `/cogload`, and counting rests due from transcripts were set aside: the
   first reads Claude Code's private file, the second keeps the answer out of
   the CLI, the third cannot tell taken from skipped.
