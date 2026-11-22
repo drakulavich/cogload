@@ -48,9 +48,8 @@ After this change:
 6. A Remote Control prompt passes, as during a rest, with no note. A fresh
    session whose reading is missing or older than 5 minutes (`STALE_MS`), or
    whose cogload is older than this field, is not held.
-7. Each hold adds its start to the store key `fourthHolds`, kept for a week,
-   negated when a skip lifts it; the `/cogload` week line counts both, and a
-   hold alone shows the line.
+7. Each hold adds its start to the store key `fourthHolds`, kept for a week;
+   the `/cogload` week line counts them, and a hold alone shows the line.
 
 ## Approaches
 
@@ -151,13 +150,10 @@ stateDiagram-v2
   the race is accepted. A per-minute write that overlaps the hold's can set
   the latch back by its reading's age (a minute, at most five), so it re-arms
   that much early; a lost per-minute write is repeated the next minute.
-- **`fourthHolds`**, a new store key: a list of numbers for seven days,
-  trimmed on each write as `rests` is. Each is a hold's start, negated when
-  a skip lifted it. At 12 holds a week: objects `{"at":…,"skipped":false}`
-  take 37 bytes an entry (about 440 a week); parallel lists of starts and
-  skips take 14, plus 14 per lifted hold, in two keys kept in step; the sign
-  takes 14, plus 1 per lifted hold (168 to 180 a week), in one key whose type, a list of numbers, is
-  final from its first release. The sign is chosen. Only the race above
+- **`fourthHolds`**, a new store key: a list of numbers, the start of each hold
+  for seven days, trimmed on each write as `rests` is. About 14 bytes an
+  entry; 12 a week at work is about 170 bytes. A flag for a hold a skip lifted
+  was considered and dropped: nothing reads it now. Only the race above
   writes it twice at once; the lost entry then counts that crossing once.
 - **`holdUntil`** (a number) and **`asked`** (a boolean) in the session's
   `$.state`, in memory only, typed beside `queued` in `PluginState`: the hold
@@ -185,8 +181,8 @@ today's rest band, whichever ends first):
 
 The other sessions show today's band. The `/cogload` week line gains the holds
 after the queued sends when there is one, and a hold alone is enough for the
-line to appear (today it needs a rest or a skip), so the measure below always
-has its numbers: `This week: 0 rests taken, 2 fourth-session holds (1 lifted), 1 skipped (last: "need it right now"), 4 skips left.`
+line to appear (today it needs a rest or a skip), so this week's count is
+always readable: `This week: 0 rests taken, 2 fourth-session holds, 5 skips left.`
 
 ## Not in scope
 
@@ -199,12 +195,12 @@ has its numbers: `This week: 0 rests taken, 2 fourth-session holds (1 lifted), 1
 
 ## Measure after a month
 
-Thirty days after the release, `cogload trend --days 30` on the work Mac gives
-the share of active hours in the `4` and `5+` rows against 61% (190 of 310),
-and the week lines give the holds and how many a skip lifted. The hold is
-removed when both are true: the share is still above 56% (it fell less than 5 points), and more than
-half the holds were lifted by a skip. With one of the two, it stays a month and is
-judged once more. These two thresholds are proposed, for the owner to approve.
+On the work Mac, `cogload trend --days 30` run 30 days after the release
+covers those 30 days and gives the share of active hours in the `4` and `5+`
+rows. If it is still above 56%, a fall of less than 5 points from 61% (190 of
+310), the hold is removed. The threshold is proposed, for the owner to
+approve. The week line's hold count, for the current week only, is read beside
+it against the 8 to 12 measured above; it is no part of the rule.
 
 ## Testing strategy
 
@@ -223,16 +219,14 @@ clock and store, `$.session.turns()` answered with `on("session.turns")`.
 6. A held session and a rest ending 4 minutes after the hold → nothing at the
    hold's end; the box goes at the rest's end.
 7. `skip: need it right now` in a held session → passes, `overrides` gains
-   one, the hold's `fourthHolds` entry turns negative; with five skips this
-   week → the empty-powerbank text, still held, the entry stays positive.
+   one; with five skips this week → the empty-powerbank text, still held.
 8. A bridge prompt, a reading 6 minutes old, a reading without `sessions` →
    each passes, and no older-cogload toast.
 9. A tick with `sessions: 4` writes `fourSeenAt`, keeping a newer stored
    value; with 3 it writes nothing.
 10. The hold band at 50 and 49 columns; a hold during a rest shows the rest
     band. `fourthHolds` with two entries this week, nothing else → `This
-    week: 0 rests taken, 2 fourth-session holds (0 lifted), 5 skips left.`;
-    after case 7's skip → `(1 lifted)`, which fails if the skip is not recorded.
+    week: 0 rests taken, 2 fourth-session holds, 5 skips left.`
 11. `cogload status` on a fixture with three sessions in the hour → the line
     ends `"restMin":10,"sessions":3}`.
 
