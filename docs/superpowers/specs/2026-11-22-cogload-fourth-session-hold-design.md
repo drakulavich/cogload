@@ -27,10 +27,11 @@ After this change:
 2. `fourSeenAt` is the latch. A held session writes no record, so the count
    stays 3 for the whole hold: the hold writes `now` to the latch when it
    starts, and a second fresh session a minute later passes. Every minute, a
-   session whose reading shows 4 or more also writes that reading's `asOf`,
-   so a fifth session, or a new one after another went quiet, passes. The
-   hold re-arms only after an hour below four, as an hourly crossing
-   measures. Two first prompts in the same second can both hold; accepted.
+   session whose reading shows 4 or more writes the later of the stored
+   value and its reading's `asOf`, so a fifth session, or a new one after
+   another went quiet, passes. The hold re-arms only after an hour below
+   four, as an hourly crossing measures. The latch is a plain `get` then
+   `set`, not a claim (see Data and cost).
 3. The hold lasts `restMin` minutes (10) from that prompt and ends on its own.
    It holds this session only; the other three keep working. During it the
    session behaves as during a rest: Enter queues the box, which is sent at
@@ -60,11 +61,9 @@ After this change:
 | B. The plugin's own count of open sessions: each session writes a heartbeat to the store every minute, `session.end` removes it | A map key every session rewrites each minute, so one write can drop another's entry; idle sessions left open for days count; sessions started before the update and machines without the plugin are missing | Rejected |
 
 A measures what the index scores and what the 61% counts, so the hold and its
-measure agree. B counts a different thing: an open session that has been idle
-for hours adds nothing to the index, and B would hold for it. A's lag is
-accepted: a session closed half an hour ago still scores as one of the hour's
-sessions, and the hold argues with the hour's score, not with the window list.
-How often a hold fires on such a session the hourly JSON cannot say (below).
+measure agree. B would hold for an open session idle for hours, which adds
+nothing to the index. A's lag is accepted: a session closed half an hour ago
+still scores as one of the hour's sessions.
 
 Subagents, `claude -p` and Agent SDK runs, and copied background history
 already drop out of A in the parser (`isSidechain`, `entrypoint` `sdk-`, the
@@ -100,9 +99,8 @@ session lifts the rest there and leaves this session's hold alone.
 
 ## How often it fires
 
-Counted over the work Mac's hourly buckets (`sessions` per clock hour) with a
-scratch script. A crossing is an hour with 4+ sessions after an hour with
-fewer.
+From the hourly buckets (`sessions` per clock hour): a crossing is an hour
+with 4+ sessions after an hour with fewer.
 
 | | Work | Home |
 |---|---|---|
@@ -110,18 +108,17 @@ fewer.
 | Per full week | 9, 8, 8, 12 | 8, 0, 0, 1 |
 | Fresh sessions opened in 4+ hours (estimate) | 177, 37 to 52 a week | 13 |
 
-The last row is what holding every fourth-or-later session would have done,
-which is why rule 1 holds only the crossing.
-
-The live rule can sit off the 8 to 12 either way, and the hourly JSON cannot
-say by how much:
+The last row is what holding every later session would have done, so rule 1
+holds only the crossing. The live rule can sit off the 8 to 12 either way, by
+an amount the hourly JSON cannot give:
 
 - Lower: a crossing made by a resumed session (`turns() > 0`) is not held, and
   an hourly bucket with four distinct sessions may never have had three in
   the window at a fresh session's first prompt.
 - Higher: a dip below four of more than an hour that does not fill a clock
   hour re-arms the live rule but shows no crossing in the buckets.
-- Either: hours when no session ran the plugin write no `fourSeenAt`.
+- Either: hours when no session ran the plugin write no `fourSeenAt`; the
+  accepted race adds a second hold now and then.
 
 `fourthHolds` gives the real rate after two weeks; the exact past count needs
 an output that is out of scope here.
@@ -145,24 +142,32 @@ stateDiagram-v2
 - **`status.json`** gains a twelfth field, `sessions`, after `restMin`: the
   live bucket's count, an integer from 0. The line grows by 13 bytes
   (`,"sessions":3`), from 190 in the line printed today. Adding a field does
-  not bump `schema`, which stays 1 (status-file spec). The plugin's `decodeStatus` accepts the line without it as today and reads a missing
-  `sessions` as unknown, which never holds and raises no older-cogload
+  not bump `schema`, which stays 1 (status-file spec). `decodeStatus` reads a
+  missing `sessions` as unknown, which never holds and raises no older-cogload
   toast. The `reading` store key stays an object.
 - **`fourSeenAt`**, a new store key: one number, milliseconds, about 14 bytes.
   Written by a hold when it starts, and once a minute by each session whose
   reading shows 4 or more, the rhythm `reading` has today.
+- **No claim across sessions.** `$.store` has only `get`, `set` ("Sets
+  `key` to `value`") and `delete`, so the last write wins; `register.ts`'s
+  `update` works on `$.state`, "held by the host for the session". Two
+  fresh sessions whose first-prompt hooks overlap between the latch's `get`
+  and `set` (milliseconds of store I/O) both hold: each waits at most ten
+  minutes and both boxes are sent. A lock is not worth that (`simplicity.md`);
+  the race is accepted. A per-minute write that overlaps the hold's can set
+  the latch back by its reading's age (a minute, at most five), so it re-arms
+  that much early; a lost per-minute write is repeated the next minute.
 - **`fourthHolds`**, a new store key: a list of numbers, the start of each hold
   for seven days, trimmed on each write as `rests` is. About 14 bytes an
-  entry; 12 a week at work is about 170 bytes.
+  entry; 12 a week at work is about 170 bytes. Only the race above writes it
+  twice at once; the lost entry then counts that crossing once, which is right.
 - **`holdUntil`** (a number) and **`asked`** (a boolean) in the session's
   `$.state`, in memory only, typed beside `queued` in `PluginState`: the hold
   is this session's, and the store is shared.
 
-No existing key changes type (`CLAUDE.md`). No text is kept beyond `held`,
-whose privacy line does not change. A session started before the update never
-holds and writes neither key; an updated one reads a store without them as no
-hold seen. The hold needs cogload with the `sessions` field, so the plugin
-README's minimum version moves to that release.
+No key changes type (`CLAUDE.md`) and no text is kept beyond `held`. A
+session started before the update never holds and writes neither key. The
+plugin README's minimum cogload moves to the release with `sessions`.
 
 ## What the person sees
 
@@ -200,12 +205,6 @@ active hours in the `4` and `5+` rows against 61% (190 of 310) before. Beside
 it, the holds per week from the `/cogload` week line against the 8 to 12
 crossings measured above.
 
-## Project structure
-
-`src/lib/status/status.ts` (the field), `plugin/hooks/register.ts` and
-`plugin/types/index.d.ts` (rule, latch, hold, band, week line), their tests,
-and README, `plugin/README.md`, `docs/reference.md`.
-
 ## Testing strategy
 
 `claude plugin test plugin` through the registered hooks, the engine's fake
@@ -226,7 +225,8 @@ clock and store, `$.session.turns()` answered with `on("session.turns")`.
    one; with five skips this week → the empty-powerbank text, still held.
 8. A bridge prompt, a reading 6 minutes old, a reading without `sessions` →
    each passes, and no older-cogload toast.
-9. A tick with `sessions: 4` writes `fourSeenAt`; with 3 it does not.
+9. A tick with `sessions: 4` writes `fourSeenAt`, keeping a newer stored
+   value; with 3 it writes nothing.
 10. The band rows above at 50 and 49 columns. `fourthHolds` with two entries
     this week and no rest, skip or send → the week line reads
     `This week: 0 rests taken, 2 fourth-session holds, 5 skips left.`
