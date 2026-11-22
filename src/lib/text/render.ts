@@ -1,5 +1,5 @@
 import { formatCount, plural } from "./format.ts";
-import { levelOf } from "../metrics/index.ts";
+import { levelOf, type Trend } from "../metrics/index.ts";
 import type { Day, HourBucket, Level } from "../types.ts";
 
 const GLYPH: Record<Level, string> = { Calm: "░", Warming: "▒", Heating: "▓", Fried: "█" };
@@ -136,4 +136,35 @@ export function renderDay(day: Day, opts: { explain: boolean; color: boolean }):
 
 export function renderJson(data: Day[] | Day): string {
   return JSON.stringify(data, null, 2);
+}
+
+export function renderTrend(t: Trend, color: boolean): string {
+  const head = `${label(t.from)} to ${label(t.to)}, ${plural(t.days, "day")}: ${plural(t.hours, "hour")} with a session, ${hm(t.activeMin)} active`;
+  if (t.hours === 0)
+    return [head, t.from === t.to ? `no activity on ${t.to}` : `no activity from ${t.from} to ${t.to}`, ...snapshotLine(t.asOf, color)].join("\n");
+  const levels = LEVELS.map((l) => {
+    const name = LEVEL_NAME[l];
+    const share = `${Math.round((100 * t.levels[l]) / t.hours)}%`;
+    return `${paint(name, l, color)}${" ".repeat(11 - name.length)}${String(t.levels[l]).padStart(5)}${share.padStart(7)}`;
+  });
+  const weeks = t.weeks.map(
+    (w) =>
+      `${label(w.from).padEnd(12)}${String(w.days).padStart(4)}${String(w.hours).padStart(7)}${hm(w.activeMin).padStart(8)}${String(w.hot).padStart(10)}${String(w.prompts).padStart(9)}`,
+  );
+  const sessions = t.bySessions.map(
+    (s) => `${(s.sessions === 5 ? "5+" : String(s.sessions)).padEnd(10)}${String(s.hours).padStart(5)}${(s.mean === null ? "-" : String(s.mean)).padStart(12)}`,
+  );
+  return [
+    head,
+    "",
+    "level      hours  share",
+    ...levels,
+    "",
+    "week from   days  hours  active  heating+  prompts",
+    ...weeks,
+    "",
+    "sessions  hours  mean index",
+    ...sessions,
+    ...snapshotLine(t.asOf, color),
+  ].join("\n");
 }

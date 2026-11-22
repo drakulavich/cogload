@@ -2,9 +2,10 @@ import { statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { CardWriteError, cardData, cardHtml, loadAssets, openCard, renderCard, sentenceText } from "../lib/card/index.ts";
+import { trendOf } from "../lib/metrics/index.ts";
 import { report, type Timing } from "../lib/report/index.ts";
 import { renderStatus, statusOf, streakFrom, writeStatus } from "../lib/status/index.ts";
-import { renderDay, renderJson, renderWeek } from "../lib/text/index.ts";
+import { renderDay, renderJson, renderTrend, renderWeek } from "../lib/text/index.ts";
 import type { TranscriptCache } from "../lib/transcripts/index.ts";
 import type { Day } from "../lib/types.ts";
 import type { Args } from "./args.ts";
@@ -15,6 +16,12 @@ export async function table(a: Args, now: Date, cache: TranscriptCache | null, t
   const text = a.json ? renderJson(data!) : a.command === "day" ? renderDay(days[0]!, { explain: a.explain, color: a.color }) : renderWeek(days, a.color);
   // Not console.log: in Bun 1.4.2, once process.stdout is touched (isTTY in parseArgs), console.log into a pipe stops at 64 KiB.
   process.stdout.write(`${text}\n`);
+  return 0;
+}
+
+export async function trend(a: Args, now: Date, cache: TranscriptCache | null, timing?: Timing): Promise<number> {
+  const t = trendOf(await report({ projects: a.projects, to: a.to, days: a.days, now }, timing, cache));
+  process.stdout.write(`${a.json ? JSON.stringify(t, null, 2) : renderTrend(t, a.color)}\n`);
   return 0;
 }
 

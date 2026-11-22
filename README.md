@@ -50,6 +50,7 @@ Restart Claude Code to load the plugin. With a Homebrew Bun, put `~/.bun/bin` on
 cogload                      # the last 7 days
 cogload yesterday --explain  # one day, with the components behind each index
 cogload card                 # the picture
+cogload trend                # the last four weeks in one screen
 ```
 
 ## What it looks like

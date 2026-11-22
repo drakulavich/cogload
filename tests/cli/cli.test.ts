@@ -142,7 +142,7 @@ describe("cli", () => {
     expect(await line("--from", "2026-09-20", "--to", "2026-09-14")).toBe("cogload: --from 2026-09-20 is after --to 2026-09-14");
     expect(await line("--from", "2026-06-01", "--to", "2026-09-14")).toBe("cogload: --from 2026-06-01 to 2026-09-14 is 106 days; the most is 90");
     expect(await line("today", "--days", "3")).toBe("cogload: --days, --from and --to do not apply to a named day");
-    expect(await line("week")).toBe("cogload: unknown command week (try today, yesterday, a date, card or status)");
+    expect(await line("week")).toBe("cogload: unknown command week (try today, yesterday, a date, card, trend or status)");
     for (const args of [["2099-01-01"], ["--to", "2099-01-01"], ["--from", "2099-01-01"], ["card", "--to", "2099-01-01"]]) {
       expect([args.join(" "), ...(await first(...args))]).toEqual([args.join(" "), 2, "cogload: 2099-01-01 is in the future"]);
     }
@@ -150,7 +150,7 @@ describe("cli", () => {
 
   test("a usage error never echoes a path or an escape, only a short plain value", async () => {
     const line = async (...args: string[]) => (await first(...args))[1];
-    expect(await line(join(root, "secret"))).toBe("cogload: unknown command (try today, yesterday, a date, card or status)");
+    expect(await line(join(root, "secret"))).toBe("cogload: unknown command (try today, yesterday, a date, card, trend or status)");
     expect(await line("--to", "/Users/someone/2026-09-14")).toBe("cogload: --to must be YYYY-MM-DD, today or yesterday");
     expect(await line("--days", "\x1b[31m7")).toBe("cogload: --days must be 1..90");
     expect(await line("--bogus\n")).toBe("cogload: unknown flag");

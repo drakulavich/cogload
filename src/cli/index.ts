@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { openCache } from "../lib/transcripts/index.ts";
 import type { Timing } from "../lib/report/index.ts";
 import { HelpRequested, HINT, parseArgs, USAGE, UsageError, VersionRequested } from "./args.ts";
-import { card, status, table } from "./commands.io.ts";
+import { card, status, table, trend } from "./commands.io.ts";
 import { timingLines } from "./timing.ts";
 
 // Read only when --version is handled, so a broken package.json fails inside
@@ -45,9 +45,11 @@ async function main(): Promise<number> {
     const code =
       a.command === "card"
         ? await card(a, now, cache, timing)
-        : a.command === "status"
-          ? await status(a, now, cache, timing)
-          : await table(a, now, cache, timing);
+        : a.command === "trend"
+          ? await trend(a, now, cache, timing)
+          : a.command === "status"
+            ? await status(a, now, cache, timing)
+            : await table(a, now, cache, timing);
     if (timing) process.stderr.write(timingLines(timing, runEnv()));
     return code;
   } finally {
