@@ -3,6 +3,7 @@ import { localDate } from "../lib/metrics/index.ts";
 export const USAGE = `usage: cogload [window]                 the last 7 days, one cell per hour
        cogload today|yesterday|<date>   one day, one row per active hour
        cogload card [window] [--out]    the last 14 days as one picture
+       cogload trend [window]           the last 28 days in one screen
        cogload status                   write today's load for a status line
 
 window:
@@ -28,7 +29,7 @@ bugs, ideas and a star: github.com/drakulavich/cogload`;
 export const HINT = "run 'cogload --help' for usage";
 
 export type Args = {
-  command: "grid" | "day" | "card" | "status";
+  command: "grid" | "day" | "card" | "trend" | "status";
   to: string;
   days: number;
   explain: boolean;
@@ -191,7 +192,7 @@ export function parseArgs(argv: string[], now: Date, env: Record<string, string 
   if (positional.length > 1) throw new UsageError(`unexpected argument${named(positional[1]!)}`);
   const [word] = positional;
   if (word === undefined) a.command = "grid";
-  else if (word === "card") a.command = "card";
+  else if (word === "card" || word === "trend") a.command = word;
   else if (word === "status") {
     a.command = "status";
     a.to = localDate(now);
@@ -200,16 +201,16 @@ export function parseArgs(argv: string[], now: Date, env: Record<string, string 
     a.command = "day";
     a.to = resolveDate("date", word, now);
     a.days = 1;
-  } else throw new UsageError(`unknown command${named(word)} (try today, yesterday, a date, card or status)`);
+  } else throw new UsageError(`unknown command${named(word)} (try today, yesterday, a date, card, trend or status)`);
 
   if (a.command === "day" || a.command === "status") {
     if (days !== null || from !== null || to !== null)
       throw new UsageError(`--days, --from and --to do not apply to ${a.command === "day" ? "a named day" : "status"}`);
   } else {
-    ({ to: a.to, days: a.days } = windowOf(days, from, to, a.command === "card" ? 14 : 7, now));
+    ({ to: a.to, days: a.days } = windowOf(days, from, to, a.command === "card" ? 14 : a.command === "trend" ? 28 : 7, now));
   }
-  // The card is a file either way, so only an explicit --json switches it.
-  a.json = a.command === "card" ? jsonFlag : jsonFlag || !isTTY;
+  // The card is a file and a trend something to paste, so only an explicit --json switches them.
+  a.json = a.command === "card" || a.command === "trend" ? jsonFlag : jsonFlag || !isTTY;
   if (a.command !== "day" && a.explain) throw new UsageError("--explain applies to a named day only");
   if (a.command !== "card" && a.out !== null) throw new UsageError("--out applies to card only");
   if (a.json && a.out !== null) throw new UsageError("--json writes no file; drop --out");

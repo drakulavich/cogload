@@ -1,5 +1,5 @@
 import { formatCount, plural } from "./format.ts";
-import { levelOf, overOf } from "../metrics/index.ts";
+import { levelOf, overOf, type Trend } from "../metrics/index.ts";
 import type { Day, HourBucket, Level, Part } from "../types.ts";
 
 const GLYPH: Record<Level, string> = { Calm: "░", Warming: "▒", Heating: "▓", Fried: "█" };
@@ -14,8 +14,8 @@ const hm = (min: number) => `${Math.floor(min / 60)}h${String(min % 60).padStart
 const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 // Marks the snapshot time on the open day, so two runs minutes apart are
 // explained rather than silently disagreeing.
-const snapshotLine = (d: Day | undefined, color: boolean): string[] =>
-  d?.asOf ? [dim(`  as of ${hhmm(new Date(d.asOf))}, this hour is still running`, color)] : [];
+const snapshotLine = (asOf: string | undefined, color: boolean): string[] =>
+  asOf ? [dim(`  as of ${hhmm(new Date(asOf))}, this hour is still running`, color)] : [];
 // The weekday of the calendar date, in UTC: a date the local zone skipped
 // has no local midnight to ask.
 const label = (date: string) => {
@@ -49,17 +49,7 @@ export function renderWeek(days: Day[], color: boolean): string {
     color,
   );
   // Today need not be the last row: --to may name a later day.
-  return [
-    header,
-    ...rows,
-    "",
-    legend,
-    totals,
-    ...snapshotLine(
-      days.find((d) => d.asOf),
-      color,
-    ),
-  ].join("\n");
+  return [header, ...rows, "", legend, totals, ...snapshotLine(days.find((d) => d.asOf)?.asOf, color)].join("\n");
 }
 
 const fmtTokens = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
@@ -128,7 +118,7 @@ export function renderDay(day: Day, opts: { explain: boolean; color: boolean }):
   const active = day.buckets.filter((b) => b.score !== null);
   // The snapshot line still shows on an empty open day, or a run at 09:00 and
   // one at 18:00 would print the identical line.
-  if (active.length === 0) return [`no activity on ${day.date}`, ...snapshotLine(day, opts.color)].join("\n");
+  if (active.length === 0) return [`no activity on ${day.date}`, ...snapshotLine(day.asOf, opts.color)].join("\n");
 
   const visible = cols.filter(([name, , f]) => !EVENT_COLS.has(name) || active.some((b) => f(b) !== "0"));
   const leftOut = cols.filter((col) => EVENT_COLS.has(col[0]) && !visible.includes(col));
@@ -149,10 +139,41 @@ export function renderDay(day: Day, opts: { explain: boolean; color: boolean }):
     lines.push(dim(note, opts.color));
   }
   if (opts.explain && active.some((b) => Object.keys(overOf(b)).length > 0)) lines.push(dim(OVER_LEGEND, opts.color));
-  lines.push(...snapshotLine(day, opts.color));
+  lines.push(...snapshotLine(day.asOf, opts.color));
   return lines.join("\n");
 }
 
 export function renderJson(data: Day[] | Day): string {
   return JSON.stringify(data, null, 2);
+}
+
+export function renderTrend(t: Trend, color: boolean): string {
+  const head = `${label(t.from)} to ${label(t.to)}, ${plural(t.days, "day")}: ${plural(t.hours, "hour")} with a session, ${hm(t.activeMin)} active`;
+  if (t.hours === 0)
+    return [head, t.from === t.to ? `no activity on ${t.to}` : `no activity from ${t.from} to ${t.to}`, ...snapshotLine(t.asOf, color)].join("\n");
+  const levels = LEVELS.map((l) => {
+    const name = LEVEL_NAME[l];
+    const share = `${Math.round((100 * t.levels[l]) / t.hours)}%`;
+    return `${paint(name, l, color)}${" ".repeat(11 - name.length)}${String(t.levels[l]).padStart(5)}${share.padStart(7)}`;
+  });
+  const weeks = t.weeks.map(
+    (w) =>
+      `${label(w.from).padEnd(12)}${String(w.days).padStart(4)}${String(w.hours).padStart(7)}${hm(w.activeMin).padStart(8)}${String(w.hot).padStart(10)}${String(w.prompts).padStart(9)}`,
+  );
+  const sessions = t.bySessions.map(
+    (s) => `${(s.sessions === 5 ? "5+" : String(s.sessions)).padEnd(10)}${String(s.hours).padStart(5)}${(s.mean === null ? "-" : String(s.mean)).padStart(12)}`,
+  );
+  return [
+    head,
+    "",
+    "level      hours  share",
+    ...levels,
+    "",
+    "week from   days  hours  active  heating+  prompts",
+    ...weeks,
+    "",
+    "sessions  hours  mean index",
+    ...sessions,
+    ...snapshotLine(t.asOf, color),
+  ].join("\n");
 }
