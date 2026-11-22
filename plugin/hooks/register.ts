@@ -170,7 +170,7 @@ const skipsLeft = (spent: number): string => {
   return n === 0 ? "no skips left" : `${plural(n, "skip")} left`;
 };
 
-const timesSince = async ($: EngineInterface, key: "rests" | "queueSends", since: number): Promise<number[]> => {
+const timesSince = async ($: EngineInterface, key: "rests" | "queueSends" | "fourthHolds", since: number): Promise<number[]> => {
   const list = await $.store.get(key);
   return Array.isArray(list) ? (list as number[]).filter((at) => at > since) : [];
 };
@@ -198,6 +198,7 @@ const holdIfFourth = async ($: EngineInterface, now: number): Promise<number | n
   const isArmed = typeof seen !== "number" || now - seen >= HOUR_MS;
   if (!isArmed || (await $.session.turns()) !== 0) return null;
   await $.store.set("fourSeenAt", now);
+  await $.store.set("fourthHolds", [...(await timesSince($, "fourthHolds", now - WEEK_MS)), now]);
   await update($, holdUntil, () => now + reading.restMin * 60_000);
   return reading.restMin;
 };
@@ -234,10 +235,12 @@ const weekLine = async ($: EngineInterface, now: number): Promise<string | null>
   const rests = await restsSince($, weekStart(now) - 1);
   const skips = await skipsThisWeek($, now);
   const sends = await timesSince($, "queueSends", weekStart(now) - 1);
-  if (rests.length === 0 && skips.length === 0 && sends.length === 0) return null;
+  const holds = await timesSince($, "fourthHolds", weekStart(now) - 1);
+  if (rests.length === 0 && skips.length === 0 && sends.length === 0 && holds.length === 0) return null;
   const pushed = skips.filter((o) => rests.some((at) => at <= o.at));
   const queuedSent = sends.length === 0 ? "" : `, ${plural(sends.length, "queued prompt")} sent`;
-  const taken = `This week: ${plural(rests.length - pushed.length, "rest")} taken${queuedSent}`;
+  const fourthHeld = holds.length === 0 ? "" : `, ${plural(holds.length, "fourth-session hold")}`;
+  const taken = `This week: ${plural(rests.length - pushed.length, "rest")} taken${queuedSent}${fourthHeld}`;
   const newest = skips.at(-1);
   const skipped = newest === undefined ? "" : `, ${skips.length} skipped (last: "${newest.reason}")`;
   return `${taken}${skipped}, ${skipsLeft(skips.length)}.`;
@@ -427,10 +430,14 @@ export const register: Register = (on) => {
     if (e.props.hasSurvey || s === null || s.index === null || s.level === null) return beneath;
     const now = await $.clock.now();
     const until = await restUntil($, now);
+    const hold = await holdingUntil($, now);
     const isAhead = until === null && s.restAt !== null && Date.parse(s.restAt) > Date.parse(s.asOf) && !(await isSpent($, s));
     const parts: string[] = [];
     if (until !== null) {
       parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`);
+      if (e.props.bodyColumns >= NARROW) parts.push(skipsLeft((await skipsThisWeek($, now)).length));
+    } else if (hold !== null) {
+      parts.push(`4th session until ${clockTime(hold)} (${Math.ceil((hold - now) / 60_000)} min)`);
       if (e.props.bodyColumns >= NARROW) parts.push(skipsLeft((await skipsThisWeek($, now)).length));
     } else if (isAhead && s.restAt !== null) parts.push(`rest at ${clockTime(Date.parse(s.restAt))}`);
     else if (e.props.bodyColumns >= NARROW && s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`);

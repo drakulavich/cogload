@@ -1668,10 +1668,12 @@ describe("fourth session", () => {
     return { box, enter, open: () => (other = new Map()) };
   };
 
-  test("the first prompt of a session with three others this hour waits ten minutes", async ($, on) => {
-    const { enter } = setup(on);
+  test("the first prompt of a session with three others this hour waits ten minutes, and the week keeps its start", async ($, on) => {
+    const store: Record<string, unknown> = { fourthHolds: [NOW - 8 * DAY_MS, NOW - 6 * DAY_MS] };
+    const { enter } = setup(on, [three()], store);
     await start($);
     expect(await enter($, "plan")).toEqual(HELD_FOURTH(NOW + REST_MS));
+    expect(store.fourthHolds).toEqual([NOW - 6 * DAY_MS, NOW]);
   });
 
   for (const [name, fields, sent] of [
@@ -1752,6 +1754,34 @@ describe("fourth session", () => {
     expect(await enter($, "skip: need it right now")).toEqual(EMPTY(NOW + REST_MS));
     expect(store.overrides).toEqual(FIVE);
     expect((await enter($, "next")).drop).toStartWith(`Queued for ${hhmm(NOW + REST_MS)}.`);
+  });
+
+  for (const [columns, shown] of [
+    [50, `● Heating · 4th session until ${hhmm(NOW + REST_MS)} (7 min) · 5 skips left`],
+    [49, `● Heating · 4th session until ${hhmm(NOW + REST_MS)} (7 min)`],
+  ] as const) {
+    test(`the band of a held session at ${columns} columns`, async ($, on) => {
+      const { enter } = setup(on);
+      await start($);
+      await enter($, "plan");
+      await clock.advance(3 * 60_000);
+      expect(await band($, { bodyColumns: columns })).toBe(shown);
+    });
+  }
+
+  test("a rest during the hold shows the rest band", async ($, on) => {
+    const store: Record<string, unknown> = {};
+    const { enter } = setup(on, [three()], store);
+    await start($);
+    await enter($, "plan");
+    store.restUntil = NOW + 5 * 60_000;
+    expect(await band($)).toBe(`● Heating · rest until ${hhmm(NOW + 5 * 60_000)} (5 min) · 5 skips left`);
+  });
+
+  test("two holds this week and nothing else show the week line", async ($, on) => {
+    expect(await explain($, on, { stdout: today(null) }, { fourthHolds: [MONDAY + HOUR, MONDAY + 2 * HOUR] })).toBe(
+      "Nothing scored this hour.\nThis week: 0 rests taken, 2 fourth-session holds, 5 skips left.",
+    );
   });
 
   for (const [name, runs, kind] of [
