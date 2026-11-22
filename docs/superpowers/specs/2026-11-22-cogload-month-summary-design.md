@@ -207,8 +207,7 @@ buckets. The JSON above is 1.4 KB for 30 days.
 No chart, no comparison between two windows, no per-project split, no new
 field on `Day`, no change to the grid or its JSON. `trend` does not pick the
 window's weeks by the calendar. No rests (#255). No count of capped hours:
-no output reproduces the issue's 130, 109 and 108 capped hours any more;
-`--explain` (section 2) shows how far over each hour's parts are.
+no output reproduces the issue's 130, 109 and 108 capped hours any more.
 
 ### 1g. Definition of Done
 
