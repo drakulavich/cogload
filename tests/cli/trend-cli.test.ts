@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { prompt, writeTree } from "../helpers/transcript.ts";
 
 const CLI = join(import.meta.dir, "../../src/cli/index.ts");
 const projects = join(import.meta.dir, "../fixtures/busy-week/projects");
@@ -146,6 +147,44 @@ describe("cogload trend", () => {
     expect(lines.slice(1)).toEqual([`no activity on ${today}`, expect.stringMatching(/^ {2}as of \d\d:\d\d, this hour is still running$/)]);
     const j = JSON.parse((await runIn(empty, "trend", "--days", "1", "--json")).out);
     expect(j.asOf).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+  });
+
+  // One prompt from each of six sessions, at 10:00 to 10:05.
+  const sixSessions = async (day: string, hour: string): Promise<string> => {
+    const dir = await mkdtemp(join(tmpdir(), "cogload-trend-six-"));
+    const at = (i: number) => `${day}T${hour}:0${i}:00.000Z`;
+    await writeTree(
+      dir,
+      [1, 2, 3, 4, 5, 6].map((n, i) => ({
+        path: `-Users-me-six/${n}.jsonl`,
+        lines: [prompt(at(i), `${String(n).repeat(8)}-6666-4666-8666-666666666666`)],
+        mtime: at(i),
+      })),
+    );
+    return dir;
+  };
+
+  test("an hour of six sessions lands in the 5+ row", async () => {
+    const dir = await sixSessions("2026-09-14", "10");
+    try {
+      const text = await runIn(dir, "trend", "--days", "1", "--to", "2026-09-14", "--no-color");
+      expect(text.out.trimEnd().split("\n").at(-1)).toBe("5+            1          34");
+      const j = JSON.parse((await runIn(dir, "trend", "--days", "1", "--to", "2026-09-14", "--json")).out);
+      expect(j.bySessions[4]).toEqual({ sessions: 5, hours: 1, mean: 34 });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a window that holds today and has hours ends with the as-of line after the tables", async () => {
+    const now = new Date(Date.now() - 6 * 60_000).toISOString();
+    const dir = await sixSessions(now.slice(0, 10), now.slice(11, 13));
+    try {
+      const lines = (await runIn(dir, "trend", "--days", "2", "--no-color")).out.trimEnd().split("\n");
+      expect(lines.slice(-2)).toEqual([expect.stringMatching(/^5\+ {12}1 /), expect.stringMatching(/^ {2}as of \d\d:\d\d, this hour is still running$/)]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   test("--explain and --out are usage errors with trend", async () => {
