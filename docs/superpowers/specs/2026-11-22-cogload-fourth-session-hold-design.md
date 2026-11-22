@@ -48,8 +48,9 @@ After this change:
 6. A Remote Control prompt passes, as during a rest, with no note. A fresh
    session whose reading is missing or older than 5 minutes (`STALE_MS`), or
    whose cogload is older than this field, is not held.
-7. Each hold adds its start to the store key `fourthHolds`, kept for a week;
-   the `/cogload` week line counts them, and a hold alone shows the line.
+7. Each hold adds its start to the store key `fourthHolds`, kept for a week,
+   negated when a skip lifts it; the `/cogload` week line counts both, and a
+   hold alone shows the line.
 
 ## Approaches
 
@@ -70,12 +71,8 @@ already drop out of A in the parser (`isSidechain`, `entrypoint` `sdk-`, the
 `bg` dedupe of `2026-10-17-cogload-copied-history-design.md`). No new filter.
 The plugin only sees composer and bridge prompts, so a scripted session is
 never held either. A `/clear` starts a new session id with `turns() === 0`,
-and the index counts it as a new session, so the hold does too.
-
-"Fresh" is `$.session.turns() === 0` inside `prompt.submit`: the engine's
-count of user prompts in the transcript. A `--resume` session has more and is
-never held. A fresh session has written no record yet, so the live count holds
-only the other sessions, and 3 means this prompt makes four.
+and the index counts it as a new session, so the hold does too. A `--resume`
+session has `turns() > 0` and is never held.
 
 ### 2. When the hold ends
 
@@ -120,9 +117,6 @@ an amount the hourly JSON cannot give:
 - Either: hours when no session ran the plugin write no `fourSeenAt`; the
   accepted race adds a second hold now and then.
 
-`fourthHolds` gives the real rate after two weeks; the exact past count needs
-an output that is out of scope here.
-
 ## The hold's states
 
 ```mermaid
@@ -157,10 +151,14 @@ stateDiagram-v2
   the race is accepted. A per-minute write that overlaps the hold's can set
   the latch back by its reading's age (a minute, at most five), so it re-arms
   that much early; a lost per-minute write is repeated the next minute.
-- **`fourthHolds`**, a new store key: a list of numbers, the start of each hold
-  for seven days, trimmed on each write as `rests` is. About 14 bytes an
-  entry; 12 a week at work is about 170 bytes. Only the race above writes it
-  twice at once; the lost entry then counts that crossing once, which is right.
+- **`fourthHolds`**, a new store key: a list of numbers for seven days,
+  trimmed on each write as `rests` is. Each is a hold's start, negated when
+  a skip lifted it. At 12 holds a week: objects `{"at":…,"skipped":false}`
+  take 37 bytes an entry (about 440 a week); parallel lists of starts and
+  skips take 14, plus 14 per lifted hold, in two keys kept in step; the sign
+  takes 14, plus 1 per lifted hold (168 to 180 a week), in one key whose type, a list of numbers, is
+  final from its first release. The sign is chosen. Only the race above
+  writes it twice at once; the lost entry then counts that crossing once.
 - **`holdUntil`** (a number) and **`asked`** (a boolean) in the session's
   `$.state`, in memory only, typed beside `queued` in `PluginState`: the hold
   is this session's, and the store is shared.
@@ -173,21 +171,22 @@ plugin README's minimum cogload moves to the release with `sessions`.
 
 The held prompt's answer, in the held session:
 `Queued for 14:52. Three other sessions ran this hour: a fourth waits 10 min. It stays in the box, and goes as it reads then.`
+The time is the later of the hold's end and a running rest's (rule 5); a rest
+that starts later moves it, and the band then shows the rest.
 With an attachment:
 `Three other sessions ran this hour: a fourth waits 10 min. Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.`
 
-The band, in the held session only:
+The band, in the held session, with no rest running (during a rest it is
+today's rest band, whichever ends first):
 
-| | 50 columns or wider | Narrower |
-|---|---|---|
-| Hold | `● Warming · 4th session until 14:52 (7 min) · 5 skips left` | `● Warming · 4th session until 14:52 (7 min)` |
-| Hold and a rest ending first | `● Heating · rest until 14:48 · 4th session until 14:52 (11 min)` | `● Heating · 4th session until 14:52 (11 min)` |
-| Hold inside a longer rest | today's rest band: `● Heating · rest until 14:55 (14 min) · 3 skips left` | `● Heating · rest until 14:55 (14 min)` |
+| 50 columns or wider | Narrower |
+|---|---|
+| `● Warming · 4th session until 14:52 (7 min) · 5 skips left` | `● Warming · 4th session until 14:52 (7 min)` |
 
 The other sessions show today's band. The `/cogload` week line gains the holds
 after the queued sends when there is one, and a hold alone is enough for the
 line to appear (today it needs a rest or a skip), so the measure below always
-has its number: `This week: 0 rests taken, 2 fourth-session holds, 5 skips left.`
+has its numbers: `This week: 0 rests taken, 2 fourth-session holds (1 lifted), 1 skipped (last: "need it right now"), 4 skips left.`
 
 ## Not in scope
 
@@ -200,10 +199,12 @@ has its number: `This week: 0 rests taken, 2 fourth-session holds, 5 skips left.
 
 ## Measure after a month
 
-From the release date, `cogload trend --days 30` on the work Mac: the share of
-active hours in the `4` and `5+` rows against 61% (190 of 310) before. Beside
-it, the holds per week from the `/cogload` week line against the 8 to 12
-crossings measured above.
+Thirty days after the release, `cogload trend --days 30` on the work Mac gives
+the share of active hours in the `4` and `5+` rows against 61% (190 of 310),
+and the week lines give the holds and how many a skip lifted. The hold is
+removed when both are true: the share is still above 56% (it fell less than 5 points), and more than
+half the holds were lifted by a skip. With one of the two, it stays a month and is
+judged once more. These two thresholds are proposed, for the owner to approve.
 
 ## Testing strategy
 
@@ -222,26 +223,24 @@ clock and store, `$.session.turns()` answered with `on("session.turns")`.
 6. A held session and a rest ending 4 minutes after the hold → nothing at the
    hold's end; the box goes at the rest's end.
 7. `skip: need it right now` in a held session → passes, `overrides` gains
-   one; with five skips this week → the empty-powerbank text, still held.
+   one, the hold's `fourthHolds` entry turns negative; with five skips this
+   week → the empty-powerbank text, still held, the entry stays positive.
 8. A bridge prompt, a reading 6 minutes old, a reading without `sessions` →
    each passes, and no older-cogload toast.
 9. A tick with `sessions: 4` writes `fourSeenAt`, keeping a newer stored
    value; with 3 it writes nothing.
-10. The band rows above at 50 and 49 columns. `fourthHolds` with two entries
-    this week and no rest, skip or send → the week line reads
-    `This week: 0 rests taken, 2 fourth-session holds, 5 skips left.`
+10. The hold band at 50 and 49 columns; a hold during a rest shows the rest
+    band. `fourthHolds` with two entries this week, nothing else → `This
+    week: 0 rests taken, 2 fourth-session holds (0 lifted), 5 skips left.`;
+    after case 7's skip → `(1 lifted)`, which fails if the skip is not recorded.
 11. `cogload status` on a fixture with three sessions in the hour → the line
     ends `"restMin":10,"sessions":3}`.
 
-First step, before the code: a throwaway plugin whose `prompt.submit` hook
-drops the prompt with `turns=<n>` as its answer, loaded with
-`claude --plugin-dir` in an interactive session. Type one prompt in a new
-session and read the number. 0 keeps the predicate `turns() === 0`; 1 means
-the count includes the prompt being submitted, and the predicate becomes
-`turns() === 1` (`asked` already keeps later prompts out). The tests answer
-`session.turns` themselves, so only this run shows the engine's value. On
-2.1.330 a `-p` run answered the prompt without the probe's hook running, so
-it cannot stand in for the interactive one.
+First step, before the code: a throwaway plugin whose `prompt.submit` drops
+the prompt with `turns=<n>` as its answer, in an interactive
+`claude --plugin-dir` session (a `-p` run on 2.1.330 never ran the hook).
+Type one prompt and read the number: 0 keeps `turns() === 0`; 1 makes the
+predicate `turns() === 1`. The tests answer `session.turns` themselves.
 
 ## Definition of Done
 
