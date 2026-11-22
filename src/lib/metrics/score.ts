@@ -34,15 +34,27 @@ export function score(m: Metrics): Score | null {
   return m.sessions === 0 ? null : scoreOf(fractionsOf(m));
 }
 
+function rawOf(m: Metrics): Record<Exclude<Part, "late">, number> {
+  return {
+    parallel: (m.sessions - 1) / NORMS.parallelSpan,
+    pace: m.prompts / NORMS.pacePerHour,
+    // A decision costs `decisionWeight` reports or session hops; the three share a norm.
+    supervision: (NORMS.decisionWeight * m.decisions + m.reports + m.contextSwitches) / NORMS.supervisionPerHour,
+    reading: m.outputTokens / NORMS.readingTokens,
+    streak: m.streakMin / NORMS.streakMin,
+  };
+}
+
 export function fractionsOf(m: Metrics): Fractions {
-  const parallel = clamp01((m.sessions - 1) / NORMS.parallelSpan);
-  const pace = clamp01(m.prompts / NORMS.pacePerHour);
-  // A decision costs `decisionWeight` reports or session hops; the three share a norm.
-  const supervision = clamp01((NORMS.decisionWeight * m.decisions + m.reports + m.contextSwitches) / NORMS.supervisionPerHour);
-  const reading = clamp01(m.outputTokens / NORMS.readingTokens);
-  const streak = clamp01(m.streakMin / NORMS.streakMin);
-  const late = m.lateNight ? 1 : 0;
-  return { parallel, pace, supervision, reading, streak, late };
+  const r = rawOf(m);
+  return {
+    parallel: clamp01(r.parallel),
+    pace: clamp01(r.pace),
+    supervision: clamp01(r.supervision),
+    reading: clamp01(r.reading),
+    streak: clamp01(r.streak),
+    late: m.lateNight ? 1 : 0,
+  };
 }
 
 export function scoreOf(fractions: Fractions): Score {
