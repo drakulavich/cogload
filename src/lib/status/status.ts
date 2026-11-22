@@ -1,7 +1,7 @@
 import { GAP_MS, MAX_STREAK_MIN, NORMS } from "../metrics/index.ts";
 import type { Day, Level } from "../types.ts";
 
-// The status file's eleven values. The field order is the file format.
+// The status file's twelve values. The field order is the file format.
 export type Status = {
   schema: 1;
   asOf: string;
@@ -14,6 +14,7 @@ export type Status = {
   streakMin: number;
   restAt: string | null;
   restMin: number;
+  sessions: number;
 };
 
 // How far back `status` reads to find where the live streak began: as far as
@@ -44,6 +45,7 @@ export function statusOf(day: Day, now: Date): Status {
     streakMin,
     restAt: streakMin > 0 ? new Date(Date.parse(day.presence!.streakStartAt) + NORMS.streakMin * 60000).toISOString() : null,
     restMin: GAP_MS / 60000,
+    sessions: day.live?.sessions ?? 0,
   };
 }
 
