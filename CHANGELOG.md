@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-22
+
+### Added
+- `cogload trend [window]` shows a window in one screen: the share of hours
+  by level, one line per week and the mean index by sessions in the hour.
+  It covers the last 28 days by default and prints text even in a pipe;
+  `--json` prints the counts. (#256)
+- `--explain` now shows how far over its norm a part at its cap is:
+  `25 2.5×` for an hour with 11 sessions, where it printed `25` as for 5.
+  The index, the plain day table and the JSON are unchanged. (#254)
+
 ## [0.16.1] - 2026-11-19
 
 ### Fixed
