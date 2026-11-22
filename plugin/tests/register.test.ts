@@ -55,6 +55,8 @@ let paths: (string | undefined)[] = [];
 let sent: string[] = [];
 // What the engine answers the plugin's next own prompt with, in place of entering it.
 let refusals: (string | Error)[] = [];
+// What `$.session.turns()` answers: the user prompts the session has sent.
+let turns = 0;
 
 // The engine beneath the plugin: each queued answer is one `cogload status` run, or one `cogload today --json` from todayRuns; binRuns answers BIN.
 const engine = (
@@ -75,6 +77,7 @@ const engine = (
   paths = [];
   sent = [];
   refusals = [];
+  turns = 0;
   on("store.get", (_$, e) => ({ value: store[e.key] }));
   on("store.set", (_$, e) => {
     store[e.key] = e.value;
@@ -100,6 +103,7 @@ const engine = (
     return { value: undefined };
   });
   on("session.start", () => ({ cwd: "/" }));
+  on("session.turns", () => ({ value: turns }));
   on("turn.complete", () => ({ text: "" }));
   on("ui.log", (_$, e) => {
     logs.push(e.text);
@@ -1633,4 +1637,178 @@ describe("queued prompts", () => {
     await clock.advance(60_000);
     expect(sent).toEqual(["plan"]);
   });
+});
+
+describe("fourth session", () => {
+  const FOURTH = "Three other sessions ran this hour: a fourth waits 10 min.";
+  const HELD_FOURTH = (until: number) => ({ drop: `Queued for ${hhmm(until)}. ${FOURTH} ${QUEUED}` });
+  const three = (fields: Record<string, unknown> = {}) => ({ stdout: line({ sessions: 3, ...fields }) });
+  // The box as Claude Code keeps it, and a second session: from open(), this plugin's $.state starts empty again while the store stays shared.
+  const setup = (on: On, runs: Run[] = [three()], store: Record<string, unknown> = {}, toasts: string[] = []) => {
+    const box = { text: "" };
+    engine(on, runs, [], toasts, store);
+    on("prompt.read", () => ({ value: { text: box.text, cursor: box.text.length } }));
+    on("prompt.fill", (_$, e) => {
+      box.text = e.text;
+      return { isFilled: true };
+    });
+    let other: Map<string, { value: unknown; version: number }> | null = null;
+    on("state.get", (_$, e, next) => (other === null ? next(e) : { value: other.get(e.key) ?? { value: undefined, version: 0 } }));
+    on("state.set", (_$, e, next) => {
+      if (other === null) return next(e);
+      const version = (other.get(e.key)?.version ?? 0) + 1;
+      other.set(e.key, { value: e.value, version });
+      return { value: { isSet: true, version } };
+    });
+    const enter = async ($: Engine, text: string) => {
+      const r = await typed($, text);
+      box.text = r.drop === undefined ? "" : text;
+      return r;
+    };
+    return { box, enter, open: () => (other = new Map()) };
+  };
+
+  test("the first prompt of a session with three others this hour waits ten minutes, and the week keeps its start", async ($, on) => {
+    const store: Record<string, unknown> = { fourthHolds: [NOW - 8 * DAY_MS, NOW - 6 * DAY_MS] };
+    const { enter } = setup(on, [three()], store);
+    await start($);
+    expect(await enter($, "plan")).toEqual(HELD_FOURTH(NOW + REST_MS));
+    expect(store.fourthHolds).toEqual([NOW - 6 * DAY_MS, NOW]);
+  });
+
+  for (const [name, fields, sent] of [
+    ["two others", { sessions: 2 }, 0],
+    ["four others", { sessions: 4 }, 0],
+    ["a resumed session", { sessions: 3 }, 1],
+  ] as const) {
+    test(`${name}: the first prompt goes as typed`, async ($, on) => {
+      const { enter } = setup(on, [{ stdout: line(fields) }]);
+      turns = sent;
+      await start($);
+      expect(await enter($, "plan")).toEqual({ text: "plan" });
+    });
+  }
+
+  for (const [minutesAgo, expected] of [
+    [59, { text: "plan" }],
+    [60, HELD_FOURTH(NOW + REST_MS)],
+    [61, HELD_FOURTH(NOW + REST_MS)],
+  ] as const) {
+    test(`four sessions last seen ${minutesAgo} minutes ago: ${"text" in expected ? "passes" : "held"}`, async ($, on) => {
+      const { enter } = setup(on, [three()], { fourSeenAt: NOW - minutesAgo * 60_000 });
+      await start($);
+      expect(await enter($, "plan")).toEqual(expected);
+    });
+  }
+
+  test("a fresh session a minute after a hold started passes, on the same reading", async ($, on) => {
+    const { enter, open } = setup(on, [three(), three({ asOf: iso(NOW + 30_000) })]);
+    await start($);
+    expect(await enter($, "plan A")).toEqual(HELD_FOURTH(NOW + REST_MS));
+    open();
+    await clock.advance(60_000);
+    await start($);
+    expect(await enter($, "plan B")).toEqual({ text: "plan B" });
+  });
+
+  test("the box goes once at the hold's end, and a prompt after it goes as typed", async ($, on) => {
+    const { enter } = setup(on);
+    await start($);
+    await enter($, "plan");
+    await clock.advance(REST_MS - 60_000);
+    expect(sent).toEqual([]);
+    await clock.advance(60_000);
+    expect(sent).toEqual(["plan"]);
+    await clock.advance(60_000);
+    expect(sent).toEqual(["plan"]);
+    expect(await enter($, "next")).toEqual({ text: "next" });
+  });
+
+  test("a rest ending four minutes after the hold sends the box at the rest's end", async ($, on) => {
+    const store: Record<string, unknown> = {};
+    const { enter } = setup(on, [three()], store);
+    await start($);
+    await enter($, "plan");
+    store.restUntil = NOW + REST_MS + 4 * 60_000;
+    await clock.advance(REST_MS);
+    expect(sent).toEqual([]);
+    await clock.advance(4 * 60_000);
+    expect(sent).toEqual(["plan"]);
+  });
+
+  test("a skip lifts the hold and spends one of the five", async ($, on) => {
+    const store: Record<string, unknown> = {};
+    const { enter } = setup(on, [three()], store);
+    await start($);
+    await enter($, "plan");
+    expect(await enter($, "skip: need it right now")).toEqual({ text: "skip: need it right now", context: [LIFTED] });
+    expect(store.overrides).toEqual([{ at: NOW, reason: "need it right now" }]);
+    expect(await enter($, "next")).toEqual({ text: "next" });
+  });
+
+  test("a skip with the powerbank empty gets its text, and the hold runs on", async ($, on) => {
+    const store: Record<string, unknown> = { overrides: [...FIVE] };
+    const { enter } = setup(on, [three()], store);
+    await start($);
+    await enter($, "plan");
+    expect(await enter($, "skip: need it right now")).toEqual(EMPTY(NOW + REST_MS));
+    expect(store.overrides).toEqual(FIVE);
+    expect((await enter($, "next")).drop).toStartWith(`Queued for ${hhmm(NOW + REST_MS)}.`);
+  });
+
+  for (const [columns, shown] of [
+    [50, `● Heating · 4th session until ${hhmm(NOW + REST_MS)} (7 min) · 5 skips left`],
+    [49, `● Heating · 4th session until ${hhmm(NOW + REST_MS)} (7 min)`],
+  ] as const) {
+    test(`the band of a held session at ${columns} columns`, async ($, on) => {
+      const { enter } = setup(on);
+      await start($);
+      await enter($, "plan");
+      await clock.advance(3 * 60_000);
+      expect(await band($, { bodyColumns: columns })).toBe(shown);
+    });
+  }
+
+  test("a rest during the hold shows the rest band", async ($, on) => {
+    const store: Record<string, unknown> = {};
+    const { enter } = setup(on, [three()], store);
+    await start($);
+    await enter($, "plan");
+    store.restUntil = NOW + 5 * 60_000;
+    expect(await band($)).toBe(`● Heating · rest until ${hhmm(NOW + 5 * 60_000)} (5 min) · 5 skips left`);
+  });
+
+  test("two holds this week and nothing else show the week line", async ($, on) => {
+    expect(await explain($, on, { stdout: today(null) }, { fourthHolds: [MONDAY + HOUR, MONDAY + 2 * HOUR] })).toBe(
+      "Nothing scored this hour.\nThis week: 0 rests taken, 2 fourth-session holds, 5 skips left.",
+    );
+  });
+
+  for (const [name, runs, kind] of [
+    ["a bridge prompt", [three()], "bridge"],
+    ["a reading six minutes old", [three({ asOf: iso(NOW - 6 * 60_000) })], "composer"],
+    ["a reading without sessions", [{ stdout: line() }], "composer"],
+  ] as const) {
+    test(`${name} is not held, and no older-cogload toast shows`, async ($, on) => {
+      const toasts: string[] = [];
+      setup(on, [...runs], {}, toasts);
+      await start($);
+      expect(await typed($, "plan", kind)).toEqual({ text: "plan" });
+      expect(toasts).not.toContain("cogload is older than this plugin: bun add -g @drakulavich/cogload@latest");
+    });
+  }
+
+  for (const [name, sessions, stored, expected] of [
+    ["4 sessions writes the reading's asOf", 4, undefined, ASOF + 60_000],
+    ["4 sessions keeps a newer fourSeenAt", 4, NOW + 30 * 60_000, NOW + 30 * 60_000],
+    ["3 sessions writes nothing", 3, undefined, undefined],
+  ] as const) {
+    test(`a tick reading ${name}`, async ($, on) => {
+      const store: Record<string, unknown> = stored === undefined ? {} : { fourSeenAt: stored };
+      engine(on, [three(), { stdout: line({ sessions, asOf: iso(ASOF + 60_000) }) }], [], [], store);
+      await start($);
+      await clock.advance(60_000);
+      expect(store.fourSeenAt).toBe(expected);
+    });
+  }
 });

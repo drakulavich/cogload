@@ -14,7 +14,7 @@ const busy = Array.from({ length: 12 }, (_, i) => {
 }).flat();
 const t = transcript([...busy, prompt("2026-09-14T14:10:00.000Z", S[0]!), assistant("2026-09-14T14:12:00.000Z", S[0]!)]);
 
-describe("status: today's load in eleven fields", () => {
+describe("status: today's load in twelve fields", () => {
   test("the last sixty minutes, and the day's peak and active time", () => {
     const now = new Date("2026-09-14T14:25:00.000Z");
     const [day] = analyze([t], { to: "2026-09-14", days: 1, now });
@@ -33,6 +33,7 @@ describe("status: today's load in eleven fields", () => {
       streakMin: 0,
       restAt: null,
       restMin: 10,
+      sessions: 3,
     });
     // The window (13:25, 14:25] holds the tail of the busy hour and the quiet
     // exchange, a quarter of it after a 15-minute break: less than the peak,
@@ -68,13 +69,14 @@ describe("status: today's load in eleven fields", () => {
       streakMin: 0,
       restAt: null,
       restMin: 10,
+      sessions: 0,
     });
   });
   test("renderStatus is one line in the spec's field order with a newline", () => {
     const now = new Date("2026-09-14T09:15:00.000Z");
     const [day] = analyze([], { to: "2026-09-14", days: 1, now });
     expect(renderStatus(statusOf(day!, now))).toBe(
-      '{"schema":1,"asOf":"2026-09-14T09:15:00.000Z","date":"2026-09-14","hour":9,"index":null,"level":null,"peak":null,"activeMin":0,"streakMin":0,"restAt":null,"restMin":10}\n',
+      '{"schema":1,"asOf":"2026-09-14T09:15:00.000Z","date":"2026-09-14","hour":9,"index":null,"level":null,"peak":null,"activeMin":0,"streakMin":0,"restAt":null,"restMin":10,"sessions":0}\n',
     );
   });
   test("the peak counts the last sixty minutes too, so the index is never above it", () => {
