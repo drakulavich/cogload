@@ -18,7 +18,7 @@ jobs:
         with:
           exclude: |
             tests/fixtures/busy-week/**
-      - uses: actions/checkout@v4.4.0
+      - uses: actions/checkout@v7.0.1
       - uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version-file: .bun-version

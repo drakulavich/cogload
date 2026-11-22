@@ -316,9 +316,12 @@ describe("day table", () => {
 
   test("--explain appends the six weighted parts, named and in order, and they add up to the index", () => {
     const lines = renderDay(monday, { explain: true, color: false }).split("\n");
-    expect(lines[0]!.endsWith("  par  pace   sup  read  strk  late")).toBe(true);
+    expect(lines[0]!.endsWith("       par      pace       sup      read      strk  late")).toBe(true);
     const row13 = lines.find((l) => l.startsWith("13:00"))!;
-    const nums = row13.trim().split(/\s+/);
+    const nums = row13
+      .replace(/ \d+\.\d×/g, "")
+      .trim()
+      .split(/\s+/);
     const index = Number(nums[1]);
     const parts = nums.slice(-6).map(Number);
     // Named by position (par, pace, sup, read, strk, late), not just their sum:
@@ -346,12 +349,51 @@ describe("day table", () => {
     // rounding of the parts is exercised at the same time.
     const lines = renderDay(tuesday, { explain: true, color: false }).split("\n");
     const row14 = lines.find((l) => l.startsWith("14:00"))!;
-    const nums = row14.trim().split(/\s+/);
+    const nums = row14
+      .replace(/ \d+\.\d×/g, "")
+      .trim()
+      .split(/\s+/);
     const index = Number(nums[1]);
     const parts = nums.slice(-6).map(Number);
     expect(parts).toEqual([6.3, 9, 7.3, 0.2, 10, 0]);
     expect(index).toBe(33);
     expect(Math.round(parts.reduce((a, b) => a + b, 0))).toBe(index);
+  });
+});
+
+describe("--explain: how far a capped part is over its norm", () => {
+  const lines = renderDay(monday, { explain: true, color: false }).split("\n");
+
+  test("a capped part's cell carries its raw value over the norm, in 10-wide part columns", () => {
+    expect(lines[0]).toBe(
+      "hour   index  level    sess  prompts  intr  rej  quest  plan  mode  ctx-sw  streak  out-tok       par      pace       sup      read      strk  late",
+    );
+    // 12:00: 5 sessions, (5 - 1)/4 = 1.0; 55 prompts, 55/20 = 2.75 -> 2.8;
+    // 3*25 decisions + 0 reports + 54 switches = 129, /45 = 2.87 -> 2.9;
+    // 55k tokens, 0.69, not capped; a 235-minute streak, 235/40 = 5.9.
+    expect(lines.find((l) => l.startsWith("12:00"))).toBe(
+      "12:00     87  Fried       5       55    20    1      1     1     2      54    235m    55.0k   25 1.0×   15 2.8×   30 2.9×       6.9   10 5.9×     0",
+    );
+  });
+
+  test("late is capped in a late hour but has no raw value, so no ratio", () => {
+    // 23:00: a 50-minute streak, 50/40 = 1.25 -> 1.3; late reads 10 with nothing after it.
+    expect(lines.find((l) => l.startsWith("23:00"))).toBe(
+      "23:00     25  Calm        1        6     0    0      0     0     0       0     50m      600         0       4.5         0       0.1   10 1.3×    10",
+    );
+  });
+
+  test("a legend line follows the rows when a ratio shows", () => {
+    expect(lines.slice(-2)).toEqual(["  no reports today", "  N× beside a part: it is at its cap, with N times what fills it"]);
+  });
+
+  test("no ratio, no legend", () => {
+    // One prompt: one session, a streak of 0 minutes, nothing at its cap.
+    const t = transcript([prompt("2026-09-14T10:00:00.000Z", "aaaaaaaa-1111-4111-8111-111111111111")]);
+    const [day] = analyze([t], { to: "2026-09-14", days: 1 });
+    const text = renderDay(day!, { explain: true, color: false });
+    expect(text.split("\n").length).toBe(3);
+    expect(text).not.toContain("×");
   });
 });
 

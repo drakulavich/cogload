@@ -16,7 +16,7 @@ Claude Code writes a JSONL transcript for every session under `~/.claude/project
 | `cogload --days 30` | The last 30 days. `--days` takes an integer from 1 to 90. |
 | `cogload --from 2026-09-01 --to 2026-09-14` | Any window, both days inclusive, at most 90 days. `--to` alone is 7 days ending there, `--days 30 --to 2026-09-14` is 30 days ending there. |
 | `cogload today` | Today, one row per hour that had activity. `yesterday` likewise. |
-| `cogload 2026-09-14 --explain` | One day, with the six weighted components behind each index. |
+| `cogload 2026-09-14 --explain` | One day, with the six weighted components behind each index, and how far over its norm a component at its cap is. |
 | `cogload card` | The last 14 days as one shareable picture, `cogload-card.png` in `~/Downloads`. |
 | `cogload card --days 30 --out me.webp` | Any window from 1 to 90 days; `.png`, `.webp` or `.html` by extension. `--json` prints the card's data instead. |
 | `cogload trend` | The last 28 days in one screen: hours with a session and active time, the share of hours at each level, one line per week (seven days counted back from `--to`), and the mean index by sessions in the hour. Any window from 1 to 90 days; `--json` prints the counts instead. |
@@ -25,7 +25,7 @@ Claude Code writes a JSONL transcript for every session under `~/.claude/project
 | Flag | What it does |
 |---|---|
 | `--days <N>`, `--from <date>`, `--to <date>` | The window. A date is `YYYY-MM-DD`, `today` or `yesterday`. `--days=30` works as well as `--days 30`. |
-| `--explain` | With a day: the six weighted parts behind each index. |
+| `--explain` | With a day: the six weighted parts behind each index. A part at its cap shows its points, then how many times its norm the raw value reached: `25 2.5×` is 11 sessions, (11 − 1) / 4. |
 | `--json` | Print the whole window as one JSON document instead of a table. |
 | `--projects <dir>` | Read this directory instead of `~/.claude/projects`. |
 | `--out <path>` | Where `card` writes instead of `~/Downloads`; the extension picks the format. |
@@ -129,6 +129,8 @@ index = round(25*parallel + 15*pace + 30*supervision + 10*reading + 10*streak + 
 
 `decisions` is the sum of interrupts, tool rejections, questions, plan reviews and permission-mode switches. Without the late-night flag the index tops out at 90. An hour with no activity has no index at all: it renders as `·` and is `null` in JSON.
 
+A part at its cap scores the same however far past its norm the hour went, so `--explain` prints the value before the clamp beside its points: `15 2.8×` is 55 prompts against a norm of 20. The index never reads that value. Five parts can pass their norm; `late` is a flag and never shows one.
+
 | Level | Range |
 |---|---|
 | Calm | 0–29 |
@@ -178,17 +180,18 @@ TZ=UTC bun src/cli/index.ts 2026-09-14 --projects tests/fixtures/busy-week --exp
 ```
 
 ```
-hour   index  level    sess  prompts  intr  rej  quest  plan  mode  ctx-sw  streak  out-tok  par  pace   sup  read  strk  late
-09:00     15  Calm        1        6     0    0      0     0     0       0     50m      600    0   4.5     0   0.1    10     0
-10:00     15  Calm        1        6     0    0      0     0     0       0    110m      600    0   4.5     0   0.1    10     0
-11:00     15  Calm        1        7     0    0      0     0     0       0    179m      600    0   5.3     0   0.1    10     0
-12:00     87  Fried       5       55    20    1      1     1     2      54    235m    55.0k   25    15    30   6.9    10     0
-13:00     87  Fried       5       55    20    1      1     1     2      54    295m    55.0k   25    15    30   6.9    10     0
-14:00     87  Fried       5       55    20    1      1     1     2      54    355m    55.0k   25    15    30   6.9    10     0
-20:00     15  Calm        1        6     0    0      0     0     0       0     50m      600    0   4.5     0   0.1    10     0
-21:00     15  Calm        1        6     0    0      0     0     0       0    110m      600    0   4.5     0   0.1    10     0
-23:00     25  Calm        1        6     0    0      0     0     0       0     50m      600    0   4.5     0   0.1    10    10
+hour   index  level    sess  prompts  intr  rej  quest  plan  mode  ctx-sw  streak  out-tok       par      pace       sup      read      strk  late
+09:00     15  Calm        1        6     0    0      0     0     0       0     50m      600         0       4.5         0       0.1   10 1.3×     0
+10:00     15  Calm        1        6     0    0      0     0     0       0    110m      600         0       4.5         0       0.1   10 2.8×     0
+11:00     15  Calm        1        7     0    0      0     0     0       0    179m      600         0       5.3         0       0.1   10 4.5×     0
+12:00     87  Fried       5       55    20    1      1     1     2      54    235m    55.0k   25 1.0×   15 2.8×   30 2.9×       6.9   10 5.9×     0
+13:00     87  Fried       5       55    20    1      1     1     2      54    295m    55.0k   25 1.0×   15 2.8×   30 2.9×       6.9   10 7.4×     0
+14:00     87  Fried       5       55    20    1      1     1     2      54    355m    55.0k   25 1.0×   15 2.8×   30 2.9×       6.9   10 8.9×     0
+20:00     15  Calm        1        6     0    0      0     0     0       0     50m      600         0       4.5         0       0.1   10 1.3×     0
+21:00     15  Calm        1        6     0    0      0     0     0       0    110m      600         0       4.5         0       0.1   10 2.8×     0
+23:00     25  Calm        1        6     0    0      0     0     0       0     50m      600         0       4.5         0       0.1   10 1.3×    10
   no reports today
+  N× beside a part: it is at its cap, with N times what fills it
 ```
 
 The grid is a fixed 98 columns wide, its hour header included, and does not reflow, so it needs a terminal at least that wide.
