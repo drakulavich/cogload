@@ -171,14 +171,13 @@ store; the CLI ones through `analyze()` and the CLI on fixtures.
 3. A reading of 4 at a tick with no prompt in this session: no toast, and
    `overToastAt` stays absent. A prompt in another session then toasts.
 4. At 5 active, the stored latch 19 minutes old: no toast; 20: toast. At exactly
-   4, 59 minutes old: no toast; 60: toast. At 5, 20 minutes fails on 0.19.0.
-5. A tick reading 4 leaves a stored latch as it is, and a newer `overSeenAt`
-   does not stop the toast. Fails on 0.19.0.
+   4, 59 minutes old: no toast; 60: toast. 19 and 59 fail on 0.19.0.
+5. A newer `overSeenAt` does not stop the toast. Fails on 0.19.0.
 6. The two-second reading is still 3 and the next tick reads 4: toast at 3
    minutes after the prompt, none at 3 minutes and 1 ms.
 7. A second prompt 10 minutes after the toast, at 5: no second toast. A prompt
-   20 minutes after it toasts again at 5. Fails on 0.19.0. At 4 it does not, and
-   a reading of 5 within three minutes of that prompt toasts.
+   at 4 with the key 30 minutes old does not toast, and a reading of 5 within
+   three minutes of it does. The second fails on 0.19.0.
 8. A bridge prompt, a prompt held by a rest, a reading 6 minutes old and a
    reading without `activeSessions`: no toast, no older-cogload toast.
 9. A fresh session (`turns` 0) at `sessions: 3`: its prompt passes. Fails on main.

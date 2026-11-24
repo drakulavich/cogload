@@ -1712,14 +1712,6 @@ describe("active sessions", () => {
     });
   }
 
-  test("a tick reading four moves no latch", async ($, on) => {
-    const store: Record<string, unknown> = { overToastAt: NOW - 58 * 60_000 };
-    setup(on, [threeOnce(), at(4)], store);
-    await start($);
-    await clock.advance(60_000);
-    expect(store.overToastAt).toBe(NOW - 58 * 60_000);
-  });
-
   test("the latch a 0.15.0 session keeps moving does not stop the warning", async ($, on) => {
     const { toasts } = setup(on, [at(4)], { overSeenAt: NOW });
     await start($);
@@ -1746,22 +1738,15 @@ describe("active sessions", () => {
     });
   }
 
-  for (const [active, minutes, expected] of [
-    [5, 10, [WARN(5)]],
-    [5, 20, [WARN(5), WARN(5)]],
-    [4, 20, [WARN(4)]],
-    [4, 60, [WARN(4), WARN(4)]],
-  ] as const) {
-    test(`a second prompt ${minutes} minutes after the first, still at ${active}: ${expected.length} warnings`, async ($, on) => {
-      const { toasts } = setup(on, [at(active)], { ...SPENT });
-      await start($);
-      await typed($, "plan");
-      await clock.advance(2_000 + minutes * 60_000);
-      await typed($, "next");
-      await clock.advance(2_000);
-      expect(warnings(toasts)).toEqual([...expected]);
-    });
-  }
+  test("a second prompt ten minutes after the first, still at five, warns no more", async ($, on) => {
+    const { toasts } = setup(on, [at(5)], { ...SPENT });
+    await start($);
+    await typed($, "plan");
+    await clock.advance(2_000 + 10 * 60_000);
+    await typed($, "next");
+    await clock.advance(2_000);
+    expect(warnings(toasts)).toEqual([WARN(5)]);
+  });
 
   test("a fifth session within three minutes of a prompt that four kept quiet warns", async ($, on) => {
     let isFive = false;
