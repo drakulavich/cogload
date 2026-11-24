@@ -1672,7 +1672,7 @@ describe("active sessions", () => {
     expect(toasts).toEqual([]);
     await clock.advance(1);
     expect(toasts).toEqual(["4 active sessions in 30 min. Finish this one before the next."]);
-    expect(store.overSeenAt).toBe(NOW + 2_000);
+    expect(store.overToastAt).toBe(NOW + 2_000);
   });
 
   test("three active sessions warn about nothing, whatever sessions says", async ($, on) => {
@@ -1689,19 +1689,21 @@ describe("active sessions", () => {
     await start($);
     await clock.advance(2 * 60_000);
     expect(warnings(toasts)).toEqual([]);
-    expect(store.overSeenAt).toBeUndefined();
+    expect(store.overToastAt).toBeUndefined();
     open();
     await typed($, "plan");
     await clock.advance(2_000);
     expect(warnings(toasts)).toEqual([WARN(4)]);
   });
 
-  for (const [minutesAgo, expected] of [
-    [59, []],
-    [60, [WARN(4)]],
+  for (const [active, minutesAgo, expected] of [
+    [4, 59, []],
+    [4, 60, [WARN(4)]],
+    [5, 19, []],
+    [5, 20, [WARN(5)]],
   ] as const) {
-    test(`four last seen ${minutesAgo} minutes before the prompt: ${expected.length} warnings`, async ($, on) => {
-      const { toasts } = setup(on, [threeOnce(), at(4)], { overSeenAt: NOW - minutesAgo * 60_000 });
+    test(`${active} active, the last warning ${minutesAgo} minutes before the reading: ${expected.length} warnings`, async ($, on) => {
+      const { toasts } = setup(on, [threeOnce(), at(active)], { overToastAt: NOW + 2_000 - minutesAgo * 60_000 });
       await start($);
       await typed($, "plan");
       await clock.advance(2_000);
@@ -1710,19 +1712,13 @@ describe("active sessions", () => {
     });
   }
 
-  for (const [name, activeSessions, stored, expected] of [
-    ["4 moves the latch to the reading's asOf", 4, NOW - 58 * 60_000, NOW + 60_000],
-    ["4 keeps a newer latch", 4, NOW + 30 * 60_000, NOW + 30 * 60_000],
-    ["3 leaves the latch", 3, NOW - 58 * 60_000, NOW - 58 * 60_000],
-  ] as const) {
-    test(`a tick reading ${name}`, async ($, on) => {
-      const store: Record<string, unknown> = { overSeenAt: stored };
-      setup(on, [threeOnce(), at(activeSessions)], store);
-      await start($);
-      await clock.advance(60_000);
-      expect(store.overSeenAt).toBe(expected);
-    });
-  }
+  test("the latch a 0.15.0 session keeps moving does not stop the warning", async ($, on) => {
+    const { toasts } = setup(on, [at(4)], { overSeenAt: NOW });
+    await start($);
+    await typed($, "plan");
+    await clock.advance(2_000);
+    expect(warnings(toasts)).toEqual([WARN(4)]);
+  });
 
   for (const [name, promptAt, expected] of [
     ["three minutes", 0, [WARN(4)]],
@@ -1742,14 +1738,26 @@ describe("active sessions", () => {
     });
   }
 
-  test("a second prompt while still at four warns no more", async ($, on) => {
-    const { toasts } = setup(on, [at(4)]);
+  test("a second prompt ten minutes after the first, still at five, warns no more", async ($, on) => {
+    const { toasts } = setup(on, [at(5)], { ...SPENT });
+    await start($);
+    await typed($, "plan");
+    await clock.advance(2_000 + 10 * 60_000);
+    await typed($, "next");
+    await clock.advance(2_000);
+    expect(warnings(toasts)).toEqual([WARN(5)]);
+  });
+
+  test("a fifth session within three minutes of a prompt that four kept quiet warns", async ($, on) => {
+    let isFive = false;
+    const { toasts } = setup(on, [() => at(isFive ? 5 : 4)()], { overToastAt: NOW - 30 * 60_000 });
     await start($);
     await typed($, "plan");
     await clock.advance(2_000);
-    await typed($, "next");
-    await clock.advance(3 * 60_000);
-    expect(warnings(toasts)).toEqual([WARN(4)]);
+    expect(warnings(toasts)).toEqual([]);
+    isFive = true;
+    await clock.advance(58_000);
+    expect(warnings(toasts)).toEqual([WARN(5)]);
   });
 
   for (const [name, fields, kind, store] of [
@@ -1809,8 +1817,8 @@ describe("active sessions", () => {
 
   for (const [name, store, runs] of [
     ["armed runs cogload two seconds after the prompt", {}, 2],
-    ["exactly an hour old runs cogload two seconds after the prompt", { overSeenAt: NOW - 60 * 60_000 }, 2],
-    ["ten minutes old runs nothing before the minute", { overSeenAt: NOW - 10 * 60_000 }, 1],
+    ["exactly twenty minutes old runs cogload two seconds after the prompt", { overToastAt: NOW - 20 * 60_000 }, 2],
+    ["ten minutes old runs nothing before the minute", { overToastAt: NOW - 10 * 60_000 }, 1],
   ] as const) {
     test(`a latch ${name}`, async ($, on) => {
       setup(on, [at(3)], { ...store });
