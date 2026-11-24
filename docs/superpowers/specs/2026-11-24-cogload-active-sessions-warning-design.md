@@ -92,7 +92,8 @@ stateDiagram-v2
 - `status.json` gains `activeSessions` and `singleActionSessions`, integers
   from 0, after `sessions`: `,"activeSessions":6,"singleActionSessions":2` is 44
   bytes on a one-line file. `schema` stays 1. Both are computed
-  from the events already read, so no transcript is read for them. `sessions` stays, as a published field.
+  from the events already read, so no transcript is read for them. They travel on
+  the day that holds `now`, so its JSON gains `"active":{"sessions":6,"single":2}`. `sessions` stays, as a published field.
 - `overSeenAt` is one number, about 14 bytes, with the write rhythm
   `fourSeenAt` has. It is a new key: a session started before the update
   still writes `fourSeenAt` from the other count, which would disarm the warning.
@@ -109,7 +110,8 @@ stateDiagram-v2
   while the latch is armed; at 74% of actions the count is at four or more and
   the latch mostly is not. Five runs took 0.7 to 1.3 s of wall time on the work Mac on
   2026-11-24, outside the turn (not awaited). It is there because a toast that waits for the
-  minute tick can come after the person has left that terminal.
+  minute tick can come after the person has left that terminal. It is not
+  stored: the next minute would take it as fresh and start a due rest late.
 - `$.store` has no atomic claim: two prompts in different sessions within
   milliseconds can both toast. Accepted, as for the hold.
 

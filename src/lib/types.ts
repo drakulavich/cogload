@@ -32,6 +32,7 @@ export type Parts = {
 export type Part = keyof Parts;
 export type Score = { index: number; level: Level; parts: Parts; capped: Part[]; top: Part };
 export type LiveBucket = Metrics & { score: Score | null };
+export type ActiveSessions = { sessions: number; single: number };
 export type HourBucket = LiveBucket & { hour: number };
 export type Totals = {
   prompts: number;
@@ -46,7 +47,7 @@ export type Totals = {
   contextSwitches: number;
   maxSessions: number;
 };
-// `asOf` and `live` exist only on the day containing `now`: `live` is the sixty
+// `asOf`, `live` and `active` exist only on the day containing `now`: `live` is the sixty
 // minutes `(asOf − 60 min, asOf]`, by the hour bucket's rule, look-back included.
 // `presence` is the day's last human action and the start of its streak, which
 // may lie on an earlier day; instants are ISO 8601 UTC.
@@ -60,4 +61,5 @@ export type Day = {
   buckets: HourBucket[];
   asOf?: string;
   live?: LiveBucket;
+  active?: ActiveSessions;
 };

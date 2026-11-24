@@ -8,8 +8,7 @@ const lastToast = atom({ plugin: "cognitive-load", key: "lastToast" } as const, 
 const held = atom({ plugin: "cognitive-load", key: "held" } as const, [] as string[]);
 const queued = atom({ plugin: "cognitive-load", key: "queued" } as const, false);
 const refusalShown = atom({ plugin: "cognitive-load", key: "refusalShown" } as const, false);
-const holdUntil = atom({ plugin: "cognitive-load", key: "holdUntil" } as const, 0);
-const asked = atom({ plugin: "cognitive-load", key: "asked" } as const, false);
+const pending = atom({ plugin: "cognitive-load", key: "pending" } as const, 0);
 
 const LEVELS = ["Calm", "Warming", "Heating", "Fried"] as const;
 const COLOR: Record<Level, string> = { Calm: "success", Warming: "warning", Heating: "#ff8700", Fried: "red" };
@@ -19,6 +18,8 @@ const TOAST_GAP_MS = 2100;
 const HELD: readonly string[] = ["composer", "bridge"];
 const WEEK_MS = 7 * 24 * 60 * 60_000;
 const HOUR_MS = 60 * 60_000;
+const PENDING_MS = 3 * 60_000;
+const READ_AFTER_MS = 2_000;
 const SKIP = /^(?:skip|override):(.*)$/i;
 const SKIPS_PER_WEEK = 5;
 const PHRASES = [
@@ -35,7 +36,7 @@ const SHORT = "A skip needs a reason of three words or more.";
 const EMPTY = `The powerbank is empty until Monday: ${SKIPS_PER_WEEK} skips this week.`;
 const BACK = 'Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.';
 const QUEUED = "It stays in the box, and goes as it reads then.";
-const FOURTH = (min: number) => `Three other sessions ran this hour: a fourth waits ${min} min.`;
+const WARNING = (n: number, single: number) => `${n} active sessions in 30 min${single === 0 ? "" : `, ${single} with one action`}. Park one before the next.`;
 const WELCOME = "Keep your head cold. The dot above the prompt shows how hot this hour runs.";
 const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload";
 const NO_READING = "cogload gave no reading.";
@@ -98,7 +99,8 @@ const decodeStatus = (stdout: string, nowMs: number): Status | null => {
         streakMin: o.streakMin as number,
         restAt: o.restAt as string | null,
         restMin: o.restMin as number,
-        sessions: isInt(o.sessions, 0, Number.MAX_SAFE_INTEGER) ? o.sessions : null,
+        activeSessions: isInt(o.activeSessions, 0, Number.MAX_SAFE_INTEGER) ? o.activeSessions : null,
+        singleActionSessions: isInt(o.singleActionSessions, 0, Number.MAX_SAFE_INTEGER) ? o.singleActionSessions : null,
       }
     : null;
 };
@@ -170,37 +172,45 @@ const skipsLeft = (spent: number): string => {
   return n === 0 ? "no skips left" : `${plural(n, "skip")} left`;
 };
 
-const timesSince = async ($: EngineInterface, key: "rests" | "queueSends" | "fourthHolds", since: number): Promise<number[]> => {
+const timesSince = async ($: EngineInterface, key: "rests" | "queueSends", since: number): Promise<number[]> => {
   const list = await $.store.get(key);
   return Array.isArray(list) ? (list as number[]).filter((at) => at > since) : [];
 };
 
 const restsSince = ($: EngineInterface, since: number) => timesSince($, "rests", since);
 
-const holdingUntil = async ($: EngineInterface, now: number): Promise<number | null> => {
-  const until = await read($, holdUntil);
-  return now < until ? until : null;
+// The counts when four or more sessions are active in a reading that is not stale.
+const overOf = (s: Status, now: number): { active: number; single: number } | null => {
+  const { activeSessions: active, singleActionSessions: single } = s;
+  if (active === null || single === null || active < 4 || now - Date.parse(s.asOf) > STALE_MS) return null;
+  return { active, single };
 };
 
-const seeFour = async ($: EngineInterface, s: Status) => {
-  if (s.sessions === null || s.sessions < 4) return;
-  const seen = await $.store.get("fourSeenAt");
-  await $.store.set("fourSeenAt", Math.max(typeof seen === "number" ? seen : 0, Date.parse(s.asOf)));
+const overSeenAt = async ($: EngineInterface): Promise<number | null> => {
+  const seen = await $.store.get("overSeenAt");
+  return typeof seen === "number" ? seen : null;
 };
 
-// A held prompt writes no record, so turns() stays 0 after it: only the first composer prompt is checked.
-const holdIfFourth = async ($: EngineInterface, now: number): Promise<number | null> => {
-  if (await read($, asked)) return null;
-  await update($, asked, () => true);
-  const reading = (await $.store.get("reading")) as Status | undefined;
-  if (reading?.sessions !== 3 || now - Date.parse(reading.asOf) > STALE_MS) return null;
-  const seen = await $.store.get("fourSeenAt");
-  const isArmed = typeof seen !== "number" || now - seen >= HOUR_MS;
-  if (!isArmed || (await $.session.turns()) !== 0) return null;
-  await $.store.set("fourSeenAt", now);
-  await $.store.set("fourthHolds", [...(await timesSince($, "fourthHolds", now - WEEK_MS)), now]);
-  await update($, holdUntil, () => now + reading.restMin * 60_000);
-  return reading.restMin;
+const isArmed = (seen: number | null, now: number): boolean => seen === null || now - seen >= HOUR_MS;
+
+// While armed only a toast sets the latch: a session without a prompt would use the warning up unseen.
+const warnIfOver = async ($: EngineInterface, s: Status) => {
+  const now = await $.clock.now();
+  const over = overOf(s, now);
+  if (over === null) return;
+  const seen = await overSeenAt($);
+  if (!isArmed(seen, now)) {
+    await $.store.set("overSeenAt", Math.max(seen ?? 0, Date.parse(s.asOf)));
+    return;
+  }
+  let promptAt = 0;
+  await update($, pending, (at) => {
+    promptAt = at;
+    return 0;
+  });
+  if (promptAt === 0 || now - promptAt > PENDING_MS) return;
+  await $.store.set("overSeenAt", now);
+  await toast($, WARNING(over.active, over.single));
 };
 
 const isSpent = async ($: EngineInterface, s: Status): Promise<boolean> => s.restAt !== null && (await $.store.get("spent")) === s.restAt;
@@ -235,12 +245,10 @@ const weekLine = async ($: EngineInterface, now: number): Promise<string | null>
   const rests = await restsSince($, weekStart(now) - 1);
   const skips = await skipsThisWeek($, now);
   const sends = await timesSince($, "queueSends", weekStart(now) - 1);
-  const holds = await timesSince($, "fourthHolds", weekStart(now) - 1);
-  if (rests.length === 0 && skips.length === 0 && sends.length === 0 && holds.length === 0) return null;
+  if (rests.length === 0 && skips.length === 0 && sends.length === 0) return null;
   const pushed = skips.filter((o) => rests.some((at) => at <= o.at));
   const queuedSent = sends.length === 0 ? "" : `, ${plural(sends.length, "queued prompt")} sent`;
-  const fourthHeld = holds.length === 0 ? "" : `, ${plural(holds.length, "fourth-session hold")}`;
-  const taken = `This week: ${plural(rests.length - pushed.length, "rest")} taken${queuedSent}${fourthHeld}`;
+  const taken = `This week: ${plural(rests.length - pushed.length, "rest")} taken${queuedSent}`;
   const newest = skips.at(-1);
   const skipped = newest === undefined ? "" : `, ${skips.length} skipped (last: "${newest.reason}")`;
   return `${taken}${skipped}, ${skipsLeft(skips.length)}.`;
@@ -268,8 +276,8 @@ const run = async ($: EngineInterface, args: string[]) => {
 
 const take = async ($: EngineInterface, s: Status) => {
   await startRestIfDue($, s);
-  await seeFour($, s);
   await update($, status, () => s);
+  await warnIfOver($, s);
 };
 
 const isOlder = (stdout: string): boolean => {
@@ -281,7 +289,7 @@ const isOlder = (stdout: string): boolean => {
   }
 };
 
-const refresh = async ($: EngineInterface) => {
+const runStatus = async ($: EngineInterface): Promise<Status | null> => {
   const r = await run($, ["status"]);
   const decoded = typeof r === "string" || r.exitCode !== 0 ? null : decodeStatus(r.stdout, await $.clock.now());
   if (decoded === null) {
@@ -289,15 +297,32 @@ const refresh = async ($: EngineInterface) => {
     $.ui.log(failure, { to: "debug" });
     if (failure === "not found") await toastOnce($, "missingShown", MISSING);
     if (typeof r !== "string" && r.exitCode === 0 && isOlder(r.stdout)) await toastOnce($, "olderShown", OLDER);
-    return false;
   }
-  await $.store.set("reading", decoded);
+  return decoded;
+};
+
+const refresh = async ($: EngineInterface) => {
+  const decoded = await runStatus($);
+  if (decoded === null) return false;
+  await $.store.set("statusReading", decoded);
   await take($, decoded);
   return true;
 };
 
+// This reading is not stored: the next minute would take it as fresh and start a due rest a minute late.
+const readAfterPrompt = async ($: EngineInterface) => {
+  const s = await runStatus($);
+  if (s !== null) await warnIfOver($, s);
+};
+
+const markPrompt = async ($: EngineInterface) => {
+  const now = await $.clock.now();
+  await update($, pending, () => now);
+  if (isArmed(await overSeenAt($), now)) $.clock.after(READ_AFTER_MS, () => void readAfterPrompt($).catch(() => {}));
+};
+
 const sendQueued = async ($: EngineInterface) => {
-  if (!(await read($, queued)) || (await restUntil($, await $.clock.now())) !== null || (await holdingUntil($, await $.clock.now())) !== null) return;
+  if (!(await read($, queued)) || (await restUntil($, await $.clock.now())) !== null) return;
   await update($, queued, () => false);
   const { text } = await $.prompt.read();
   if (text.trim() === "") return;
@@ -322,11 +347,11 @@ const sendQueued = async ($: EngineInterface) => {
 };
 
 const tick = async ($: EngineInterface) => {
-  const reading = (await $.store.get("reading")) as Status | undefined;
+  const reading = (await $.store.get("statusReading")) as Status | undefined;
   const age = reading === undefined ? Number.POSITIVE_INFINITY : (await $.clock.now()) - Date.parse(reading.asOf);
   if (reading !== undefined && age < REFRESH_MS) return take($, reading);
   if ((await refresh($)) || age < STALE_MS) return;
-  await $.store.delete("reading");
+  await $.store.delete("statusReading");
   await update($, status, () => null);
 };
 
@@ -376,15 +401,17 @@ export const register: Register = (on) => {
   on("prompt.submit", async ($, e, next) => {
     if (!HELD.includes(e.origin.kind)) return next(e);
     const now = await $.clock.now();
-    const fourthMin = e.origin.kind === "composer" ? await holdIfFourth($, now) : null;
-    const rest = await restUntil($, now);
-    const hold = await holdingUntil($, now);
-    if (rest === null && hold === null) {
+    const until = await restUntil($, now);
+    const pass = async (prompt: typeof e) => {
+      const result = await next(prompt);
+      if (e.origin.kind === "composer" && result.drop === undefined) await markPrompt($);
+      return result;
+    };
+    if (until === null) {
       await update($, held, () => []);
       await update($, queued, () => false);
-      return next(e);
+      return pass(e);
     }
-    const until = Math.max(rest ?? 0, hold ?? 0);
     const lines = e.text.trimEnd().split("\n");
     const first = SKIP.exec(lines[0] ?? "");
     const last = lines.length > 1 ? SKIP.exec(lines.at(-1) ?? "") : null;
@@ -395,7 +422,6 @@ export const register: Register = (on) => {
     if (skip !== null) await update($, queued, () => false);
     if (!isEmpty && reason.split(/\s+/).length >= 3) {
       await $.store.delete("restUntil");
-      await update($, holdUntil, () => 0);
       await $.store.set("overrides", [...skips, { at: now, reason }]);
       const text = lines
         .slice(first ? 1 : 0, last ? -1 : undefined)
@@ -403,19 +429,18 @@ export const register: Register = (on) => {
         .trim();
       const back = joinHeld(await read($, held));
       await update($, held, () => []);
-      if (text !== "") return next({ ...e, text });
+      if (text !== "") return pass({ ...e, text });
       // The submit empties the box after this hook returns, so the fill waits for it.
       if (back !== "") $.clock.after(0, () => void $.prompt.fill({ text: back, mode: "replace" }));
-      return next({ ...e, context: [...(e.context ?? []), LIFTED] });
+      return pass({ ...e, context: [...(e.context ?? []), LIFTED] });
     }
-    if (e.origin.kind === "bridge") return rest === null ? next(e) : next({ ...e, context: [...(e.context ?? []), past(rest)] });
+    if (e.origin.kind === "bridge") return next({ ...e, context: [...(e.context ?? []), past(until)] });
     if (isEmpty) return { drop: `${EMPTY} ${Math.ceil((until - now) / 60_000)} min left. Your prompt is back in the box.` };
     if (skip !== null) return { drop: `${SHORT} Your prompt is back in the box.` };
     await update($, held, (list) => [...list, e.text]);
     const isQueued = (e.attachments ?? []).length === 0;
     await update($, queued, () => isQueued);
     await update($, refusalShown, () => false);
-    if (fourthMin !== null) return { drop: isQueued ? `Queued for ${clockTime(until)}. ${FOURTH(fourthMin)} ${QUEUED}` : `${FOURTH(fourthMin)} ${BACK}` };
     const phrase = await $.store.get("phrase");
     const n = typeof phrase === "number" ? phrase : 0;
     await $.store.set("phrase", (n + 1) % PHRASES.length);
@@ -430,14 +455,12 @@ export const register: Register = (on) => {
     if (e.props.hasSurvey || s === null || s.index === null || s.level === null) return beneath;
     const now = await $.clock.now();
     const until = await restUntil($, now);
-    const hold = await holdingUntil($, now);
+    const over = overOf(s, now);
     const isAhead = until === null && s.restAt !== null && Date.parse(s.restAt) > Date.parse(s.asOf) && !(await isSpent($, s));
     const parts: string[] = [];
+    if (until === null && over !== null && e.props.bodyColumns >= NARROW) parts.push(`${over.active} sessions`);
     if (until !== null) {
       parts.push(`rest until ${clockTime(until)} (${Math.ceil((until - now) / 60_000)} min)`);
-      if (e.props.bodyColumns >= NARROW) parts.push(skipsLeft((await skipsThisWeek($, now)).length));
-    } else if (hold !== null) {
-      parts.push(`4th session until ${clockTime(hold)} (${Math.ceil((hold - now) / 60_000)} min)`);
       if (e.props.bodyColumns >= NARROW) parts.push(skipsLeft((await skipsThisWeek($, now)).length));
     } else if (isAhead && s.restAt !== null) parts.push(`rest at ${clockTime(Date.parse(s.restAt))}`);
     else if (e.props.bodyColumns >= NARROW && s.streakMin > 0) parts.push(`streak ${formatMinutes(s.streakMin)}`);
