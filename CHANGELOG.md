@@ -5,6 +5,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-24
+
+### Added
+- A toast warns when a prompt makes four or more sessions active, resumed ones
+  included, and the band shows the count. Plugin 0.15.0, needs cogload 0.19.0.
+  (#264)
+- `cogload status` and `--json` print `activeSessions` and
+  `singleActionSessions`. (#264)
+
+### Removed
+- The plugin no longer holds the first prompt of a fourth session. (#264)
+
 ## [0.18.0] - 2026-11-22
 
 ### Added
