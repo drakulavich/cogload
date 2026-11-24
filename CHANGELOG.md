@@ -5,6 +5,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-24
+
+### Changed
+- The active-sessions toast comes back while the count stays high: after 20
+  minutes at five or more sessions, after an hour at four. Plugin 0.16.0, needs
+  cogload 0.19.0. (#267)
+
 ## [0.19.0] - 2026-11-24
 
 ### Added
