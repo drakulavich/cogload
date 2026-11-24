@@ -60,7 +60,7 @@ A fresh session is one whose first record in the 28 days is at most a minute
 before the crossing. Every row says the same of the hold: it could see 1 or 2
 crossings in the month.
 
-30 minutes was chosen. 15 drops a session left while Claude works for a quarter of an hour; 60
+The owner chose 30 minutes on 2026-11-24. 15 drops a session left while Claude works for a quarter of an hour; 60
 keeps one that was closed long ago. `sessions` also counts a session where
 only the agent works, which is not "actively working" in it. The plugin's own
 count of open sessions was rejected in the earlier spec (shared-store writes,
@@ -129,7 +129,7 @@ store keys.
 Thirty days after the release, `cogload --days 30 --json` gives the share, the sum of
 `crowdedActions` over the sum of `actions`. It is 74% today. Above 65% the
 warning did not change the work, and the owner chooses between a repeat and
-removing it. 65% is proposed, for the owner to approve with this spec.
+removing it. The owner set 65% on 2026-11-24.
 
 ## Testing strategy
 
