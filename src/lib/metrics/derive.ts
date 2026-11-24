@@ -56,7 +56,7 @@ const emptyMetrics = (): Metrics => ({
 
 // Presence is the human's own actions only: agent records and the agent's asks
 // are never presence, because presence answers "is it time to rest?".
-const PRESENCE: ReadonlySet<EventKind> = new Set<EventKind>(["prompt", "interrupt", "reject", "answer"]);
+export const PRESENCE: ReadonlySet<EventKind> = new Set<EventKind>(["prompt", "interrupt", "reject", "answer"]);
 
 type Acc = {
   m: Metrics;
@@ -219,7 +219,7 @@ function liveBucket(sorted: Event[], presenceTs: number[], presence: Day["presen
 }
 
 // The sessions the person acted in; `single` leaves out the latest action's, the one they are in now.
-function activeSessions(sorted: Event[], nowMs: number): ActiveSessions {
+export function activeSessions(sorted: Event[], nowMs: number): ActiveSessions {
   const own = sorted.filter((e) => PRESENCE.has(e.kind) && e.ts > nowMs - ACTIVE_MS && e.ts <= nowMs);
   const counts = new Map<string, number>();
   for (const e of own) counts.set(e.sessionId, (counts.get(e.sessionId) ?? 0) + 1);

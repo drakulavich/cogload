@@ -93,7 +93,7 @@ stateDiagram-v2
   from 0, after `sessions`: `,"activeSessions":6,"singleActionSessions":2` is 44
   bytes on a one-line file. `schema` stays 1. Both are computed
   from the events already read, so no transcript is read for them. They travel on
-  the day that holds `now`, so its JSON gains `"active":{"sessions":6,"single":2}`. `sessions` stays, as a published field.
+  the day that holds `now`, and `--json` leaves them out. `sessions` stays, as a published field.
 - `overSeenAt` is one number, about 14 bytes, with the write rhythm
   `fourSeenAt` has. It is a new key: a session started before the update
   still writes `fourSeenAt` from the other count, which would disarm the warning.
@@ -133,11 +133,12 @@ store keys.
 
 ## Measure after a month
 
-Thirty days after the release, a one-off script over the transcripts gives the
+Thirty days after the release, `bun run crowded-share 30` gives the
 share of own actions made at four or more active sessions (the action's own
 included). It was 74% (4496 of 6039) on 2026-11-24. Above 65% the warning did
 not change the work, and the owner chooses between a repeat and removing it.
 The owner set 65% on 2026-11-24.
+[#265](https://github.com/drakulavich/cogload/issues/265) holds the check.
 
 ## Testing strategy
 

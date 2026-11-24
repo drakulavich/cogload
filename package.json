@@ -37,6 +37,7 @@
   "scripts": {
     "dev": "bun run src/cli/index.ts",
     "stats": "bun scripts/signal-stats.ts",
+    "crowded-share": "bun scripts/crowded-share.ts",
     "test": "TZ=UTC bun test --randomize ./tests",
     "typecheck": "bun --check && bun scripts/typecheck-plugin.ts",
     "fmt": "bun fmt",

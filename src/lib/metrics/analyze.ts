@@ -16,7 +16,7 @@ export function analyzeEvents(events: Event[], w: Window): Day[] {
 
 // A background session copies its history under a new session id, times kept
 // to the millisecond (#222); the original never carries `bg`.
-function dropCopies(events: Event[]): Event[] {
+export function dropCopies(events: Event[]): Event[] {
   const copies = new Map<number, Event[]>();
   for (const e of events) if (e.bg) copies.set(e.ts, [...(copies.get(e.ts) ?? []), e]);
   if (copies.size === 0) return events;
