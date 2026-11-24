@@ -18,6 +18,7 @@ const TOAST_GAP_MS = 2100;
 const HELD: readonly string[] = ["composer", "bridge"];
 const WEEK_MS = 7 * 24 * 60 * 60_000;
 const HOUR_MS = 60 * 60_000;
+const REPEAT_MS = 20 * 60_000;
 const PENDING_MS = 3 * 60_000;
 const READ_AFTER_MS = 2_000;
 const SKIP = /^(?:skip|override):(.*)$/i;
@@ -187,30 +188,22 @@ const overOf = (s: Status, now: number): { active: number; single: number } | nu
   return { active, single };
 };
 
-const overSeenAt = async ($: EngineInterface): Promise<number | null> => {
-  const seen = await $.store.get("overSeenAt");
-  return typeof seen === "number" ? seen : null;
+const isArmed = async ($: EngineInterface, active: number, now: number): Promise<boolean> => {
+  const toastAt = await $.store.get("overToastAt");
+  return typeof toastAt !== "number" || now - toastAt >= (active >= 5 ? REPEAT_MS : HOUR_MS);
 };
 
-const isArmed = (seen: number | null, now: number): boolean => seen === null || now - seen >= HOUR_MS;
-
-// While armed only a toast sets the latch: a session without a prompt would use the warning up unseen.
 const warnIfOver = async ($: EngineInterface, s: Status) => {
   const now = await $.clock.now();
   const over = overOf(s, now);
-  if (over === null) return;
-  const seen = await overSeenAt($);
-  if (!isArmed(seen, now)) {
-    await $.store.set("overSeenAt", Math.max(seen ?? 0, Date.parse(s.asOf)));
-    return;
-  }
+  if (over === null || !(await isArmed($, over.active, now))) return;
   let promptAt = 0;
   await update($, pending, (at) => {
     promptAt = at;
     return 0;
   });
   if (now - promptAt > PENDING_MS) return;
-  await $.store.set("overSeenAt", now);
+  await $.store.set("overToastAt", now);
   await toast($, WARNING(over.active, over.single));
 };
 
@@ -319,7 +312,7 @@ const readAfterPrompt = async ($: EngineInterface) => {
 const markPrompt = async ($: EngineInterface) => {
   const now = await $.clock.now();
   await update($, pending, () => now);
-  if (isArmed(await overSeenAt($), now)) $.clock.after(READ_AFTER_MS, () => void readAfterPrompt($).catch(() => {}));
+  if (await isArmed($, 5, now)) $.clock.after(READ_AFTER_MS, () => void readAfterPrompt($).catch(() => {}));
 };
 
 const sendQueued = async ($: EngineInterface) => {

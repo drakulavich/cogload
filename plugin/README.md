@@ -34,8 +34,8 @@ cogload 0.19.0 or newer, with [Bun](https://bun.sh) on the machine.
   attached is not sent.
 - **Active sessions.** When a prompt you type makes four or more sessions you
   acted in within thirty minutes, new or resumed, a toast says so and how many
-  others had a single action. The prompt goes as usual. The next toast comes
-  only after an hour with fewer than four. A prompt from your phone and cogload
+  others had a single action. The prompt goes as usual. The toast comes back
+  after 20 minutes at five or more sessions and after an hour at four. A prompt from your phone and cogload
   older than 0.19.0 give no warning.
 - **Going on anyway.** Add `skip: <reason>` (three words or more) as the first
   or last line of a prompt. Sent on its own, it lifts the rest and brings the

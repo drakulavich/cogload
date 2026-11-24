@@ -41,9 +41,9 @@ title.
   until the rest is lifted or the first prompt after it ends.
 - Its store, a JSON file in Claude Code's plugin data, keeps when the current
   rest ends, which streak's rest was taken, when the last Fried rest began, the
-  start of each rest for seven days, when four sessions were last
-  active, the latest reading, which break idea comes next, which
-  one-time notices it has shown, and the time and reason of each `skip:` for
+  start of each rest for seven days, when the active-sessions toast last
+  showed, the latest reading, which break idea comes next, which one-time
+  notices it has shown, and the time and reason of each `skip:` for
   seven days. The skip reason you type is the only text it writes to disk.
   Entries older than seven days are dropped the next time it writes them.
 - It runs `cogload status` and `cogload today --json` on your machine and keeps
