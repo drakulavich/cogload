@@ -4,7 +4,7 @@
 // usage: bun run crowded-share [days, default 28]
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { activeSessions, dropCopies, PRESENCE } from "../src/lib/metrics/index.ts";
+import { ACTIVE_MS, activeSessions, dropCopies, PRESENCE } from "../src/lib/metrics/index.ts";
 import { parseTranscript, scan } from "../src/lib/transcripts/index.ts";
 
 const days = Number(process.argv[2] ?? 28);
@@ -14,12 +14,14 @@ if (!Number.isInteger(days) || days < 1) {
 }
 const now = Date.now();
 const from = now - days * 24 * 60 * 60 * 1000;
-const files = await scan(join(homedir(), ".claude", "projects"), from);
+// An action in the window's first half hour counts the sessions before it.
+const readFrom = from - ACTIVE_MS;
+const files = await scan(join(homedir(), ".claude", "projects"), readFrom);
 let skipped = 0;
 const parsed = await Promise.all(
   files.map(async (f) => {
     try {
-      return parseTranscript(await Bun.file(f.path).text(), from);
+      return parseTranscript(await Bun.file(f.path).text(), readFrom);
     } catch {
       skipped++;
       return [];
@@ -27,8 +29,9 @@ const parsed = await Promise.all(
   }),
 );
 const own = dropCopies(parsed.flat())
-  .filter((e) => PRESENCE.has(e.kind) && e.ts >= from && e.ts <= now)
+  .filter((e) => PRESENCE.has(e.kind) && e.ts >= readFrom && e.ts <= now)
   .sort((a, b) => a.ts - b.ts);
-const crowded = own.filter((e) => activeSessions(own, e.ts).activeSessions >= 4).length;
-const share = own.length === 0 ? "no actions" : `${Math.round((crowded / own.length) * 100)}%`;
-console.log(`${days} days: ${crowded} of ${own.length} actions at 4+ sessions, ${share} (${files.length} files, ${skipped} skipped)`);
+const counted = own.filter((e) => e.ts >= from);
+const crowded = counted.filter((e) => activeSessions(own, e.ts).activeSessions >= 4).length;
+const share = counted.length === 0 ? "no actions" : `${Math.round((crowded / counted.length) * 100)}%`;
+console.log(`${days} days: ${crowded} of ${counted.length} actions at 4+ sessions, ${share} (${files.length} files, ${skipped} skipped)`);
