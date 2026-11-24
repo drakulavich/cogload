@@ -20,12 +20,13 @@ After this change:
    person's own action (`prompt`, `interrupt`, `reject`, `answer`, the
    `PRESENCE` kinds) in `(now − 30 min, now]`. Agent output and messages from
    other plugins or sessions do not make a session active. It also prints
-   `singleActionSessions`: the active sessions with exactly one such action.
+   `singleActionSessions`: the active sessions with exactly one such action,
+   leaving out the session of the latest action.
 2. A composer prompt that passes to Claude marks its session `pending` with
-   its time. Two seconds later, and again at `turn.complete` and every minute,
-   the session takes a reading. A reading with `activeSessions` of 4 or more,
-   a mark three minutes old or less and an armed latch show one toast in that
-   session: `6 active sessions in 30 min, 2 with one action. Park one before the next.`
+   its time. The session takes a reading two seconds later when the latch is
+   armed, and, as today, at `turn.complete` and every minute. A reading with
+   `activeSessions` of 4 or more, a mark three minutes old or less and an armed
+   latch show one toast in that session: `6 active sessions in 30 min, 2 with one action. Park one before the next.`
    With `singleActionSessions` 0 the text has no `, 2 with one action`. No session is named.
    It clears the mark and sets the latch. Nothing is held or delayed.
 3. The latch is the store key `overSeenAt`. It is armed when absent or 60
@@ -39,10 +40,6 @@ After this change:
    `asked` and `holdUntil` state. Rests, `skip:` and the powerbank do not change.
 6. A reading older than 5 minutes (`STALE_MS`), or from a cogload without
    either new field, warns about nothing and shows no count.
-7. `/cogload` gains a line after the hour line: `74% of today's 120 actions at
-   4+ sessions.` An action is at 4+ when `activeSessions`, measured at its own
-   time and counting it, is 4 or more. No line on a day without actions, or
-   from a cogload without the field.
 
 ## What counts as active
 
@@ -60,8 +57,8 @@ A fresh session is one whose first record in the 28 days is at most a minute
 before the crossing. Every row says the same of the hold: it could see 1 or 2
 crossings in the month.
 
-The owner chose 30 minutes on 2026-11-24. 15 drops a session left while Claude works for a quarter of an hour; 60
-keeps one that was closed long ago. `sessions` also counts a session where
+The owner chose 30 minutes on 2026-11-24. 15 drops a session left while Claude
+works for a quarter of an hour; 60 keeps one that was closed long ago. `sessions` also counts a session where
 only the agent works, which is not "actively working" in it. The plugin's own
 count of open sessions was rejected in the earlier spec (shared-store writes,
 idle sessions) and is not reopened.
@@ -71,8 +68,12 @@ in the band will be on most of the time. The toast, about 12 a week, carries
 the signal; the count is there to check it. The owner chose both on 2026-11-24
 over a ten-minute hold and over a second Enter.
 
-In 3038 of the 4501 actions at 4+ (67%, counted an hour later, hence 5 more
-than the table) at least one active session had a single action. Whether such
+The session whose prompt makes the crossing had a single action on all 50, so
+a hint that counts it would always show. Without it, 40 of the 50 have another
+session with a single action. cogload does not know which session asks, so it
+leaves out the one of the latest action: two seconds after the prompt that is
+the asking one. At a later tick a newer action elsewhere can make the hint one
+too high; accepted. Whether such
 a session can be parked is a guess the data cannot check; the hint only says
 that one exists.
 
@@ -90,22 +91,24 @@ stateDiagram-v2
 
 - `status.json` gains `activeSessions` and `singleActionSessions`, integers
   from 0, after `sessions`: `,"activeSessions":6,"singleActionSessions":2` is 44
-  bytes on a one-line file. `schema` stays 1. Both are computed in the existing live fold from the events already read, so no
-  transcript is read for them. `sessions` stays, as a published field.
-- Each `Day` of the JSON gains `actions` and `crowdedActions`, two integers,
-  34 bytes a day (`,"actions":120,"crowdedActions":89`). A sliding
-  30-minute window over the actions gives both in one pass; the three-hour
-  look-back already covers the first half hour of a day. A list of actions with
-  their counts was not considered: the share needs two sums.
+  bytes on a one-line file. `schema` stays 1. Both are computed
+  from the events already read, so no transcript is read for them. `sessions` stays, as a published field.
 - `overSeenAt` is one number, about 14 bytes, with the write rhythm
   `fourSeenAt` has. It is a new key: a session started before the update
   still writes `fourSeenAt` from the other count, which would disarm the warning.
+- The shared reading moves from the key `reading` to `statusReading`, the same
+  object with the two fields, about 250 bytes. A session on the old plugin
+  rewrites `reading` without them (`decodeStatus` keeps only the fields it
+  knows), and a new session would take that for up to a minute at a time and
+  stay silent. While both versions run, each keeps its own reading: one more
+  `cogload status` run a minute.
 - `pending` is a number in the session's `$.state`, in memory only.
 - `fourSeenAt` and `fourthHolds` are no longer read or written. Nothing
   deletes them: an older session may still use them.
-- The reading two seconds after a prompt is one more `cogload status` run per
-  prompt. A run took 1.2 s of wall time on the work Mac on 2026-11-24, outside
-  the turn (not awaited). It is there because a toast that waits for the
+- The reading two seconds after a prompt is one more `cogload status` run, only
+  while the latch is armed; at 74% of actions the count is at four or more and
+  the latch mostly is not. Five runs took 0.7 to 1.3 s of wall time on the work Mac on
+  2026-11-24, outside the turn (not awaited). It is there because a toast that waits for the
   minute tick can come after the person has left that terminal.
 - `$.store` has no atomic claim: two prompts in different sessions within
   milliseconds can both toast. Accepted, as for the hold.
@@ -121,15 +124,18 @@ store keys.
   Remote Control prompt. The latch stays armed, so the next composer prompt in
   any session warns.
 - A repeat of the toast while the count stays at four or more.
+- The share in `/cogload` or the JSON: read once a month, and `cogload trend`
+  already shows the hours at 4 and 5+ sessions.
 - Naming the session to park: a title or path is not kept (`CLAUDE.md`).
 - A count of warnings in the `/cogload` week line.
 
 ## Measure after a month
 
-Thirty days after the release, `cogload --days 30 --json` gives the share, the sum of
-`crowdedActions` over the sum of `actions`. It is 74% today. Above 65% the
-warning did not change the work, and the owner chooses between a repeat and
-removing it. The owner set 65% on 2026-11-24.
+Thirty days after the release, a one-off script over the transcripts gives the
+share of own actions made at four or more active sessions (the action's own
+included). It was 74% (4496 of 6039) on 2026-11-24. Above 65% the warning did
+not change the work, and the owner chooses between a repeat and removing it.
+The owner set 65% on 2026-11-24.
 
 ## Testing strategy
 
@@ -156,12 +162,15 @@ store; the CLI ones through `analyze()` and the CLI on fixtures.
     `activeSessions` is 4 and `sessions` 5. A prompt exactly 30 minutes old is
     out, 1 ms newer is in. An `answer` alone counts.
 12. `cogload status` on that fixture ends
-    `"sessions":5,"activeSessions":4,"singleActionSessions":3}`: one of the four
-    has two prompts.
+    `"sessions":5,"activeSessions":4,"singleActionSessions":2}`: one of the four
+    has two prompts, and the latest action is in another. With the latest action
+    in the one with two prompts it is 3.
 13. `singleActionSessions` 2 and 0: the toast with and without the hint.
-14. A day with 10 actions, 7 of them at 4+: `actions` 10, `crowdedActions` 7,
-    and `/cogload` shows `70% of today's 10 actions at 4+ sessions.` No actions:
-    no line. An action just after midnight counts the sessions before it.
+14. A composer prompt with the latch armed runs `cogload status` two seconds
+    later; with a latch 10 minutes old it runs nothing until `turn.complete` or
+    the minute.
+15. A `reading` ten seconds old without the new fields, as the old plugin writes
+    it, does not stop the toast or the band's count.
 
 ## Definition of Done
 
@@ -172,12 +181,11 @@ Run on main at `baa4369` (0.18.0):
 | `cogload status \| jq -e 'has("activeSessions")'` | `false` | `true` |
 | `git grep -c overSeenAt -- plugin/hooks/register.ts` | no match | 2 or more |
 | `git grep -c -E 'fourthHolds\|holdIfFourth' -- plugin/hooks/register.ts` | 5 | no match |
-| `claude plugin test plugin` | 207 pass, 0 fail | cases 1 to 10, 13 and the `/cogload` line of 14 pass; 1 and 9 were seen to fail on main |
-| `bun run check` | 409 pass, 1 skip, 0 fail | passes, with 11, 12 and 14 |
-| `cogload --days 30 --json \| jq -e '.[0] \| has("crowdedActions")'` | `false` | `true` |
+| `claude plugin test plugin` | 207 pass, 0 fail | cases 1 to 10 and 13 to 15 pass; 1 and 9 were seen to fail on main |
+| `bun run check` | 409 pass, 1 skip, 0 fail | passes, with 11 and 12 |
 
 - In an interactive `claude --plugin-dir plugin --resume` with three other
   sessions prompted in the last half hour, a typed prompt raises the toast.
 - README, `plugin/README.md`, `docs/reference.md` and `PRIVACY.md` describe
-  the warning, the field, the store key and the new minimum cogload version.
+  the warning, the two fields, the two store keys and the new minimum cogload version.
   No text describes the hold except the earlier spec, marked replaced.
