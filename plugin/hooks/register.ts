@@ -208,7 +208,7 @@ const warnIfOver = async ($: EngineInterface, s: Status) => {
     promptAt = at;
     return 0;
   });
-  if (promptAt === 0 || now - promptAt > PENDING_MS) return;
+  if (now - promptAt > PENDING_MS) return;
   await $.store.set("overSeenAt", now);
   await toast($, WARNING(over.active, over.single));
 };

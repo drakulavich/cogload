@@ -1809,6 +1809,7 @@ describe("active sessions", () => {
 
   for (const [name, store, runs] of [
     ["armed runs cogload two seconds after the prompt", {}, 2],
+    ["exactly an hour old runs cogload two seconds after the prompt", { overSeenAt: NOW - 60 * 60_000 }, 2],
     ["ten minutes old runs nothing before the minute", { overSeenAt: NOW - 10 * 60_000 }, 1],
   ] as const) {
     test(`a latch ${name}`, async ($, on) => {
