@@ -398,14 +398,6 @@ describe("--explain: how far a capped part is over its norm", () => {
 });
 
 describe("json", () => {
-  test("the active sessions of today are for cogload status only", () => {
-    const now = new Date("2026-09-14T14:00:00.000Z");
-    const [day] = analyze([transcript([prompt("2026-09-14T13:50:00.000Z", "aaaaaaaa-1111-4111-8111-111111111111")])], { to: "2026-09-14", days: 1, now });
-    expect(day!.active).toEqual({ sessions: 1, single: 0 });
-    const json = JSON.parse(renderJson(day!));
-    expect("active" in json).toBe(false);
-    expect(json.live.sessions).toBe(1);
-  });
   test("renderJson is pretty JSON of the same data", () => {
     expect(JSON.parse(renderJson(days))).toEqual(JSON.parse(JSON.stringify(days)));
     expect(renderJson(monday).startsWith("{\n")).toBe(true);

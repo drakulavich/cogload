@@ -144,7 +144,7 @@ export function renderDay(day: Day, opts: { explain: boolean; color: boolean }):
 }
 
 export function renderJson(data: Day[] | Day): string {
-  return JSON.stringify(data, (key, value) => (key === "active" ? undefined : value), 2);
+  return JSON.stringify(data, null, 2);
 }
 
 export function renderTrend(t: Trend, color: boolean): string {

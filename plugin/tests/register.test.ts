@@ -1640,7 +1640,7 @@ describe("queued prompts", () => {
 });
 
 describe("active sessions", () => {
-  const WARN = (n: number) => `${n} active sessions in 30 min. Park one before the next.`;
+  const WARN = (n: number) => `${n} active sessions in 30 min. Finish this one before the next.`;
   const SPENT = { spent: iso(NOW + 20 * 60_000) };
   const at = (activeSessions: number, fields: Record<string, unknown> = {}) =>
     live(() => NOW - 20 * 60_000, { sessions: 6, activeSessions, singleActionSessions: 0, ...fields });
@@ -1671,7 +1671,7 @@ describe("active sessions", () => {
     await clock.advance(1_999);
     expect(toasts).toEqual([]);
     await clock.advance(1);
-    expect(toasts).toEqual(["4 active sessions in 30 min. Park one before the next."]);
+    expect(toasts).toEqual(["4 active sessions in 30 min. Finish this one before the next."]);
     expect(store.overSeenAt).toBe(NOW + 2_000);
   });
 
@@ -1795,8 +1795,8 @@ describe("active sessions", () => {
   });
 
   for (const [single, expected] of [
-    [2, "6 active sessions in 30 min, 2 with one action. Park one before the next."],
-    [0, "6 active sessions in 30 min. Park one before the next."],
+    [2, "6 active sessions in 30 min, 2 with one action. Finish this one before the next."],
+    [0, "6 active sessions in 30 min. Finish this one before the next."],
   ] as const) {
     test(`${single} other sessions with one action in the warning`, async ($, on) => {
       const { toasts } = setup(on, [at(6, { singleActionSessions: single })]);

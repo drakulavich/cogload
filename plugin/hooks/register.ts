@@ -36,7 +36,8 @@ const SHORT = "A skip needs a reason of three words or more.";
 const EMPTY = `The powerbank is empty until Monday: ${SKIPS_PER_WEEK} skips this week.`;
 const BACK = 'Your prompt is back in the box: to send it, add "skip: <reason>" as its last line.';
 const QUEUED = "It stays in the box, and goes as it reads then.";
-const WARNING = (n: number, single: number) => `${n} active sessions in 30 min${single === 0 ? "" : `, ${single} with one action`}. Park one before the next.`;
+const WARNING = (n: number, single: number) =>
+  `${n} active sessions in 30 min${single === 0 ? "" : `, ${single} with one action`}. Finish this one before the next.`;
 const WELCOME = "Keep your head cold. The dot above the prompt shows how hot this hour runs.";
 const MISSING = "cogload is not on Claude Code's PATH: bun add -g @drakulavich/cogload";
 const NO_READING = "cogload gave no reading.";

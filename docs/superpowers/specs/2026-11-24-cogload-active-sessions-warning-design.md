@@ -26,7 +26,7 @@ After this change:
    its time. The session takes a reading two seconds later when the latch is
    armed, and, as today, at `turn.complete` and every minute. A reading with
    `activeSessions` of 4 or more, a mark three minutes old or less and an armed
-   latch show one toast in that session: `6 active sessions in 30 min, 2 with one action. Park one before the next.`
+   latch show one toast in that session: `6 active sessions in 30 min, 2 with one action. Finish this one before the next.`
    With `singleActionSessions` 0 the text has no `, 2 with one action`. No session is named.
    It clears the mark and sets the latch. Nothing is held or delayed.
 3. The latch is the store key `overSeenAt`. It is armed when absent or 60
@@ -93,7 +93,7 @@ stateDiagram-v2
   from 0, after `sessions`: `,"activeSessions":6,"singleActionSessions":2` is 44
   bytes on a one-line file. `schema` stays 1. Both are computed
   from the events already read, so no transcript is read for them. They travel on
-  the day that holds `now`, and `--json` leaves them out. `sessions` stays, as a published field.
+  the day that holds `now`, so its JSON has both, under the same names. `sessions` stays, as a published field.
 - `overSeenAt` is one number, about 14 bytes, with the write rhythm
   `fourSeenAt` has. It is a new key: a session started before the update
   still writes `fourSeenAt` from the other count, which would disarm the warning.

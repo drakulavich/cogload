@@ -1,5 +1,5 @@
 import { fractionsOf, NORMS, score, scoreOf } from "./score.ts";
-import type { ActiveSessions, Day, Event, EventKind, HourBucket, LiveBucket, Metrics, Part, Totals, Window } from "../types.ts";
+import type { Day, Event, EventKind, HourBucket, LiveBucket, Metrics, Part, Totals, Window } from "../types.ts";
 
 const LOOKBACK_MS = 3 * 60 * 60 * 1000;
 export const GAP_MS = 10 * 60 * 1000;
@@ -218,13 +218,13 @@ function liveBucket(sorted: Event[], presenceTs: number[], presence: Day["presen
   return { ...full, score: scoreOf(cooled) };
 }
 
-// The sessions the person acted in; `single` leaves out the latest action's, the one they are in now.
-export function activeSessions(sorted: Event[], nowMs: number): ActiveSessions {
+// The sessions the person acted in; `singleActionSessions` leaves out the latest action's, the one they are in now.
+export function activeSessions(sorted: Event[], nowMs: number): { activeSessions: number; singleActionSessions: number } {
   const own = sorted.filter((e) => PRESENCE.has(e.kind) && e.ts > nowMs - ACTIVE_MS && e.ts <= nowMs);
   const counts = new Map<string, number>();
   for (const e of own) counts.set(e.sessionId, (counts.get(e.sessionId) ?? 0) + 1);
   const latest = own.at(-1)?.sessionId;
-  return { sessions: counts.size, single: [...counts].filter(([id, n]) => n === 1 && id !== latest).length };
+  return { activeSessions: counts.size, singleActionSessions: [...counts].filter(([id, n]) => n === 1 && id !== latest).length };
 }
 
 function buildDay(date: string, acc: Map<string, Acc>): Day {
@@ -318,7 +318,7 @@ export function derive(events: Event[], w: Window): Day[] {
       open.asOf = w.now.toISOString();
       const presenceTs = read.filter((e) => PRESENCE.has(e.kind)).map((e) => e.ts);
       open.live = liveBucket(sorted, presenceTs, open.presence, w.now.getTime(), LATE_HOURS.has(w.now.getHours()));
-      open.active = activeSessions(sorted, w.now.getTime());
+      Object.assign(open, activeSessions(sorted, w.now.getTime()));
     }
   }
   return days;

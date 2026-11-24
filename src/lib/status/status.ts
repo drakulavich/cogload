@@ -48,8 +48,8 @@ export function statusOf(day: Day, now: Date): Status {
     restAt: streakMin > 0 ? new Date(Date.parse(day.presence!.streakStartAt) + NORMS.streakMin * 60000).toISOString() : null,
     restMin: GAP_MS / 60000,
     sessions: day.live?.sessions ?? 0,
-    activeSessions: day.active?.sessions ?? 0,
-    singleActionSessions: day.active?.single ?? 0,
+    activeSessions: day.activeSessions ?? 0,
+    singleActionSessions: day.singleActionSessions ?? 0,
   };
 }
 

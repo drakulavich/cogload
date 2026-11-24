@@ -29,6 +29,6 @@ const parsed = await Promise.all(
 const own = dropCopies(parsed.flat())
   .filter((e) => PRESENCE.has(e.kind) && e.ts >= from && e.ts <= now)
   .sort((a, b) => a.ts - b.ts);
-const crowded = own.filter((e) => activeSessions(own, e.ts).sessions >= 4).length;
+const crowded = own.filter((e) => activeSessions(own, e.ts).activeSessions >= 4).length;
 const share = own.length === 0 ? "no actions" : `${Math.round((crowded / own.length) * 100)}%`;
 console.log(`${days} days: ${crowded} of ${own.length} actions at 4+ sessions, ${share} (${files.length} files, ${skipped} skipped)`);
