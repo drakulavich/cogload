@@ -1,5 +1,8 @@
 # Spec: the first prompt of a fourth session waits ten minutes
 
+Replaced by `2026-11-24-cogload-active-sessions-warning-design.md`; only the
+`sessions` field of `cogload status` is left.
+
 Extends `2026-09-19-zapara-status-file-design.md` (one field),
 `2026-10-29-cognitive-load-powerbank-design.md` (the skip and its five a week)
 and `2026-11-17-cognitive-load-queued-prompts-design.md` (Enter during a rest

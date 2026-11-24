@@ -35,19 +35,20 @@ title.
 
 ## What the plugin keeps
 
-- It reads the prompts you type only to hold them during a rest or a fourth
-  session's wait and to find a `skip:` line.
+- It reads the prompts you type only to hold them during a rest and
+  to find a `skip:` line.
 - A held prompt's text stays in the Claude Code session's memory, never on disk,
   until the rest is lifted or the first prompt after it ends.
 - Its store, a JSON file in Claude Code's plugin data, keeps when the current
   rest ends, which streak's rest was taken, when the last Fried rest began, the
-  start of each rest for seven days, when four sessions last ran in one hour,
-  the start of each fourth-session hold for seven days, which break idea comes next, which
+  start of each rest for seven days, when four sessions were last
+  active, the latest reading, which break idea comes next, which
   one-time notices it has shown, and the time and reason of each `skip:` for
   seven days. The skip reason you type is the only text it writes to disk.
   Entries older than seven days are dropped the next time it writes them.
 - It runs `cogload status` and `cogload today --json` on your machine and keeps
-  the numbers they print in the session's memory.
+  the numbers they print in the session's memory, with the time of your last
+  prompt, for the active-sessions warning.
 
 ## Sharing
 

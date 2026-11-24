@@ -12,11 +12,12 @@ export type Status = {
   streakMin: number;
   restAt: string | null;
   restMin: number;
-  sessions: number | null;
+  activeSessions: number | null;
+  singleActionSessions: number | null;
 };
 
 declare module "claude-code" {
   interface PluginState {
-    "cognitive-load": { status: Status | null; lastToast: number; held: string[]; queued: boolean; refusalShown: boolean; holdUntil: number; asked: boolean };
+    "cognitive-load": { status: Status | null; lastToast: number; held: string[]; queued: boolean; refusalShown: boolean; pending: number };
   }
 }

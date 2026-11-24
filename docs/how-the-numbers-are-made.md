@@ -206,10 +206,10 @@ are ranked against norms in `src/lib/card/card.ts` that order a picture and neve
 the index. The card spec has the rest.
 
 **The status file** (`cogload status`) writes today's current hour to
-`~/.claude/cogload/status.json` as one line of JSON with eleven fields:
+`~/.claude/cogload/status.json` as one line of JSON with fourteen fields:
 
 ```json
-{"schema":1,"asOf":"2026-09-19T12:30:38.300Z","date":"2026-09-19","hour":15,"index":36,"level":"Warming","peak":41,"activeMin":555,"streakMin":166,"restAt":"2026-09-19T10:24:38.300Z","restMin":10}
+{"schema":1,"asOf":"2026-09-19T12:30:38.300Z","date":"2026-09-19","hour":15,"index":36,"level":"Warming","peak":41,"activeMin":555,"streakMin":166,"restAt":"2026-09-19T10:24:38.300Z","restMin":10,"sessions":4,"activeSessions":3,"singleActionSessions":1}
 ```
 
 `hour` is the clock; `index` and `level` are the sixty minutes ending at
@@ -234,6 +234,9 @@ streak longer than that is written as `1500`, the ceiling the file promises.
 `restAt` is when the running streak reaches 40 minutes, its first action plus
 40 minutes, and `null` with no streak; it stays the same for the whole streak.
 `restMin` is how long a break must be to end a streak, `10`.
+`sessions` is the sixty minutes' session count, `activeSessions` the sessions you
+acted in during the last thirty, and `singleActionSessions` those of them with
+one action, without the session of your latest.
 A status line reads that file on every render and shows the index in the
 colour of its level, the time since your last ten-minute break, and the day's
 presence so far. When the file is older than the reader's threshold, it starts

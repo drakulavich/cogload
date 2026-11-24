@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { analyze } from "../../src/lib/metrics/index.ts";
 import { renderStatus, statusOf } from "../../src/lib/status/index.ts";
-import { assistant, prompt, transcript } from "../helpers/transcript.ts";
+import { assistant, prompt, question, toolResult, transcript } from "../helpers/transcript.ts";
 
 const S = ["aaaaaaaa-1111-4111-8111-111111111111", "bbbbbbbb-2222-4222-8222-222222222222", "cccccccc-3333-4333-8333-333333333333"];
 // Two active hours on 14 Sept (UTC, and TZ=UTC in tests). 13:00 is the busy one:
@@ -14,7 +14,7 @@ const busy = Array.from({ length: 12 }, (_, i) => {
 }).flat();
 const t = transcript([...busy, prompt("2026-09-14T14:10:00.000Z", S[0]!), assistant("2026-09-14T14:12:00.000Z", S[0]!)]);
 
-describe("status: today's load in twelve fields", () => {
+describe("status: today's load in fourteen fields", () => {
   test("the last sixty minutes, and the day's peak and active time", () => {
     const now = new Date("2026-09-14T14:25:00.000Z");
     const [day] = analyze([t], { to: "2026-09-14", days: 1, now });
@@ -34,6 +34,8 @@ describe("status: today's load in twelve fields", () => {
       restAt: null,
       restMin: 10,
       sessions: 3,
+      activeSessions: 1,
+      singleActionSessions: 0,
     });
     // The window (13:25, 14:25] holds the tail of the busy hour and the quiet
     // exchange, a quarter of it after a 15-minute break: less than the peak,
@@ -70,13 +72,15 @@ describe("status: today's load in twelve fields", () => {
       restAt: null,
       restMin: 10,
       sessions: 0,
+      activeSessions: 0,
+      singleActionSessions: 0,
     });
   });
   test("renderStatus is one line in the spec's field order with a newline", () => {
     const now = new Date("2026-09-14T09:15:00.000Z");
     const [day] = analyze([], { to: "2026-09-14", days: 1, now });
     expect(renderStatus(statusOf(day!, now))).toBe(
-      '{"schema":1,"asOf":"2026-09-14T09:15:00.000Z","date":"2026-09-14","hour":9,"index":null,"level":null,"peak":null,"activeMin":0,"streakMin":0,"restAt":null,"restMin":10,"sessions":0}\n',
+      '{"schema":1,"asOf":"2026-09-14T09:15:00.000Z","date":"2026-09-14","hour":9,"index":null,"level":null,"peak":null,"activeMin":0,"streakMin":0,"restAt":null,"restMin":10,"sessions":0,"activeSessions":0,"singleActionSessions":0}\n',
     );
   });
   test("the peak counts the last sixty minutes too, so the index is never above it", () => {
@@ -105,6 +109,33 @@ describe("status: today's load in twelve fields", () => {
     expect(s.index).toBe(day!.live!.score!.index);
     expect(s.index!).toBeGreaterThan(0);
     expect(s.level).toBe(day!.live!.score!.level);
+  });
+});
+
+describe("status: active sessions", () => {
+  const now = new Date("2026-09-14T14:00:00.000Z");
+  const at = (min: number, ms = 0) => new Date(now.getTime() - min * 60_000 + ms).toISOString();
+  const D = "dddddddd-4444-4444-8444-444444444444";
+  const E = "eeeeeeee-5555-4555-8555-555555555555";
+  const statusFor = (lines: string[]) => {
+    const [day] = analyze([transcript(lines)], { to: "2026-09-14", days: 1, now });
+    const { sessions, activeSessions, singleActionSessions } = statusOf(day!, now);
+    return { sessions, activeSessions, singleActionSessions };
+  };
+  const four = [prompt(at(20), S[0]!), prompt(at(19), S[0]!), prompt(at(15), S[1]!), prompt(at(12), S[2]!), assistant(at(1), E)];
+
+  test("sessions with an own action count, agent records do not, and the latest action's session is no single", () => {
+    expect(statusFor([...four, prompt(at(5), D)])).toEqual({ sessions: 5, activeSessions: 4, singleActionSessions: 2 });
+  });
+  test("with the latest action in the session of several, every single counts", () => {
+    expect(statusFor([...four, prompt(at(10), D), prompt(at(5), S[0]!)])).toEqual({ sessions: 5, activeSessions: 4, singleActionSessions: 3 });
+  });
+  test("an action thirty minutes old is out, a millisecond newer is in", () => {
+    expect(statusFor([prompt(at(30), D)]).activeSessions).toBe(0);
+    expect(statusFor([prompt(at(30, 1), D)]).activeSessions).toBe(1);
+  });
+  test("an answer alone makes a session active", () => {
+    expect(statusFor([question(at(5), D, "toolu_q"), toolResult(at(4), D, "toolu_q")]).activeSessions).toBe(1);
   });
 });
 

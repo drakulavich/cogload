@@ -5,6 +5,7 @@ const LOOKBACK_MS = 3 * 60 * 60 * 1000;
 export const GAP_MS = 10 * 60 * 1000;
 const SLOT_MS = 5 * 60 * 1000;
 const LIVE_MS = 60 * 60 * 1000;
+export const ACTIVE_MS = 30 * 60 * 1000;
 // The reader contract's ceiling for activeMin and streakMin (status file spec):
 // a reader treats a larger value as no data, so a longer streak is written as this.
 export const MAX_STREAK_MIN = 1500;
@@ -55,7 +56,7 @@ const emptyMetrics = (): Metrics => ({
 
 // Presence is the human's own actions only: agent records and the agent's asks
 // are never presence, because presence answers "is it time to rest?".
-const PRESENCE: ReadonlySet<EventKind> = new Set<EventKind>(["prompt", "interrupt", "reject", "answer"]);
+export const PRESENCE: ReadonlySet<EventKind> = new Set<EventKind>(["prompt", "interrupt", "reject", "answer"]);
 
 type Acc = {
   m: Metrics;
@@ -217,6 +218,15 @@ function liveBucket(sorted: Event[], presenceTs: number[], presence: Day["presen
   return { ...full, score: scoreOf(cooled) };
 }
 
+// The sessions the person acted in; `singleActionSessions` leaves out the latest action's, the one they are in now.
+export function activeSessions(sorted: Event[], nowMs: number): { activeSessions: number; singleActionSessions: number } {
+  const own = sorted.filter((e) => PRESENCE.has(e.kind) && e.ts > nowMs - ACTIVE_MS && e.ts <= nowMs);
+  const counts = new Map<string, number>();
+  for (const e of own) counts.set(e.sessionId, (counts.get(e.sessionId) ?? 0) + 1);
+  const latest = own.at(-1)?.sessionId;
+  return { activeSessions: counts.size, singleActionSessions: [...counts].filter(([id, n]) => n === 1 && id !== latest).length };
+}
+
 function buildDay(date: string, acc: Map<string, Acc>): Day {
   const buckets: HourBucket[] = [];
   // Hours run in time order, so the last write is the day's last action.
@@ -308,6 +318,7 @@ export function derive(events: Event[], w: Window): Day[] {
       open.asOf = w.now.toISOString();
       const presenceTs = read.filter((e) => PRESENCE.has(e.kind)).map((e) => e.ts);
       open.live = liveBucket(sorted, presenceTs, open.presence, w.now.getTime(), LATE_HOURS.has(w.now.getHours()));
+      Object.assign(open, activeSessions(sorted, w.now.getTime()));
     }
   }
   return days;

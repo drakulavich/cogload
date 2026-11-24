@@ -46,7 +46,7 @@ export type Totals = {
   contextSwitches: number;
   maxSessions: number;
 };
-// `asOf` and `live` exist only on the day containing `now`: `live` is the sixty
+// `asOf`, `live` and the two session counts exist only on the day containing `now`: `live` is the sixty
 // minutes `(asOf − 60 min, asOf]`, by the hour bucket's rule, look-back included.
 // `presence` is the day's last human action and the start of its streak, which
 // may lie on an earlier day; instants are ISO 8601 UTC.
@@ -60,4 +60,6 @@ export type Day = {
   buckets: HourBucket[];
   asOf?: string;
   live?: LiveBucket;
+  activeSessions?: number;
+  singleActionSessions?: number;
 };

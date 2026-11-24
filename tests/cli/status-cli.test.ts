@@ -76,7 +76,22 @@ describe("cogload status", () => {
     expect(r.out).toBe(file);
     expect(file.endsWith("\n") && file.split("\n").length === 2).toBe(true);
     const s = JSON.parse(file);
-    expect(Object.keys(s)).toEqual(["schema", "asOf", "date", "hour", "index", "level", "peak", "activeMin", "streakMin", "restAt", "restMin", "sessions"]);
+    expect(Object.keys(s)).toEqual([
+      "schema",
+      "asOf",
+      "date",
+      "hour",
+      "index",
+      "level",
+      "peak",
+      "activeMin",
+      "streakMin",
+      "restAt",
+      "restMin",
+      "sessions",
+      "activeSessions",
+      "singleActionSessions",
+    ]);
     expect(s.schema).toBe(1);
     expect(s.date).toBe(utcDay(0));
     expect(s.asOf).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
@@ -159,7 +174,7 @@ describe("cogload status", () => {
     }
   });
 
-  test("three sessions in the last sixty minutes end the line with sessions 3", async () => {
+  test("three sessions in the last thirty minutes end the line with the three counts", async () => {
     const tree = await mkdtemp(join(tmpdir(), "cogload-status-sessions-"));
     try {
       const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
@@ -170,7 +185,7 @@ describe("cogload status", () => {
       );
       const r = await spawn(await home(), "--projects", tree);
       expect([r.code, r.err]).toEqual([0, ""]);
-      expect(r.out).toEndWith(`"restMin":10,"sessions":3}\n`);
+      expect(r.out).toEndWith(`"restMin":10,"sessions":3,"activeSessions":3,"singleActionSessions":2}\n`);
     } finally {
       await rm(tree, { recursive: true, force: true });
     }
