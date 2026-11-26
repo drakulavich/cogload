@@ -5,6 +5,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-11-26
+
+### Fixed
+- A rest you work through no longer ends the rests for the rest of that streak:
+  the next one comes a full streak (40 minutes) after it ended, and the hourly
+  Fried rest is no longer held back by it. Plugin 0.16.1. (#269, #270)
+
 ## [0.20.0] - 2026-11-24
 
 ### Changed
