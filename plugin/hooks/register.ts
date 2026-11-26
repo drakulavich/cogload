@@ -207,7 +207,13 @@ const warnIfOver = async ($: EngineInterface, s: Status) => {
   await toast($, WARNING(over.active, over.single));
 };
 
-const isSpent = async ($: EngineInterface, s: Status): Promise<boolean> => s.restAt !== null && (await $.store.get("spent")) === s.restAt;
+// A streak that outlived its rest (#269) is due again a full streak after that rest ended.
+const isSpent = async ($: EngineInterface, s: Status): Promise<boolean> => {
+  if (s.restAt === null || (await $.store.get("spent")) !== s.restAt) return false;
+  const until = await $.store.get("restUntil");
+  const streakMs = Date.parse(s.restAt) - (Date.parse(s.asOf) - s.streakMin * 60_000);
+  return typeof until !== "number" || Date.parse(s.asOf) < until + streakMs;
+};
 
 const startRestIfDue = async ($: EngineInterface, s: Status) => {
   const now = await $.clock.now();

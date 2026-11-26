@@ -590,8 +590,25 @@ describe("rest", () => {
     let streakStart = NOW - 5 * 60_000;
     engine(on, [live(() => streakStart, { level: "Fried", index: 90 })], [], toasts, { welcomed: true });
     await start($);
-    await clock.advance(61 * 60_000);
-    streakStart = clock.now() - 5 * 60_000;
+    await clock.advance(11 * 60_000);
+    streakStart = clock.now();
+    await clock.advance(30 * 60_000);
+    streakStart = clock.now();
+    await clock.advance(18 * 60_000);
+    expect(toasts).toHaveLength(1);
+    await clock.advance(60_000);
+    expect(toasts).toHaveLength(2);
+    expect(await typed($, "next")).toEqual(DROP(clock.now() + REST_MS));
+  });
+
+  test("a streak that outlives its rest rests again a full streak after that rest ended", async ($, on) => {
+    const toasts: string[] = [];
+    const streakStart = NOW - 40 * 60_000;
+    engine(on, [live(() => streakStart)], [], toasts, { welcomed: true });
+    await start($);
+    expect(toasts).toHaveLength(1);
+    await clock.advance(REST_MS + 39 * 60_000);
+    expect(toasts).toHaveLength(1);
     await clock.advance(60_000);
     expect(toasts).toHaveLength(2);
     expect(await typed($, "next")).toEqual(DROP(clock.now() + REST_MS));
